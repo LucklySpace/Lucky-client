@@ -105,7 +105,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     },
     // 2. tauri expects a fixed port, fail if that port is not available
     build: {
-      minify: "esbuild", // 必须开启：使用terserOptions才有效果
+      minify: "terser", // 必须开启：使用terserOptions才有效果
       rollupOptions: {
         output: {
           chunkFileNames: "js/[name]-[hash].js",

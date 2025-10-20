@@ -94,7 +94,6 @@
 
 <script lang="ts" setup>
   /**
-   * 优化说明（脚本）：
    * - 保持原有 store 逻辑（chatStore、messageStore、friendStore 不变）
    * - 对 avatar 做错误回退，并提供首字母占位（中文取首字）
    * - 提供 handleCall 与 handleSendMessage 两个出口（handleCall 可在未来接入通话逻辑）
@@ -165,21 +164,22 @@
     if (!fi) return;
     await chatStore.handleCurrentChangeByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
 
-    // 请求消息数量与列表（保持原有 API）
-    messageStore.handleGetMessageCount();
-    messageStore.handleGetMessageList(chatStore.currentChat);
-    messageStore.handleSearchMessageUrl(chatStore.currentChat);
+    // 请求消息数量与列表
+    messageStore.handleReset();
+    await messageStore.handleGetMessageCount();
+    await messageStore.handleGetMessageList(chatStore.currentChat);
+    //await messageStore.handleSearchMessageUrl(chatStore.currentChat);
 
     // 跳转到消息页面
     router.push("/message");
   };
 
-  // 占位：发起通话（可接入 rtc 逻辑）
+  // 占位：发起通话
   async function handleCall(fi: any) {
     if (!fi) return;
     await chatStore.handleCurrentChangeByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
 
-    // 请求消息数量与列表（保持原有 API）
+    // 请求消息数量与列表
     messageStore.handleGetMessageCount();
     messageStore.handleGetMessageList(chatStore.currentChat);
     messageStore.handleSearchMessageUrl(chatStore.currentChat);

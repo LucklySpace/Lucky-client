@@ -161,15 +161,16 @@
   //   }
   // });
 
-  /* 操作：进入群聊 / 查看成员 / 退出群（示例行为：路由跳转与提示） */
+  /* 操作：进入群聊 / 查看成员 / 退出群 */
   async function handleEnterGroup(fi: any) {
     if (!fi) return;
     await chatStore.handleCurrentChangeByTarget(fi, IMessageType.GROUP_MESSAGE.code);
 
-    // 请求消息数量与列表（保持原有 API）
-    messageStore.handleGetMessageCount();
-    messageStore.handleGetMessageList(chatStore.currentChat);
-    messageStore.handleSearchMessageUrl(chatStore.currentChat);
+    // 请求消息数量与列表
+    messageStore.handleReset();
+    await messageStore.handleGetMessageCount();
+    await messageStore.handleGetMessageList(chatStore.currentChat);
+    //await messageStore.handleSearchMessageUrl(chatStore.currentChat);
 
     // 跳转到消息页面
     router.push("/message");

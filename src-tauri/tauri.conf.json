@@ -43,15 +43,14 @@
     "withGlobalTauri": true,
     "security": {
       "csp": {
-        "default-src": "'self' tauri: tauri://localhost http://tauri.localhost https://tauri.localhost customprotocol: asset:",
-        "connect-src": "ipc: http://ipc.localhost",
-        "img-src": "'self' asset: http://** blob: data:"
+        "default-src": "'self' tauri: tauri://localhost http://tauri.localhost https://tauri.localhost",
+        "script-src": "'self' 'unsafe-inline' 'unsafe-eval' 'sha256-00p01c5a...' 'sha256-...' ",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "connect-src": "ipc: http://ipc.localhost"
       },
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     }
   },
@@ -62,31 +61,16 @@
     "macOS": {
       "entitlements": "./src-tauri/Info.plist"
     },
-    "externalBin": [
-      "bin/ffmpeg"
-    ],
-    "resources": [
-      "resources/**/*",
-      "bin/*",
-      "resources/sql/**/*.xml",
-      "Info.plist"
-    ],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "externalBin": ["bin/ffmpeg"],
+    "resources": ["resources/**/*", "bin/*", "resources/sql/**/*.xml", "Info.plist"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
   },
   "plugins": {
     "updater": {
       "active": true,
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3NUZBMENGNUMyQzlBNjgKUldSb21peGN6NkJmRitDRTNBVm0zc2ZFUzRBVTBJQXdYbXdnUWprTEFEejJnS3dKb1pKaGt2RFUK",
-      "endpoints": [
-        "http://localhost:9191/up/api/v1/tauri/update/latest"
-      ]
+      "endpoints": []
     }
   }
 }

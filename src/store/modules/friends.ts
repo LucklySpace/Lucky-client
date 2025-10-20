@@ -170,7 +170,8 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, {
     async loadContacts() {
       const newList =
         (await api.GetContacts({
-          userId: storage.get("userId")
+          userId: storage.get("userId"),
+          sequence: 0
         })) || [];
 
       if (!Array.isArray(newList) || newList.length === 0) {

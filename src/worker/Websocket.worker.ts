@@ -26,13 +26,13 @@ import { ProtocolMode } from "@/types/env";
 
 type WorkerCommand =
   | {
-  type: "connect";
-  url: string;
-  payload?: any;
-  heartbeat?: any;
-  interval?: number;
-  protocol?: ProtocolMode; // 建立连接时的默认协议
-}
+      type: "connect";
+      url: string;
+      payload?: any;
+      heartbeat?: any;
+      interval?: number;
+      protocol?: ProtocolMode; // 建立连接时的默认协议
+    }
   | { type: "send"; payload: any; options?: { protocol?: ProtocolMode; sendAsRawBytes?: boolean } }
   | { type: "disconnect" };
 
@@ -128,8 +128,7 @@ class InnerWebSocketWorker {
     if (this.ws) {
       try {
         this.ws.close(1000, "重连/新建连接");
-      } catch {
-      }
+      } catch {}
       this.ws = null;
     }
 
@@ -231,8 +230,7 @@ class InnerWebSocketWorker {
     if (this.ws) {
       try {
         this.ws.close(1000, "client disconnect");
-      } catch {
-      }
+      } catch {}
       this.ws = null;
     }
     this.connConfig = null;
@@ -393,7 +391,7 @@ function looksLikeJsonText(s?: string | null): boolean {
   return (
     c === "{" ||
     c === "[" ||
-    c === "\"" ||
+    c === '"' ||
     c === "-" ||
     (c >= "0" && c <= "9") ||
     t.startsWith("true") ||
@@ -513,7 +511,10 @@ function decodeIncoming(data: any): any {
       // 兼容 payload/data 字段命名：优先 payload（按 proto 定义），其次 data
       const anyObj: Any | undefined = decoded.payload ?? decoded.data ?? undefined;
       const parsedPayload = anyToJs(anyObj);
-      const out: any = { ...decoded, data: parsedPayload.value ?? undefined };
+      const out: any = {
+        ...decoded,
+        data: parsedPayload ?? parsedPayload.value ?? parsedPayload.ListValue ?? undefined
+      };
       out._rawPayload = anyObj; // 保留原始 Any（必要时可取出 typeUrl/value）
       return out;
     }

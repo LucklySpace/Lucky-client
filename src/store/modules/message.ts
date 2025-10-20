@@ -490,7 +490,7 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, {
   },
 
   persist: [
-    { key: `${StoresEnum.MESSAGE}_local`, paths: ["messageList"], storage: localStorage },
+    { key: `${StoresEnum.MESSAGE}_local`, paths: ["messageList"], storage: sessionStorage },
     { key: `${StoresEnum.MESSAGE}_session`, paths: ["messageCount"], storage: sessionStorage }
   ]
 });
