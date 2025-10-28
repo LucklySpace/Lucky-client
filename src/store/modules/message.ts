@@ -164,7 +164,7 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, {
 
     handleCreateMessage(id: string | number, message: any, messageType: number, isSender: boolean = false) {
       const currentChat = chatStore.currentChat;
-      if (currentChat?.id !== id) return;
+      //if (currentChat?.id !== id) return;
 
       const ownId = this.getOwnerId;
       const userInfo = userStore.userInfo;
