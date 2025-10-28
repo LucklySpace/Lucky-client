@@ -91,7 +91,7 @@
       class="chat-container-input"
       contenteditable="true"
       spellcheck="false"
-      @click="handleSelection"
+      @click="handleSelection"  
       @input="handleSelection"
       @keydown="handleKeyDown"
       @keyup="handleKeyUp"

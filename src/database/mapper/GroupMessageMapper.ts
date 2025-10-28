@@ -55,6 +55,48 @@ class GroupMessageMapper extends BaseFTS5Mapper<GroupMessage> {
     const sql = `SELECT * FROM ${this.tableName} WHERE groupId=${groupId} AND  (messageContentType= ${imageCode} or messageContentType= ${videoCode})`;
     return this.querySql(sql);
   }
+
+  /**
+   * 清空群聊聊天记录
+   * @param groupId 群ID
+   * @returns 
+   */
+  async clearChatHistory(groupId: string, ownerId: string): Promise<boolean> {
+    try {
+      // 删除普通表中的聊天记录
+      await this.executeSql("clearChatHistory", { groupId, ownerId});
+      
+      // 删除FTS5虚拟表中的记录
+      await this.executeFTS5Sql("clearChatHistoryVirtual", { groupId, ownerId });
+      
+      return true;
+    } catch (error) {
+      console.error("清空群聊记录失败:", error);
+      return false;
+    }
+  }
+  
+  /**
+   * 退出群聊（删除当前用户的群聊记录）
+   * @param groupId 群ID
+   * @param ownerId 当前用户ID
+   * @returns 是否成功
+   */
+  async quitGroup(groupId: string, ownerId: string): Promise<boolean> {
+    try {
+      // 删除实体表中当前用户的群聊记录
+      await this.executeSql("deleteByGroupIdAndOwnerId", { groupId, ownerId });
+      // 删除虚拟表中当前用户的群聊记录
+      await this.executeFTS5Sql("deleteByGroupIdAndOwnerIdVirtual", { groupId, ownerId });
+      return true;
+    } catch (error) {
+      console.error("退出群聊时删除记录失败:", error);
+      return false;
+    }
+  }
+
 }
+
+
 
 export default GroupMessageMapper;

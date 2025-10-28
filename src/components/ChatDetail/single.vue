@@ -38,40 +38,59 @@
 
     <!-- 底部操作按钮 -->
     <div class="friend-actions">
-      <button class="ordinary-btn">
-        <span class="left">查找聊天内容</span>
+      <!-- 查找历史聊天记录 -->
+      <button class="ordinary-btn"@click="switchHistoryMessage">
+        <span class="left">{{ $t(`chat.toolbar.history`) }}</span>
         <span class="right"><el-icon><ArrowRight /></el-icon></span>
       </button>
       <el-divider />
+      <!-- 消息免打扰 -->
       <button class="ordinary-btn">
-        <span class="switch-label">消息免打扰</span>
+        <span class="switch-label">{{ $t(`settings.notification.mute`) }}</span>
         <el-switch v-model="messageMute" class="switch-btn" />
       </button>
+      <!-- 置顶 -->
       <button class="ordinary-btn">
-        <span class="switch-label">置顶聊天</span>
-        <el-switch v-model="topChat" class="switch-btn" />
+        <span class="switch-label">{{ $t(`chat.toolbar.pin`) }}</span>
+        <el-switch v-model="top" class="switch-btn" />
       </button>
     </div>
     <el-divider />
     <div class="friend-actions">
-      <el-button class="danger-btn" link @click="handleClearFriendMessage"> 清空聊天记录</el-button>
+      <el-button 
+        class="danger-btn" 
+        link 
+        @click="handleClearFriendMessage">
+        {{ $t(`dialog.clearChatLog`) }}
+    </el-button>
       <el-divider />
-      <el-button class="danger-btn" link @click="handleDeleteContact"> 删除好友</el-button>
+      <el-button 
+       class="danger-btn"
+       link 
+       @click="handleDeleteContact">
+       {{ $t(`contacts.delete`) }}
+      </el-button>
     </div>
   </div>
+  <HistoryDialog :visible="historyDialogParam.showDialog" title="聊天历史记录" @handleClose="toggleHistoryDialog" />
 
 </template>
 
 <script lang="ts" setup>
-  import { computed, ref } from "vue";
+  import { computed, ref, watch } from "vue";
   import { ElMessageBox } from "element-plus";
   import { useChatMainStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
+  import HistoryDialog from "@/components/History/index.vue";
+  import Chats from "@/database/entity/Chats";
 
   const chatStore = useChatMainStore();
 
   // 事件定义
-  const emit = defineEmits(["handleDeleteContact", "handleClearFriendMessage"]);
+  const emit = defineEmits([
+    "handleDeleteContact", 
+    "handleClearFriendMessage"
+  ]);
 
   // 表单数据（预留：可用于备注编辑等扩展）
   const singleForm = ref({});
@@ -102,13 +121,53 @@
     // await api.updateRemark(singleInfo.value.name)
   }
 
-  // 开关绑定变量
-  const messageMute = ref(false); // 消息免打扰开关
-  const topChat = ref(false);    // 置顶聊天开关
+  //查找聊天信息
+  const switchHistoryMessage = () => {
+    historyDialogParam.value.showDialog = true;
+  };
+  const historyDialogParam = ref({showDialog: false})
+  const toggleHistoryDialog = () => {
+    historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
+  }
+  
+  //置顶会话
+  //通过监听开关值的变化调动store中的函数
+  //获取会话对象
+    const currentItem = computed(() => {
+      const { currentChat } = chatStore;
+      const chatId = currentChat?.chatId;
+      if (!chatId) return null;
+      return chatStore.getChatById(chatId);
+    });
+
+    const top = ref(currentItem.value?.isTop === 1);
+    // 监听 currentItem 变化，同步到本地 ref
+    watch(
+      () => top.value,
+      (newVal) => {
+        const item = currentItem.value || {isTop: 0};
+          item.isTop = newVal ? 0 : 1
+          chatStore.handlePinChat(item as Chats);
+      },
+    );
+
+    //消息免打扰
+    const messageMute = ref(currentItem.value?.isMute === 1);
+      // 监听 messageMute 变化，同步到 store
+      watch(
+        () => messageMute.value,
+        (newVal) => {
+          const item = currentItem.value|| {isMute: 0};
+          if (item) {
+            item.isMute = newVal ? 0 : 1;
+            chatStore.handleMuteChat(item as Chats);
+          }
+        }
+      );
 
 
   /**
-   * 清空聊天记录
+   *清空聊天记录
    */
   const handleClearFriendMessage = () => {
     ElMessageBox.confirm("确定清空该好友的聊天记录？", "提示", {
@@ -196,12 +255,13 @@
       color: #666;
     }
   }
-
   /* 操作按钮区域 */
   .friend-actions {
     margin-top: 10px;
+    display: flex;
     flex-direction: column;
-    
+    align-items: center; 
+    width: 100%;
 
     //普通样式
     .ordinary-btn {
@@ -210,7 +270,7 @@
        background: transparent;
        align-items: center;
        justify-content: space-between; 
-       color: (--main-text-color);
+       color: var(--main-text-color);
        font-weight: 400;
        width: 100%;
        .left {
@@ -231,6 +291,7 @@
             color: var(--main-text-color);
           }
           .switch-btn {
+            cursor: pointer;
             --el-switch-button-size: 16px;
             --el-switch-width: 36px;
           }
@@ -238,9 +299,9 @@
       }
 
     .danger-btn {
-      display: block;
       color: var(--main-red-color);
       font-weight: 500;
+      text-align: center;
     }
   }
 
