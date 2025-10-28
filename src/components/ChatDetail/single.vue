@@ -38,28 +38,11 @@
 
     <!-- 底部操作按钮 -->
     <div class="friend-actions">
-      <button class="ordinary-btn">
-        <span class="left">查找聊天内容</span>
-        <span class="right"><el-icon><ArrowRight /></el-icon></span>
-      </button>
-      <el-divider />
-      <button class="ordinary-btn">
-        <span class="switch-label">消息免打扰</span>
-        <el-switch v-model="messageMute" class="switch-btn" />
-      </button>
-      <button class="ordinary-btn">
-        <span class="switch-label">置顶聊天</span>
-        <el-switch v-model="topChat" class="switch-btn" />
-      </button>
-    </div>
-    <el-divider />
-    <div class="friend-actions">
       <el-button class="danger-btn" link @click="handleClearFriendMessage"> 清空聊天记录</el-button>
       <el-divider />
       <el-button class="danger-btn" link @click="handleDeleteContact"> 删除好友</el-button>
     </div>
   </div>
-
 </template>
 
 <script lang="ts" setup>
@@ -101,11 +84,6 @@
     // TODO: 这里可以调用接口保存备注，比如：
     // await api.updateRemark(singleInfo.value.name)
   }
-
-  // 开关绑定变量
-  const messageMute = ref(false); // 消息免打扰开关
-  const topChat = ref(false);    // 置顶聊天开关
-
 
   /**
    * 清空聊天记录
@@ -199,46 +177,10 @@
 
   /* 操作按钮区域 */
   .friend-actions {
-    margin-top: 10px;
-    flex-direction: column;
-    
-
-    //普通样式
-    .ordinary-btn {
-       display: flex;
-       border: none;
-       background: transparent;
-       align-items: center;
-       justify-content: space-between; 
-       color: (--main-text-color);
-       font-weight: 400;
-       width: 100%;
-       .left {
-          text-align: left;
-        }
-        .right {
-          text-align: right;
-        }
-        // 开关行（消息免打扰、置顶聊天）
-        .switch-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          width: 100%;
-          .switch-label {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--main-text-color);
-          }
-          .switch-btn {
-            --el-switch-button-size: 16px;
-            --el-switch-width: 36px;
-          }
-        }
-      }
+    margin-top: 20px;
+    text-align: center;
 
     .danger-btn {
-      display: block;
       color: var(--main-red-color);
       font-weight: 500;
     }
