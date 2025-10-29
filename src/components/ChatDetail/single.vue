@@ -61,10 +61,11 @@
   </div>
   <HistoryDialog :visible="historyDialogParam.showDialog" title="聊天历史记录" @handleClose="toggleHistoryDialog" />
 
+
 </template>
 
 <script lang="ts" setup>
-  import { computed, ref } from "vue";
+  import { computed, ref, watch } from "vue";
   import { ElMessageBox } from "element-plus";
   import { useChatMainStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
@@ -107,7 +108,6 @@
   // 开关绑定变量
   const messageMute = ref(false); // 消息免打扰开关
   const topChat = ref(false);    // 置顶聊天开关
-
   //查找聊天信息
   const switchHistoryMessage = () => {
     historyDialogParam.value.showDialog = true;
@@ -117,6 +117,25 @@
     historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
   }
   
+  //置顶会话
+  //通过监听开关值的变化调动store中的函数
+  const currentItem = 
+    computed(() => {
+      const { currentChat } = chatStore;
+      const chatId = currentChat?.chatId
+      return chatStore.getChatById(chatId ?? "");
+    })
+
+   watch (
+    () => topChat.value, 
+    () => {
+      const item = currentItem.value
+      if (item) {
+        item.isTop = topChat.value ? 1 : 0
+        chatStore.handlePinChat(item)
+      }
+    }
+)
 
 
   /**
