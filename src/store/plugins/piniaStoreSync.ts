@@ -27,9 +27,24 @@ declare module "pinia" {
     $sync: () => void;
   }
 }
-
+/**
+ * 创建一个用于在多个窗口之间同步 Pinia 状态的插件。
+ * 
+ * @param globalOpts - 全局同步选项，可被具体 store 的 sync 配置覆盖。
+ *            包含以下属性：
+ *          - paths: 要同步的状态路径列表（默认为空数组）。
+ *          - targetWindows: 指定要同步到的目标窗口标签列表（默认为空数组）。
+ *          - sourceWindow: 指定作为状态来源的窗口标签（默认为 undefined）。
+ *          - debounce: 同步操作的防抖时间（毫秒，默认为 50ms）。
+ * @returns 返回一个符合 Pinia 插件规范的函数，该函数会在每个 store 初始化时执行。
+ */
 function createPiniaSync(globalOpts: SyncOptions = {}): PiniaPlugin {
-  const currentLabel = getCurrentWindow().label;
+  // debugger
+  const currentWindow = getCurrentWindow();
+  console.log('currentwindow', currentWindow)
+  const currentLabel = currentWindow?.label ;
+  // console.log(`[pinia-sync] 当前窗口 label: ${currentLabel}`);
+  // const currentLabel = getCurrentWindow().label;
 
   return (ctx: PiniaPluginContext) => {
     const store = ctx.store;
@@ -124,6 +139,7 @@ function createPiniaSync(globalOpts: SyncOptions = {}): PiniaPlugin {
 
     /** 提供手动同步方法 */
     (store as any).$sync = () => {
+      
       if (cfg.sourceWindow && currentLabel !== cfg.sourceWindow) {
         emit("pinia-sync-request", {
           storeId,

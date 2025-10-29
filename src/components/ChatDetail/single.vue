@@ -38,7 +38,7 @@
 
     <!-- 底部操作按钮 -->
     <div class="friend-actions">
-      <button class="ordinary-btn">
+      <button class="ordinary-btn"@click="switchHistoryMessage">
         <span class="left">查找聊天内容</span>
         <span class="right"><el-icon><ArrowRight /></el-icon></span>
       </button>
@@ -59,6 +59,7 @@
       <el-button class="danger-btn" link @click="handleDeleteContact"> 删除好友</el-button>
     </div>
   </div>
+  <HistoryDialog :visible="historyDialogParam.showDialog" title="聊天历史记录" @handleClose="toggleHistoryDialog" />
 
 </template>
 
@@ -67,6 +68,7 @@
   import { ElMessageBox } from "element-plus";
   import { useChatMainStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
+  import HistoryDialog from "@/components/History/index.vue";
 
   const chatStore = useChatMainStore();
 
@@ -105,6 +107,16 @@
   // 开关绑定变量
   const messageMute = ref(false); // 消息免打扰开关
   const topChat = ref(false);    // 置顶聊天开关
+
+  //查找聊天信息
+  const switchHistoryMessage = () => {
+    historyDialogParam.value.showDialog = true;
+  };
+  const historyDialogParam = ref({showDialog: false})
+  const toggleHistoryDialog = () => {
+    historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
+  }
+  
 
 
   /**
@@ -196,12 +208,13 @@
       color: #666;
     }
   }
-
   /* 操作按钮区域 */
   .friend-actions {
     margin-top: 10px;
+    display: flex;
     flex-direction: column;
-    
+    align-items: center; 
+    width: 100%;
 
     //普通样式
     .ordinary-btn {
@@ -241,6 +254,7 @@
       display: block;
       color: var(--main-red-color);
       font-weight: 500;
+      text-align: center;
     }
   }
 
