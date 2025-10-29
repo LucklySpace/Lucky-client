@@ -49,7 +49,7 @@
       </button>
       <button class="ordinary-btn">
         <span class="switch-label">置顶聊天</span>
-        <el-switch v-model="topChat" class="switch-btn" />
+        <el-switch v-model="top" class="switch-btn" />
       </button>
     </div>
     <el-divider />
@@ -105,9 +105,6 @@
     // await api.updateRemark(singleInfo.value.name)
   }
 
-  // 开关绑定变量
-  const messageMute = ref(false); // 消息免打扰开关
-  const topChat = ref(false);    // 置顶聊天开关
   //查找聊天信息
   const switchHistoryMessage = () => {
     historyDialogParam.value.showDialog = true;
@@ -119,23 +116,53 @@
   
   //置顶会话
   //通过监听开关值的变化调动store中的函数
-  const currentItem = 
-    computed(() => {
+  //获取会话对象
+    const currentItem = computed(() => {
       const { currentChat } = chatStore;
-      const chatId = currentChat?.chatId
-      return chatStore.getChatById(chatId ?? "");
-    })
+      const chatId = currentChat?.chatId;
+      if (!chatId) return null;
+      return chatStore.getChatById(chatId);
+    });
 
-   watch (
-    () => topChat.value, 
-    () => {
-      const item = currentItem.value
-      if (item) {
-        item.isTop = topChat.value ? 1 : 0
-        chatStore.handlePinChat(item)
-      }
+    // const topChat = computed({
+    //   get() {
+    //     return currentItem.value?.isTop === 1;
+    //   },
+    //   set(value) {
+    //     const item = currentItem.value;
+    //     if (item && item.isTop !== (value ? 1 : 0)) { // 只有值真正改变时才更新
+    //       item.isTop = value ? 1 : 0;
+    //       chatStore.handlePinChat(item);
+    //     }
+    //   }
+    // });
+    // 使用 ref 创建响应式变量
+const top = ref(currentItem.value?.isTop === 1);
+const messageMute = ref(currentItem.value?.isMute === 1);
+
+// 监听 currentItem 变化，同步到本地 ref
+watch(
+  () => top.value,
+  (newVal) => {
+    const item = currentItem.value || {isTop: 0};
+      item.isTop = newVal ? 1 : 0
+      chatStore.handlePinChat(item as any);
+  },
+  { immediate: true } // 立即执行一次
+);
+
+
+// 监听 messageMute 变化，同步到 store
+watch(
+  () => messageMute.value,
+  (newVal) => {
+    const item = currentItem.value;
+    if (item && item.isMute !== (newVal ? 1 : 0)) {
+      item.isMute = newVal ? 0 : 1;
+      chatStore.handleMuteChat(item);
     }
-)
+  }
+);
 
 
   /**
@@ -242,7 +269,7 @@
        background: transparent;
        align-items: center;
        justify-content: space-between; 
-       color: (--main-text-color);
+       color: var(--main-text-color);
        font-weight: 400;
        width: 100%;
        .left {
@@ -263,6 +290,7 @@
             color: var(--main-text-color);
           }
           .switch-btn {
+            cursor: pointer;
             --el-switch-button-size: 16px;
             --el-switch-width: 36px;
           }
