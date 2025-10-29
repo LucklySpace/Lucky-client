@@ -70,6 +70,7 @@
   import { useChatMainStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
   import HistoryDialog from "@/components/History/index.vue";
+import Chats from "@/database/entity/Chats";
 
   const chatStore = useChatMainStore();
 
@@ -124,45 +125,31 @@
       return chatStore.getChatById(chatId);
     });
 
-    // const topChat = computed({
-    //   get() {
-    //     return currentItem.value?.isTop === 1;
-    //   },
-    //   set(value) {
-    //     const item = currentItem.value;
-    //     if (item && item.isTop !== (value ? 1 : 0)) { // 只有值真正改变时才更新
-    //       item.isTop = value ? 1 : 0;
-    //       chatStore.handlePinChat(item);
-    //     }
-    //   }
-    // });
-    // 使用 ref 创建响应式变量
-const top = ref(currentItem.value?.isTop === 1);
-const messageMute = ref(currentItem.value?.isMute === 1);
+    const top = ref(currentItem.value?.isTop === 1);
+    const messageMute = ref(currentItem.value?.isMute === 1);
 
-// 监听 currentItem 变化，同步到本地 ref
-watch(
-  () => top.value,
-  (newVal) => {
-    const item = currentItem.value || {isTop: 0};
-      item.isTop = newVal ? 1 : 0
-      chatStore.handlePinChat(item as any);
-  },
-  { immediate: true } // 立即执行一次
-);
+    // 监听 currentItem 变化，同步到本地 ref
+    watch(
+      () => top.value,
+      (newVal) => {
+        const item = currentItem.value || {isTop: 0};
+          item.isTop = newVal ? 0 : 1
+          chatStore.handlePinChat(item as Chats);
+      },
+    );
 
 
-// 监听 messageMute 变化，同步到 store
-watch(
-  () => messageMute.value,
-  (newVal) => {
-    const item = currentItem.value;
-    if (item && item.isMute !== (newVal ? 1 : 0)) {
-      item.isMute = newVal ? 0 : 1;
-      chatStore.handleMuteChat(item);
-    }
-  }
-);
+      // 监听 messageMute 变化，同步到 store
+      watch(
+        () => messageMute.value,
+        (newVal) => {
+          const item = currentItem.value|| {isMute: 0};
+          if (item) {
+            item.isMute = newVal ? 0 : 1;
+            chatStore.handleMuteChat(item as Chats);
+          }
+        }
+      );
 
 
   /**
