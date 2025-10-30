@@ -1,0 +1,23 @@
+<SQLStore className="Chats">
+    <SQL name="createTable">
+        CREATE TABLE IF NOT EXISTS chats (
+        chatId TEXT PRIMARY KEY,
+        chatType INTEGER,
+        ownerId TEXT,
+        toId TEXT,
+        isMute INTEGER,
+        isTop INTEGER,
+        sequence INTEGER,
+        name TEXT,
+        avatar TEXT,
+        unread INTEGER,
+        id TEXT,
+        message TEXT,
+        messageTime INTEGER)
+    </SQL>
+
+    <SQL name="findLastChat">
+        SELECT * from chats ORDER BY sequence desc limit 1
+    </SQL>
+
+</SQLStore>

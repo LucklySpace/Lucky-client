@@ -1,0 +1,7 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <!-- 蓝色圆角正方形背景 -->
+    <rect x="0" y="0" width="100" height="100" rx="15" fill="#007BFF"/>
+    <!-- 两个重叠的白色圆形图案 -->
+    <circle cx="40" cy="50" r="15" fill="white"/>
+    <circle cx="60" cy="50" r="15" fill="white"/>
+</svg>

@@ -1,0 +1,99 @@
+<SQLStore className="SingleMessage">
+    <SQL name="createTable">
+        CREATE TABLE IF NOT EXISTS single_message (
+        messageId TEXT PRIMARY KEY,
+        fromId TEXT,
+        toId TEXT,
+        ownerId TEXT,
+        messageBody TEXT,
+        messageContentType TEXT,
+        messageTime INTEGER,
+        messageType TEXT,
+        readStatus INTEGER,
+        sequence INTEGER,
+        extra TEXT
+        )
+    </SQL>
+
+    <SQL name="findMessage">
+        SELECT
+        *
+        FROM
+        (
+        SELECT
+        messageId,
+        fromId,
+        toId,
+        ownerId,
+        messageBody,
+        messageContentType,
+        messageTime,
+        messageType,
+        readStatus,
+        sequence,
+        extra
+        FROM
+        single_message
+        WHERE
+        (
+        (fromId = #{fromId} AND toId = #{toId})
+        OR (fromId = #{toId} AND toId =#{fromId})
+        )
+        ORDER BY
+        messageTime DESC LIMIT #{num}, #{size}
+        ) subquery
+        ORDER BY
+        messageTime ASC;
+    </SQL>
+
+    <SQL name="findLastMessage">
+        SELECT
+        *
+        FROM
+        (
+        SELECT
+        messageId,
+        fromId,
+        toId,
+        messageBody,
+        messageContentType,
+        messageTime,
+        messageType,
+        readStatus,
+        sequence,
+        extra
+        FROM
+        single_message
+        WHERE
+        (
+        (fromId = #{fromId} AND toId = #{toId})
+        OR (fromId = #{toId} AND toId =#{fromId})
+        )
+        ORDER BY
+        messageTime DESC
+        LIMIT 1
+        ) subquery
+        ORDER BY
+        messageTime ASC;
+    </SQL>
+
+    <SQL name="findMessageCount">
+        SELECT count(*)
+        FROM single_message
+        WHERE (fromId = #{fromId} AND toId = #{toId}) OR (fromId = #{toId} AND toId =#{fromId});
+    </SQL>
+
+
+    <SQL name="deleteByFormIdAndToId">
+        DELETE FROM single_message WHERE (fromId = #{fromId} AND toId = #{toId}) OR (fromId = #{toId} AND toId
+        =#{fromId})
+    </SQL>
+
+
+    <SQL name="deleteByFormIdAndToId__virtual">
+        DELETE FROM single_message_virtual WHERE (fromId = #{fromId} AND toId = #{toId}) OR (fromId = #{toId} AND toId
+        =#{fromId})
+    </SQL>
+
+</SQLStore>
+
