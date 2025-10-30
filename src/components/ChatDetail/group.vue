@@ -104,11 +104,14 @@
   >
     <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
   </el-dialog>
+<<<<<<< HEAD
 
   <HistoryDialog 
     :visible="historyDialogParam.showDialog" 
     :title="$t('chat.toolbar.history')" 
     @handleClose="toggleHistoryDialog" />
+=======
+>>>>>>> B-repo/master
 </template>
 
 <script lang="ts" setup>

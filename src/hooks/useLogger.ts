@@ -30,11 +30,11 @@ export function useLogger() {
     if (typeof args[0] === "string") {
       // 使用样式输出第一个字符串，后面参数原样输出
       // eslint-disable-next-line no-console
-      // console.log(`%c ${args[0]}`, style, ...args.slice(1));
+      console.log(`%c ${args[0]}`, style, ...args.slice(1));
     } else {
       // 如果第一个不是字符串，直接打印所有原始参数
       // eslint-disable-next-line no-console
-      // console.log(...args);
+      console.log(...args);
     }
 
     addTask(
@@ -59,7 +59,7 @@ export function useLogger() {
     const color = COLOR_MAP[level] ?? COLOR_MAP.info;
     // 控制台分组显示，保留原始 object 方便展开
     // eslint-disable-next-line no-console
-    // console.group(`%c ${title}`, `background:${color};color:#fff;padding:2px 6px;border-radius:3px;`);
+    console.group(`%c ${title}`, `background:${color};color:#fff;padding:2px 6px;border-radius:3px;`);
     if (datas.length === 1 && typeof datas[0] === "object") {
       // 如果只有一个对象，使用 dir/table 更友好
       if (Array.isArray(datas[0])) {
@@ -72,10 +72,10 @@ export function useLogger() {
     } else {
       // 多个参数逐个输出，保留原型
       // eslint-disable-next-line no-console
-      // console.log(...datas);
+      console.log(...datas);
     }
     // eslint-disable-next-line no-console
-    // console.groupEnd();
+    console.groupEnd();
   };
 
   /**
@@ -101,7 +101,7 @@ export function useLogger() {
     `;
     // 控制台保留原始对象
     // eslint-disable-next-line no-console
-    // console.log(`%c${hint}%c`, hintStyle, contentStyle, ...contents);
+    console.log(`%c${hint}%c`, hintStyle, contentStyle, ...contents);
 
     addTask(
       () => {
@@ -228,7 +228,7 @@ async function writeToTauriLog(level: LogType, message: string, options?: LogOpt
   } catch (e) {
     // 写入 Tauri 日志失败不抛出（仅在开发时使用）
     // eslint-disable-next-line no-console
-    // console.warn("writeToTauriLog error", e);
+    console.warn("writeToTauriLog error", e);
   }
 }
 
