@@ -112,7 +112,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, {
       }
 
       // if (chat.chatType == IMessageType.SINGLE_MESSAGE.code)
-      else {
+      else {zAAAAAAAAAAAAAAZAZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
         api.QuitGroups({ fromId: this.getOwnerId, groupId: chat.id }).then(async () => {
           // 删除聊天记录
           await messageStore.handleClearMessage(chat);

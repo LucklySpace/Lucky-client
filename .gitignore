@@ -22,4 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe
+src-tauri/bin/
+# src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe
