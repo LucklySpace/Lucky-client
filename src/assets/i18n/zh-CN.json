@@ -46,6 +46,7 @@
       "contactInfo": "联系人信息",
       "count": "{count} 人",
       "delete": "删除好友",
+      "deleteGroup": "退出群聊",
       "id": "ID",
       "idLabel": "ID: ",
       "nickname": "昵称",

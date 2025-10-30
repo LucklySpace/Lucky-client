@@ -95,7 +95,9 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, {
      * @param chat 会话
      */
     async handleDeleteContact(chat: Chats) {
-      // 当前会话为群聊
+
+      console.log('okok delete')
+      // 当前会话为单聊
       if (chat.chatType == IMessageType.SINGLE_MESSAGE.code) {
         api.DeleteContact({ fromId: this.getOwnerId, toId: chat.id }).then(async () => {
           // 删除聊天记录
@@ -109,7 +111,8 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, {
         });
       }
 
-      if (chat.chatType == IMessageType.SINGLE_MESSAGE.code) {
+      // if (chat.chatType == IMessageType.SINGLE_MESSAGE.code)
+      else {
         api.QuitGroups({ fromId: this.getOwnerId, groupId: chat.id }).then(async () => {
           // 删除聊天记录
           await messageStore.handleClearMessage(chat);

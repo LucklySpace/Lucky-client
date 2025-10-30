@@ -90,7 +90,7 @@
       </el-button>
       <el-divider></el-divider>
       <el-button link class="danger-btn" @click="handleQuitGroup">
-        {{ $t('contacts.delete') }}
+        {{ $t('contacts.deleteGroup') }}
       </el-button>
     </div>
   </div>

@@ -68,7 +68,9 @@
       "reject": "Reject",
       "accepted": "Accepted",
       "rejected": "Rejected",
-      "delete": "Delete Contact"
+      "delete": "Delete Contact",
+      "deleteGroup": "Delete Group"
+
     },
     "group": {
       "memberLabel": "Members:",
