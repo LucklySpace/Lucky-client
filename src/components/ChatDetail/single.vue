@@ -299,7 +299,6 @@
       }
 
     .danger-btn {
-      display: block;
       color: var(--main-red-color);
       font-weight: 500;
       text-align: center;
