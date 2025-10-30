@@ -33,7 +33,11 @@
       style="position: absolute"
       @close="chatStore.handleChatDetail"
     >
-      <GroupDetail v-if="isGroupMessage" />
+      <GroupDetail 
+      v-if="isGroupMessage"
+      @handleClearGroupMessage="handleClearMessage"
+      @handleQuitGroup="handleDelete"
+       />
       <SingleDetail
         v-if="isSingleMessage"
         @handleClearFriendMessage="handleClearMessage"

@@ -89,7 +89,8 @@
   // 改造的 getMenuConfig：使用 computed 跟踪 item.isTop，并通过 getter 暴露 options（保持外部使用不变）
   const getMenuConfig = (item: Chats) => {
     // 获取当前item
-    const currentItem = computed(() => chatStore.getChatById(item.chatId) ?? item);
+    const currentItem = 
+    computed(() => chatStore.getChatById(item.chatId) ?? item);
 
     const options = computed(() => [
       { label: currentItem.value?.isTop === 1 ? "取消置顶" : "置顶会话", value: "pin" },

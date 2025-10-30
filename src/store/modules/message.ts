@@ -315,7 +315,13 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, {
     },
 
     async handleClearMessage(chat: Chats) {
-      if (chat.chatType !== IMessageType.SINGLE_MESSAGE.code) return;
+
+      if (chat.chatType !== IMessageType.SINGLE_MESSAGE.code) {
+         await groupMessageMapper.clearChatHistory(chat.id, this.getOwnerId);
+         this.handleReset();
+         await this.handleGetMessageList(chat);
+        return;
+      }
 
       await singleMessageMapper.deleteByFormIdAndToId(chat.id, this.getOwnerId);
       await singleMessageMapper.deleteByFormIdAndToIdVirtual(this.getOwnerId, chat.id);

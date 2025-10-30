@@ -28,5 +28,24 @@
         SELECT count(*) FROM group_message WHERE groupId = #{groupId}
     </SQL>
 
+    <!-- 清空群聊记录 -->
+    <SQL name="clearChatHistory">
+        DELETE FROM group_message WHERE groupId = #{groupId} AND ownerId = #{ownerId}
+    </SQL>
+
+    <!-- 清空群聊记录(FTS5虚拟表) -->
+    <SQL name="clearChatHistoryVirtual" type="fts5">
+        DELETE FROM group_message_virtual WHERE groupId = #{groupId} AND ownerId = #{ownerId}
+    </SQL>
+
+     <!--退出群聊（删除当前用户的群聊记录） -->
+    <SQL name="deleteByGroupIdAndOwnerId">
+        DELETE FROM group_message WHERE groupId = #{groupId} AND ownerId = #{ownerId}
+    </SQL>
+
+    <!-- 退出群聊（删除虚拟表记录） -->
+    <SQL name="deleteByGroupIdAndOwnerIdVirtual" type="fts5">
+        DELETE FROM group_message_virtual WHERE groupId = #{groupId} AND ownerId = #{ownerId}
+    </SQL>
 </SQLStore>
 

@@ -67,7 +67,10 @@
       "accept": "Accept",
       "reject": "Reject",
       "accepted": "Accepted",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "delete": "Delete Contact",
+      "deleteGroup": "Delete Group"
+
     },
     "group": {
       "memberLabel": "Members:",
@@ -137,6 +140,7 @@
       "toolbar": {
         "emoji": "Emoji",
         "screenshot": "Screenshot",
+        "pin": "Pin Chat",
         "recorder": {
           "label": "Record",
           "start": "Start",
@@ -161,6 +165,13 @@
         },
         "file": "File",
         "history": "History"
+      },
+      "groupChat": {
+        "searchMembers": "Search Group Members",
+        "viewMore": "View More",
+        "collapse": "Collapse",
+        "groupName": "Group Name",
+        "groupNotice": "Group Notice"
       },
       "input": {
         "placeholder": "Type a message",
@@ -317,7 +328,8 @@
       "notification": {
         "call": "Call Notification Sound",
         "label": "Notification Sound",
-        "newMsg": "New Message Sound"
+        "newMsg": "New Message Sound",
+        "mute": "Mute notifications"
       },
       "profile": {
         "address": "Address:",
