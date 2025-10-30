@@ -64,10 +64,10 @@ export function useLogger() {
       // 如果只有一个对象，使用 dir/table 更友好
       if (Array.isArray(datas[0])) {
         // eslint-disable-next-line no-console
-        // console.table(datas[0] as any);
+        console.table(datas[0] as any);
       } else {
         // eslint-disable-next-line no-console
-        // console.dir(datas[0] as any);
+        console.dir(datas[0] as any);
       }
     } else {
       // 多个参数逐个输出，保留原型
