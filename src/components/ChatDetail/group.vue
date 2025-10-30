@@ -2,7 +2,11 @@
   <div class="group-container">
     <!-- 搜索群成员 -->
     <div class="search-members">
-      <el-input v-model="searchText" class="input-with-select" clearable placeholder="搜索群成员">
+      <el-input 
+        v-model="searchText" 
+        class="input-with-select" 
+        clearable 
+        :placeholder="$t('chat.groupChat.searchMembers')">
         <el-button slot="append" icon="el-icon-search"></el-button>
       </el-input>
     </div>
@@ -26,13 +30,17 @@
           <el-button class="member-btn" style="margin-bottom: 3px" @click="handleInviteDialog">
             <i class="iconfont icon-jia" style="margin-left: -5px"></i>
           </el-button>
-          <div class="member-name">添加</div>
+          <div class="member-name">{{ $t('actions.add') }}</div>
         </el-col>
       </el-row>
       <!-- 折叠按钮 -->
-      <el-button v-if="filteredMembers.length > 16" class="group-footer" link type="primary" @click="toggleExpand">{{
-          isExpanded ? "收起" : "查看更多"
-        }}
+      <el-button 
+        v-if="filteredMembers.length > 16" 
+        class="group-footer" 
+        link 
+        type="primary" 
+        @click="toggleExpand">
+        {{ isExpanded ? $t('chat.groupChat.collapse') : $t('chat.groupChat.viewMore') }}
       </el-button>
     </div>
 
@@ -42,11 +50,11 @@
     <div class="group-header">
       <div class="group-title">
         <el-form :model="groupInfo" label-position="top" label-width="80px">
-          <el-form-item label="群聊名称">
+          <el-form-item :label="$t('chat.groupChat.groupName')">
             <p>{{ groupInfo.name }}</p>
             <!-- <el-input v-model="groupInfo.groupName" placeholder="请输入群聊名称"></el-input> -->
           </el-form-item>
-          <el-form-item label="群公告">
+          <el-form-item :label="$t('chat.groupChat.groupNotice')">
             <p>{{ groupInfo.notice }}</p>
             <!-- <el-input type="textarea" :rows="3" v-model="groupInfo.groupNotice" placeholder="请输入群公告">
                         </el-input>  -->
@@ -59,9 +67,31 @@
 
     <!-- 底部操作 -->
     <div class="group-footer">
-      <el-button link style="color: #ff4d4f" @click="handleClearChat">清空聊天记录</el-button>
+      <button class="ordinary-btn" @click="switchHistoryMessage">
+        <span class="left">{{ $t('chat.toolbar.history') }}</span>
+        <span class="right"><el-icon><ArrowRight /></el-icon></span>
+      </button>
+      <el-divider />
+      <button class="ordinary-btn">
+        <span class="switch-label">
+          {{ $t('settings.notification.mute') }}
+        </span>
+        <el-switch v-model="messageMute" class="switch-btn" />
+      </button>
+      <button class="ordinary-btn">
+        <span class="switch-label">{{ $t('chat.toolbar.pin') }}</span>
+        <el-switch v-model="top" class="switch-btn" />
+      </button>
+    </div>
+
+    <div class="group-footer">
+      <el-button link class="danger-btn" @click="handleClearGroupMessage">
+        {{ $t('dialog.clearChatLog') }}
+      </el-button>
       <el-divider></el-divider>
-      <el-button link style="color: #ff4d4f" @click="handleQuitGroup">退出群聊</el-button>
+      <el-button link class="danger-btn" @click="handleQuitGroup">
+        {{ $t('contacts.delete') }}
+      </el-button>
     </div>
   </div>
 
@@ -69,11 +99,16 @@
     :destroy-on-close="true"
     :model-value="inviteDialogVisible"
     class="status_change"
-    title="邀请成员"
+    :title="$t('search.invite.title')"
     width="550"
   >
     <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
   </el-dialog>
+
+  <HistoryDialog 
+    :visible="historyDialogParam.showDialog" 
+    :title="$t('chat.toolbar.history')" 
+    @handleClose="toggleHistoryDialog" />
 </template>
 
 <script lang="ts" setup>
@@ -84,11 +119,17 @@
   import { IMessageType } from "@/constants";
 
   import defaultImg from "@/assets/avatar/default.jpg";
+  import { ref, effect, computed } from 'vue'
+  import Chats from "@/database/entity/Chats";
+  import HistoryDialog from "@/components/History/index.vue";
 
   const chatStore = useChatMainStore();
   const messageStore = useMessageStore();
 
-  const emit = defineEmits(["handleQuitGroup"]);
+  const emit = defineEmits([
+     "handleQuitGroup",
+     "handleClearGroupMessage"
+    ]);
 
   onMounted(() => {
     // init();
@@ -158,8 +199,61 @@
     messageStore.handleAddGroupMember(arr, true);
   };
 
-  const handleClearChat = () => {
+  //查找聊天信息
+  //查找聊天信息
+  const switchHistoryMessage = () => {
+    historyDialogParam.value.showDialog = true;
+  };
+  const historyDialogParam = ref({showDialog: false})
+  const toggleHistoryDialog = () => {
+    historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
+  }
+
+  //置顶聊天
+  //获取会话对象
+    const currentItem = computed(() => {
+      const { currentChat } = chatStore;
+      const chatId = currentChat?.chatId;
+      if (!chatId) return null;
+      return chatStore.getChatById(chatId);
+    });
+
+    const top = ref(currentItem.value?.isTop === 1);
+    // 监听 currentItem 变化，同步到本地 ref
+    watch(
+      () => top.value,
+      (newVal) => {
+        const item = currentItem.value || {isTop: 0};
+          item.isTop = newVal ? 0 : 1
+          chatStore.handlePinChat(item as Chats);
+      },
+    );
+
+    //消息免打扰
+    const messageMute = ref(currentItem.value?.isMute === 1);
+      // 监听 messageMute 变化，同步到 store
+      watch(
+        () => messageMute.value,
+        (newVal) => {
+          const item = currentItem.value|| {isMute: 0};
+          if (item) {
+            item.isMute = newVal ? 0 : 1;
+            chatStore.handleMuteChat(item as Chats);
+          }
+        }
+      );
+  const handleClearGroupMessage = () => {
     // 实现清空聊天记录的逻辑
+    ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
+      type: "warning"
+    })
+      .then(() => {
+        emit("handleClearGroupMessage");
+      })
+      .catch(() => {
+      });
   };
 
   const handleQuitGroup = () => {
@@ -247,7 +341,53 @@
 
   .group-footer {
     margin-top: 10px;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    width: 100%;
+
+    //普通样式
+    .ordinary-btn {
+       display: flex;
+       border: none;
+       background: transparent;
+       align-items: center;
+       justify-content: space-between; 
+       color: var(--main-text-color);
+       font-weight: 400;
+       width: 100%;
+       .left {
+          text-align: left;
+        }
+        .right {
+          text-align: right;
+        }
+        // 开关行（消息免打扰、置顶聊天）
+        .switch-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          .switch-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--main-text-color);
+          }
+          .switch-btn {
+            cursor: pointer;
+            --el-switch-button-size: 16px;
+            --el-switch-width: 36px;
+          }
+        }
+      }
+
+    .danger-btn {
+      display: block;
+      color: var(--main-red-color);
+      font-weight: 500;
+      text-align: center;
+    }
+
   }
 
   .member-avatar {

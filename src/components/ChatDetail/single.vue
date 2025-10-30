@@ -38,29 +38,41 @@
 
     <!-- 底部操作按钮 -->
     <div class="friend-actions">
+      <!-- 查找历史聊天记录 -->
       <button class="ordinary-btn"@click="switchHistoryMessage">
-        <span class="left">查找聊天内容</span>
+        <span class="left">{{ $t(`chat.toolbar.history`) }}</span>
         <span class="right"><el-icon><ArrowRight /></el-icon></span>
       </button>
       <el-divider />
+      <!-- 消息免打扰 -->
       <button class="ordinary-btn">
-        <span class="switch-label">消息免打扰</span>
+        <span class="switch-label">{{ $t(`settings.notification.label`) }}</span>
         <el-switch v-model="messageMute" class="switch-btn" />
       </button>
+      <!-- 置顶 -->
       <button class="ordinary-btn">
-        <span class="switch-label">置顶聊天</span>
+        <span class="switch-label">{{ $t(`chat.toolbar.pin`) }}</span>
         <el-switch v-model="top" class="switch-btn" />
       </button>
     </div>
     <el-divider />
     <div class="friend-actions">
-      <el-button class="danger-btn" link @click="handleClearFriendMessage"> 清空聊天记录</el-button>
+      <el-button 
+        class="danger-btn" 
+        link 
+        @click="handleClearFriendMessage">
+        {{ $t(`dialog.clearChatLog`) }}
+    </el-button>
       <el-divider />
-      <el-button class="danger-btn" link @click="handleDeleteContact"> 删除好友</el-button>
+      <el-button 
+       class="danger-btn"
+       link 
+       @click="handleDeleteContact">
+       {{ $t(`contacts.delete`) }}
+      </el-button>
     </div>
   </div>
   <HistoryDialog :visible="historyDialogParam.showDialog" title="聊天历史记录" @handleClose="toggleHistoryDialog" />
-
 
 </template>
 
@@ -70,12 +82,15 @@
   import { useChatMainStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
   import HistoryDialog from "@/components/History/index.vue";
-import Chats from "@/database/entity/Chats";
+  import Chats from "@/database/entity/Chats";
 
   const chatStore = useChatMainStore();
 
   // 事件定义
-  const emit = defineEmits(["handleDeleteContact", "handleClearFriendMessage"]);
+  const emit = defineEmits([
+    "handleDeleteContact", 
+    "handleClearFriendMessage"
+  ]);
 
   // 表单数据（预留：可用于备注编辑等扩展）
   const singleForm = ref({});
@@ -126,8 +141,6 @@ import Chats from "@/database/entity/Chats";
     });
 
     const top = ref(currentItem.value?.isTop === 1);
-    const messageMute = ref(currentItem.value?.isMute === 1);
-
     // 监听 currentItem 变化，同步到本地 ref
     watch(
       () => top.value,
@@ -138,7 +151,8 @@ import Chats from "@/database/entity/Chats";
       },
     );
 
-
+    //消息免打扰
+    const messageMute = ref(currentItem.value?.isMute === 1);
       // 监听 messageMute 变化，同步到 store
       watch(
         () => messageMute.value,

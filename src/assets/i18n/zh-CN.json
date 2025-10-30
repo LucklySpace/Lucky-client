@@ -45,6 +45,7 @@
       "contacts": "联系人",
       "contactInfo": "联系人信息",
       "count": "{count} 人",
+      "delete": "删除好友",
       "id": "ID",
       "idLabel": "ID: ",
       "nickname": "昵称",
@@ -137,6 +138,7 @@
       "toolbar": {
         "emoji": "表情",
         "screenshot": "屏幕截图",
+        "pin": "置顶聊天",
         "recorder": {
           "label": "屏幕录制",
           "start": "开始",
@@ -161,6 +163,13 @@
         },
         "file": "文件",
         "history": "历史消息"
+      },
+      "groupChat": {
+        "searchMembers": "搜索群成员",
+        "viewMore": "查看更多",
+        "collapse": "收起",
+        "groupName": "群聊名称",
+        "groupNotice": "群公告"
       },
       "input": {
         "placeholder": "输入消息",
@@ -305,7 +314,8 @@
       "notification": {
         "call": "语音和视频通话通知声音",
         "label": "通知声音",
-        "newMsg": "新消息通知声音"
+        "newMsg": "新消息通知声音",
+        "mute": "消息免打扰"
       },
       "profile": {
         "address": "地址:",

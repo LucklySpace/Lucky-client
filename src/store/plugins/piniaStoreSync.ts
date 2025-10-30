@@ -40,11 +40,10 @@ declare module "pinia" {
  */
 function createPiniaSync(globalOpts: SyncOptions = {}): PiniaPlugin {
   // debugger
-  const currentWindow = getCurrentWindow();
-  console.log('currentwindow', currentWindow)
-  const currentLabel = currentWindow?.label ;
+  // const currentWindow = getCurrentWindow();
+  // const currentLabel = currentWindow?.label ;
   // console.log(`[pinia-sync] 当前窗口 label: ${currentLabel}`);
-  // const currentLabel = getCurrentWindow().label;
+  const currentLabel = getCurrentWindow().label;
 
   return (ctx: PiniaPluginContext) => {
     const store = ctx.store;
