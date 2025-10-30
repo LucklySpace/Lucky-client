@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 src-tauri/bin/
 src-tauri/target/
+target/
 # src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe
