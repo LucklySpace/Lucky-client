@@ -46,7 +46,7 @@
       <el-divider />
       <!-- 消息免打扰 -->
       <button class="ordinary-btn">
-        <span class="switch-label">{{ $t(`settings.notification.label`) }}</span>
+        <span class="switch-label">{{ $t(`settings.notification.mute`) }}</span>
         <el-switch v-model="messageMute" class="switch-btn" />
       </button>
       <!-- 置顶 -->
