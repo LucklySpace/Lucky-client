@@ -1,5 +1,5 @@
 <template>
-  <div class="single-container">
+  <div class="single-container no-select">
     <!-- 好友信息区域 -->
     <div class="friend-info no-select">
       <el-row :gutter="20" align="middle">

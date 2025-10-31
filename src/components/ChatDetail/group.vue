@@ -1,5 +1,5 @@
 <template>
-  <div class="group-container">
+  <div class="group-container no-select">
     <!-- 搜索群成员 -->
     <div class="search-members">
       <el-input 
@@ -104,14 +104,10 @@
   >
     <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
   </el-dialog>
-<<<<<<< HEAD
-
   <HistoryDialog 
     :visible="historyDialogParam.showDialog" 
     :title="$t('chat.toolbar.history')" 
     @handleClose="toggleHistoryDialog" />
-=======
->>>>>>> B-repo/master
 </template>
 
 <script lang="ts" setup>
