@@ -51,16 +51,14 @@
         <div class="msg__bubble">
           <Suspense>
             <template #default>
-<<<<<<< HEAD
+
               <component 
                 :is="currentComponent" 
                 v-if="currentComponent" 
                 :key="message.messageId" 
                 :message="message" 
               />
-=======
-              <component :is="currentComponent" v-if="currentComponent" :key="message.messageId" :message="message" />
->>>>>>> B-repo/master
+
             </template>
           </Suspense>
         </div>
