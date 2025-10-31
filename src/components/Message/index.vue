@@ -51,7 +51,14 @@
         <div class="msg__bubble">
           <Suspense>
             <template #default>
-              <component :is="currentComponent" v-if="currentComponent" :key="message.messageId" :message="message" />
+
+              <component
+                :is="currentComponent"
+                v-if="currentComponent"
+                :key="message.messageId"
+                :message="message"
+              />
+
             </template>
           </Suspense>
         </div>
