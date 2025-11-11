@@ -115,8 +115,7 @@
 <script lang="ts" setup>
   import SelectContact from "@/components/SelectContact/index.vue";
   import { ElMessageBox } from "element-plus";
-  import { useChatMainStore } from "@/store/modules/chat";
-  import { useMessageStore } from "@/store/modules/message";
+  import { useChatStore } from "@/store/modules/chat";
   import { IMessageType } from "@/constants";
 
   import defaultImg from "@/assets/avatar/default.jpg";
@@ -124,8 +123,7 @@
   import Chats from "@/database/entity/Chats";
   import HistoryDialog from "@/components/History/index.vue";
 
-  const chatStore = useChatMainStore();
-  const messageStore = useMessageStore();
+  const chatMessageStore = useChatStore();
 
   const emit = defineEmits([
      "handleQuitGroup",
@@ -149,7 +147,7 @@
    * 获取群详情
    */
   const groupInfo = computed(() => {
-    const { currentChat } = chatStore;
+    const { currentChat } = chatMessageStore;
     if (currentChat?.chatType == IMessageType.GROUP_MESSAGE.code) {
       return { name: currentChat?.name, notice: "" };
     }
@@ -160,7 +158,7 @@
    * 获取群成员
    */
   const filteredMembers = computed(() => {
-    const { currentChatGroupMemberMap } = chatStore;
+    const { currentChatGroupMemberMap } = chatMessageStore;
     const searchTextValue = searchText.value.trim().toLowerCase();
     let members = Object.values(currentChatGroupMemberMap);
     // 根据搜索文本过滤群成员
@@ -197,7 +195,7 @@
   const handleAddGroupMember = (arr: any) => {
     if (arr && arr.length <= 0) return;
     // 实现添加成员的逻辑
-    messageStore.handleAddGroupMember(arr, true);
+    chatMessageStore.handleAddGroupMember(arr, true);
   };
 
   //查找聊天信息
@@ -213,10 +211,10 @@
   //置顶聊天
   //获取会话对象
     const currentItem = computed(() => {
-      const { currentChat } = chatStore;
+      const { currentChat } = chatMessageStore;
       const chatId = currentChat?.chatId;
       if (!chatId) return null;
-      return chatStore.getChatById(chatId);
+      return chatMessageStore.getChatById(chatId);
     });
 
     const top = ref(currentItem.value?.isTop === 1);
@@ -226,7 +224,7 @@
       (newVal) => {
         const item = currentItem.value || {isTop: 0};
           item.isTop = newVal ? 0 : 1
-          chatStore.handlePinChat(item as Chats);
+          chatMessageStore.handlePinChat(item as Chats);
       },
     );
 
@@ -239,7 +237,7 @@
           const item = currentItem.value|| {isMute: 0};
           if (item) {
             item.isMute = newVal ? 0 : 1;
-            chatStore.handleMuteChat(item as Chats);
+            chatMessageStore.handleMuteChat(item as Chats);
           }
         }
       );

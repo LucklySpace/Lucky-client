@@ -52,11 +52,10 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
   import GroupDetail from "@/components/ChatDetail/group.vue";
   import SingleDetail from "@/components/ChatDetail/single.vue";
-  import { useChatMainStore } from "@/store/modules/chat";
   import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
   import { IMessageType } from "@/constants";
   import { useDebounceFn } from "@vueuse/core";
-  import { useMessageStore } from "@/store/modules/message";
+  import { useChatStore } from "@/store/modules/chat";
   import { useFriendsStore } from "@/store/modules/friends";
 
   // ------------------------- Props & Emits -------------------------
@@ -79,8 +78,7 @@
   });
 
   // ------------------------- Stores / Computed -------------------------
-  const chatStore = useChatMainStore();
-  const msgStore = useMessageStore();
+  const chatStore = useChatStore();
   const friendStore = useFriendsStore();
   const isGroupMessage = computed(() => chatStore.getCurrentType === IMessageType.GROUP_MESSAGE.code);
   const isSingleMessage = computed(() => chatStore.getCurrentType === IMessageType.SINGLE_MESSAGE.code);
@@ -106,7 +104,7 @@
       previousScrollTop.value = el.scrollTop;
       isLoadingMore.value = true;
     }
-    msgStore.handleMoreMessage();
+    chatStore.handleMoreMessage();
   }
 
   // 删除会话对象
@@ -119,7 +117,7 @@
   // 清空会话消息
   async function handleClearMessage() {
     if (chatStore.currentChat) {
-      await msgStore.handleClearMessage(chatStore.currentChat);
+      await chatStore.handleClearMessage(chatStore.currentChat);
     }
   }
 

@@ -35,9 +35,9 @@
 <script lang="ts" setup>
   import { reactive } from "vue";
   import HistoryItem from "./item.vue";
-  import { useMessageStore } from "@/store/modules/message";
+  import { useChatStore } from "@/store/modules/chat";
 
-  const messageStore = useMessageStore();
+  const chatMessageStore = useChatStore();
 
   const emit = defineEmits(["handleClose"]);
 
@@ -94,7 +94,7 @@
   };
 
   const getList = async () => {
-    let res: any = await messageStore.handleHistoryMessage(
+    let res: any = await chatMessageStore.handleHistoryMessage(
       {
         page: pageInfo.currentPage,
         size: pageInfo.pageSize

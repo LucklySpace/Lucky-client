@@ -20,7 +20,7 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-if="!chatStore.loading && totalCount === 0" class="vl-empty">
+    <div v-if="!chatMessageStore.loading && totalCount === 0" class="vl-empty">
       <el-empty />
     </div>
   </div>
@@ -29,32 +29,30 @@
 <script lang="ts" setup>
   import { computed, ref } from "vue";
   import ItemView from "./ItemView/index.vue";
-  import { useChatMainStore } from "@/store/modules/chat";
-  import { useMessageStore } from "@/store/modules/message";
+  import { useChatStore } from "@/store/modules/chat";
   import type Chats from "@/database/entity/Chats";
   import { useWindowSize } from "@vueuse/core";
   import { ElMessageBox } from "element-plus";
   import { useMediaCacheStore } from "@/store/modules/media";
 
-  const chatStore = useChatMainStore();
-  const messageStore = useMessageStore();
+  const chatMessageStore = useChatStore();
   const mediaStore = useMediaCacheStore();
 
   const { height: windowHeight } = useWindowSize();
   const boxRef = ref<HTMLElement | null>(null);
-  const selectedId = ref<string | number | null>((chatStore as any).currentChat?.chatId ?? null);
+  const selectedId = ref<string | number | null>((chatMessageStore as any).currentChat?.chatId ?? null);
 
   const rowHeight = 60;
   const offset = ref(0);
   const offsetIndex = ref(0);
   let rafId: number | null = null;
 
-  const totalCount = computed(() => chatStore.chatList.length ?? 0);
-  const boxHeight = computed(() => (chatStore.chatList.length ?? 0) * rowHeight);
+  const totalCount = computed(() => chatMessageStore.chatList.length ?? 0);
+  const boxHeight = computed(() => (chatMessageStore.chatList.length ?? 0) * rowHeight);
 
   // 注意：保持 item 的引用不被 clone，slice 返回的仍是原始对象引用，子组件可以响应更新
   const offsetData = computed(() => {
-    const data = chatStore.chatList || [];
+    const data = chatMessageStore.chatList || [];
     if (!data.length) return [] as { item: Chats; absIndex: number }[];
     const visibleCount = Math.ceil(windowHeight.value / rowHeight) + 1;
     const startIndex = Math.floor(offset.value / rowHeight);
@@ -72,16 +70,16 @@
 
   const handleChooseChat = async (item: Chats) => {
     selectedId.value = item.chatId;
-    messageStore.handleReset();
+    chatMessageStore.handleResetMessage();
     await mediaStore.initStorage(item.toId);
-    await chatStore.handleChangeCurrentChat(item);
-    await messageStore.handleGetMessageList(item);
-    await chatStore.handleUpdateReadStatus(item);
+    await chatMessageStore.handleChangeCurrentChat(item);
+    await chatMessageStore.handleGetMessageList(item);
+    await chatMessageStore.handleUpdateReadStatus(item);
   };
 
   const isActive = (item: Chats) => {
     if (!item) return false;
-    const storeCur = (chatStore as any).currentChat?.chatId ?? null;
+    const storeCur = (chatMessageStore as any).currentChat?.chatId ?? null;
     if (storeCur != null) return item.chatId === storeCur;
     return item.chatId === selectedId.value;
   };
@@ -90,7 +88,7 @@
   const getMenuConfig = (item: Chats) => {
     // 获取当前item
     const currentItem = 
-    computed(() => chatStore.getChatById(item.chatId) ?? item);
+    computed(() => chatMessageStore.getChatById(item.chatId) ?? item);
 
     const options = computed(() => [
       { label: currentItem.value?.isTop === 1 ? "取消置顶" : "置顶会话", value: "pin" },
@@ -106,13 +104,13 @@
             confirmButtonText: "确认",
             cancelButtonText: "取消"
           });
-          await chatStore.handleDeleteChat(currentItem.value ?? item);
+          await chatMessageStore.handleDeleteChat(currentItem.value ?? item);
         }
         if (action === "pin") {
-          await chatStore.handlePinChat(currentItem.value ?? item);
+          await chatMessageStore.handlePinChat(currentItem.value ?? item);
         }
         if (action === "mute") {
-          await chatStore.handleMuteChat(currentItem.value ?? item);
+          await chatMessageStore.handleMuteChat(currentItem.value ?? item);
         }
       } catch {
       }

@@ -5,9 +5,9 @@
 </template>
 
 <script setup>
-  import { useChatMainStore } from "@/store/modules/chat";
+  import { useChatStore } from "@/store/modules/chat";
 
-  const chatStore = useChatMainStore();
+  const chatStore = useChatStore();
 
   const name = computed(() => chatStore.getCurrentName);
 </script>

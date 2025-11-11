@@ -18,12 +18,8 @@
         <el-row style="height: 30px">
           <el-col :span="18"></el-col>
           <el-col :span="6">
-            <el-button
-              v-if="chatStore.getShowDetailBtn"
-              class="control-el-button"
-              link
-              @click="chatStore.handleChatDetail"
-            >
+            <el-button v-if="chatStore.getShowDetailBtn" class="control-el-button" link
+              @click="chatStore.handleChatDetail">
               <i class="iconfont icon-sandian" style="font-size: 25px"></i>
             </el-button>
           </el-col>
@@ -34,38 +30,38 @@
 </template>
 
 <script lang="ts" setup>
-  import Search from "@/components/Search/index.vue";
-  import System from "@/components/System/index.vue";
-  import { useChatMainStore } from "@/store/modules/chat";
-  import Name from "./name/index.vue";
-  import { useSystemClose } from "@/hooks/useSystem";
+import Search from "@/components/Search/index.vue";
+import System from "@/components/System/index.vue";
+import { useChatStore } from "@/store/modules/chat";
+import Name from "./name/index.vue";
+import { useSystemClose } from "@/hooks/useSystem";
 
-  const { currPlatform } = useSystemClose();
-  const chatStore = useChatMainStore();
+const { currPlatform } = useSystemClose();
+const chatStore = useChatStore();
 </script>
 
 <style lang="scss" scoped>
-  .title {
-    color: #909399;
-    font-size: 16px;
-    line-height: 40px;
-  }
+.title {
+  color: #909399;
+  font-size: 16px;
+  line-height: 40px;
+}
 
-  .chat-header {
-    height: 60px;
-    width: 240px;
-    float: left;
-  }
+.chat-header {
+  height: 60px;
+  width: 240px;
+  float: left;
+}
 
-  .chat-header-name {
-    width: 100%;
-  }
+.chat-header-name {
+  width: 100%;
+}
 
-  .el-header {
-    line-height: unset;
-    height: 60px;
-    padding: 0;
-    border-bottom: 1px solid var(--header-border-bottom-color);
-    background-color: var(--header-bg-color);
-  }
+.el-header {
+  line-height: unset;
+  height: 60px;
+  padding: 0;
+  border-bottom: 1px solid var(--header-border-bottom-color);
+  background-color: var(--header-bg-color);
+}
 </style>

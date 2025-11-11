@@ -1,9 +1,9 @@
-import { defineStore } from "pinia";
+import { defineStore, storeToRefs } from "pinia";
 import { appCacheDir, join } from "@tauri-apps/api/path";
 import { exists, mkdir, writeFile } from "@tauri-apps/plugin-fs";
 import { Store as TauriStore } from "@tauri-apps/plugin-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { markRaw } from "vue";
+import { markRaw, ref, computed } from "vue";
 import { CacheEnum, StoresEnum } from "@/constants";
 
 /**
@@ -51,50 +51,47 @@ async function ensureCacheDir(): Promise<string> {
   return cacheDir;
 }
 
-export const useMediaCacheStore = defineStore(StoresEnum.MEDIA_CACHE, {
-  state: (): State => ({
-    mediaMap: {},
-    storage: null,
-    targetId: null
-  }),
+export const useMediaCacheStore = defineStore(
+  StoresEnum.MEDIA_CACHE,
+  () => {
+    // state
+    const mediaMap = ref<Record<string, string>>({});
+    const storage = ref<TauriStore | null>(null);
+    const targetId = ref<string | null>(null);
 
-  getters: {
-    // 获取已缓存地址，若未缓存返回空字符串
-    getMedia: state => (key: string) => state.mediaMap[key] ?? "",
+    // getters
+    const getMedia = computed(() => (key: string) => mediaMap.value[key] ?? "");
+    const getId = computed(() => () => targetId.value);
 
-    getId: state => () => state.targetId
-  },
-
-  actions: {
     /**
      * 初始化用户存储（优先 load）
      * - id: 用户 id，用于区分不同用户的缓存文件
      */
-    async initStorage(id: string) {
+    const initStorage = async (id: string) => {
       const idHash = safeBase64(id);
       const name = `./media/media-cache-${idHash}.dat`;
 
       try {
         // 尽量使用 load，若不存在 plugin 会返回一个新 store
         const store = await TauriStore.load(name);
-        this.storage = markRaw(store);
-        this.targetId = id;
+        storage.value = markRaw(store);
+        targetId.value = id;
 
         // 尝试从存储读取 mediaMap（兼容旧版本：可能直接保存了 entries）
         try {
-          const saved = (await this.storage.get("mediaMap")) as Record<string, string> | undefined;
+          const saved = (await storage.value.get("mediaMap")) as Record<string, string> | undefined;
           if (saved && typeof saved === "object") {
-            this.mediaMap = { ...saved };
+            mediaMap.value = { ...saved };
           } else {
             // 兼容读取全部 entries（如果之前使用 entries 存储）
-            const entries = await this.storage.entries();
-            this.mediaMap = entries
+            const entries = await storage.value.entries();
+            mediaMap.value = entries
               .filter(([_, v]) => typeof v === "string")
               .reduce((map, [k, v]) => ({ ...map, [k]: v as string }), {});
           }
         } catch (e) {
           // 读取失败则保留空 map
-          this.mediaMap = {};
+          mediaMap.value = {};
           if (process.env.NODE_ENV !== "production") {
             // eslint-disable-next-line no-console
             console.warn("[MediaCacheStore] load mediaMap fail:", e);
@@ -102,41 +99,41 @@ export const useMediaCacheStore = defineStore(StoresEnum.MEDIA_CACHE, {
         }
       } catch (e) {
         // store 加载失败（极少情况），保持降级策略
-        this.storage = null;
-        this.targetId = id;
-        this.mediaMap = {};
+        storage.value = null;
+        targetId.value = id;
+        mediaMap.value = {};
         if (process.env.NODE_ENV !== "production") {
           // eslint-disable-next-line no-console
           console.error("[MediaCacheStore] initStorage failed:", e);
         }
       }
-    },
+    };
 
     /**
      * 持久化 mediaMap（可传单个 key 来只写入单条）
      */
-    async persist(key?: string) {
-      if (!this.storage) return;
+    const persist = async (key?: string) => {
+      if (!storage.value) return;
       try {
         if (key) {
-          await this.storage.set(key, this.mediaMap[key]);
+          await storage.value.set(key, mediaMap.value[key]);
         } else {
-          await this.storage.set("mediaMap", this.mediaMap);
+          await storage.value.set("mediaMap", mediaMap.value);
         }
-        await this.storage.save();
+        await storage.value.save();
       } catch (e) {
         if (process.env.NODE_ENV !== "production") {
           // eslint-disable-next-line no-console
           console.error("[MediaCacheStore] persist failed:", e);
         }
       }
-    },
+    };
 
     /**
      * 将远程 URL 缓存到本地并返回可在前端使用的路径（convertFileSrc -> file://）
      * - 若文件已存在则直接返回
      */
-    async cacheUrl(url: string): Promise<string> {
+    const cacheUrl = async (url: string): Promise<string> => {
       try {
         const cacheDir = await ensureCacheDir();
 
@@ -177,25 +174,25 @@ export const useMediaCacheStore = defineStore(StoresEnum.MEDIA_CACHE, {
         }
         return url;
       }
-    },
+    };
 
     /**
      * 加载并缓存资源（key 通常是消息 id 或 url 的 hash）
      * - 若已存在则直接返回
      */
-    async loadMedia(key: string, url: string) {
+    const loadMedia = async (key: string, url: string) => {
       // 已缓存或正在缓存时直接返回
-      const existing = this.mediaMap[key];
+      const existing = mediaMap.value[key];
       if (existing) return;
 
       // 先标记占位（避免短时间内并发触发 UI 闪烁）
-      this.mediaMap[key] = "";
+      mediaMap.value[key] = "";
       // 并发去重：如果其他地方也调用 loadMedia，先检查 inflightPromises（以 key 为单位）
       if (inflightPromises.has(key)) {
         try {
           const path = await inflightPromises.get(key)!;
-          this.mediaMap[key] = path;
-          await this.persist(key);
+          mediaMap.value[key] = path;
+          await persist(key);
           return;
         } catch {
           // ignore and proceed to try
@@ -205,18 +202,18 @@ export const useMediaCacheStore = defineStore(StoresEnum.MEDIA_CACHE, {
       // 将下载 Promise 存入 inflightPromises（用 key 作为标识）
       const promise = (async () => {
         try {
-          const local = await this.cacheUrl(url);
-          this.mediaMap[key] = local || url;
+          const local = await cacheUrl(url);
+          mediaMap.value[key] = local || url;
         } catch {
-          this.mediaMap[key] = url;
+          mediaMap.value[key] = url;
         } finally {
           try {
-            await this.persist(key);
+            await persist(key);
           } catch {
             /* ignore persist errors */
           }
         }
-        return this.mediaMap[key];
+        return mediaMap.value[key];
       })();
 
       inflightPromises.set(key, promise);
@@ -226,39 +223,60 @@ export const useMediaCacheStore = defineStore(StoresEnum.MEDIA_CACHE, {
       } finally {
         inflightPromises.delete(key);
       }
-    },
+    };
 
     /**
      * 清除单条缓存映射（不删除本地文件）
      */
-    removeKey(key: string) {
-      if (this.mediaMap[key]) {
-        delete this.mediaMap[key];
-        this.persist(); // 异步持久化（不 await）
+    const removeKey = (key: string) => {
+      if (mediaMap.value[key]) {
+        delete mediaMap.value[key];
+        persist(); // 异步持久化（不 await）
       }
-    },
+    };
 
     /**
      * 清空内存映射与持久化存储（不会删除本地缓存文件）
      */
-    async clearAll() {
-      this.mediaMap = {};
-      if (this.storage) {
-        await this.storage.set("mediaMap", {});
-        await this.storage.save();
+    const clearAll = async () => {
+      mediaMap.value = {};
+      if (storage.value) {
+        await storage.value.set("mediaMap", {});
+        await storage.value.save();
       }
-    }
-  },
+    };
 
-  // 只把 mediaMap 持久化到 sessionStorage（你已有的策略）
-  persist: [
-    {
-      key: `${StoresEnum.MEDIA_CACHE}_session`,
-      paths: ["mediaMap"],
-      storage: sessionStorage
-    }
-  ]
-});
+    // 返回 store 实例的内容
+    return {
+      // state
+      mediaMap,
+      storage,
+      targetId,
+
+      // getters
+      getMedia,
+      getId,
+
+      // actions
+      initStorage,
+      persist,
+      cacheUrl,
+      loadMedia,
+      removeKey,
+      clearAll
+    };
+  },
+  {
+    // 只把 mediaMap 持久化到 sessionStorage（你已有的策略）
+    persist: [
+      {
+        key: `${StoresEnum.MEDIA_CACHE}_session`,
+        paths: ["mediaMap"],
+        storage: sessionStorage
+      }
+    ]
+  }
+);
 
 // type MediaType = 'image' | 'video'
 

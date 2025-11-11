@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, Ref, shallowReactive } from "vue";
 import { useLogger } from "./useLogger";
-import { useChatMainStore } from "@/store/modules/chat";
+import { useChatStore } from "@/store/modules/chat";
 import { IMessageType } from "@/constants";
 
 // 工具函数
@@ -20,7 +20,7 @@ export default function useAt(inputContentRef: Ref<HTMLElement | null>) {
   // 日志
   const log = useLogger();
 
-  const chatStore = useChatMainStore();
+  const chatMessageStore = useChatStore();
 
   const atDialogParam = shallowReactive<AtDialog>({
     showDialog: false,
@@ -155,7 +155,7 @@ export default function useAt(inputContentRef: Ref<HTMLElement | null>) {
     if (now - lastKeyup < 50) return; // 50ms 节流
     lastKeyup = now;
     try {
-      if (showAt() && !getAtUser() && chatStore.getCurrentType == IMessageType.GROUP_MESSAGE.code) {
+      if (showAt() && !getAtUser() && chatMessageStore.getCurrentType == IMessageType.GROUP_MESSAGE.code) {
         const node = getRangeNode();
         const endIndex = getCursorIndex();
         atDialogParam.node = node;

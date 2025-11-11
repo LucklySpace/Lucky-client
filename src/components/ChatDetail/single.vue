@@ -79,12 +79,12 @@
 <script lang="ts" setup>
   import { computed, ref, watch } from "vue";
   import { ElMessageBox } from "element-plus";
-  import { useChatMainStore } from "@/store/modules/chat";
+  import { useChatStore } from "@/store/modules/chat";
   import defaultImg from "@/assets/avatar/default.jpg";
   import HistoryDialog from "@/components/History/index.vue";
   import Chats from "@/database/entity/Chats";
 
-  const chatStore = useChatMainStore();
+  const chatStore = useChatStore();
 
   // 事件定义
   const emit = defineEmits([

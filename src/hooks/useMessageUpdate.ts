@@ -1,9 +1,7 @@
 import { emitTo, listen } from "@tauri-apps/api/event";
-import { useChatMainStore } from "@/store/modules/chat";
-import { useMessageStore } from "@/store/modules/message";
+import { useChatStore } from "@/store/modules/chat";
 
-const chatStore = useChatMainStore();
-const messageStore = useMessageStore();
+const chatMessageStore = useChatStore();
 
 
 export function useListenWindowMessage() {
@@ -24,24 +22,24 @@ export function useListenWindowMessage() {
   const messageUpdate = async (item: any) => {
 
     // 重置消息store
-    messageStore.handleReset();
+    chatMessageStore.handleResetMessage();
 
     // 更新当前消息
-    await chatStore.handleChangeCurrentChat(item);
+    await chatMessageStore.handleChangeCurrentChat(item);
 
     // 更新消息列表
-    messageStore.handleGetMessageList(item);
+    chatMessageStore.handleGetMessageList(item);
 
     // 更新已读状态
-    chatStore.handleUpdateReadStatus(item);
+    chatMessageStore.handleUpdateReadStatus(item);
 
     // 获取消息总数
-    messageStore.handleGetMessageCount();
+    chatMessageStore.handleGetMessageCount();
 
     // 更新预览窗口url
-    messageStore.handleSearchMessageUrl(item);
+    chatMessageStore.handleSearchMessageUrl(item);
 
-    chatStore.handleJumpToChat();
+    chatMessageStore.handleJumpToChat();
   };
 
   onBeforeMount(() => {

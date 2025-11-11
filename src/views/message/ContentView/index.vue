@@ -1,12 +1,12 @@
 <template>
-  <div v-if="chatStore.currentChat" ref="containerRef" class="message-container">
+  <div v-if="chatMessageStore.currentChat" ref="containerRef" class="message-container">
     <!-- 上半区：消息列表（EffectsManager 填满此区域） -->
     <div ref="topRef" class="message-content">
       <MessageView
-        v-show="chatStore.currentChat"
-        :chat="chatStore.currentChat"
-        :count="msgStore.remainingQuantity"
-        :data="msgStore.messageList"
+        v-show="chatMessageStore.currentChat"
+        :chat="chatMessageStore.currentChat"
+        :count="chatMessageStore.remainingQuantity"
+        :data="chatMessageStore.messageList"
         :rowHeight="64"
       />
 
@@ -19,7 +19,7 @@
 
     <!-- 下半区：输入框区域 -->
     <div ref="bottomRef" class="message-input">
-      <InputView v-show="chatStore.currentChat" @trigger="onTrigger" />
+      <InputView v-show="chatMessageStore.currentChat" @trigger="onTrigger" />
     </div>
   </div>
 </template>
@@ -28,13 +28,12 @@
   import { onBeforeUnmount, ref } from "vue";
   import MessageView from "./MessageView/index.vue";
   import InputView from "./InputView/index.vue";
-  import { useMessageStore } from "@/store/modules/message";
-  import { useChatMainStore } from "@/store/modules/chat";
+  import { useChatStore } from "@/store/modules/chat";
   import EffectsManager from "@/components/EffectsManager/index.vue";
 
   // stores
-  const chatStore = useChatMainStore();
-  const msgStore = useMessageStore();
+  const chatMessageStore = useChatStore();
+
 
   // DOM refs
   const containerRef = ref<HTMLElement | null>(null);

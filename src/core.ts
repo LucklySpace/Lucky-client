@@ -27,8 +27,7 @@ import api from "@/api/index";
 import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
 //import loadWorker from "@/worker/LoadWorker";
 // 状态管理和数据存储
-import { useChatMainStore } from "@/store/modules/chat";
-import { useMessageStore } from "@/store/modules/message";
+import { useChatStore } from "@/store/modules/chat";
 import { useUserStore } from "@/store/modules/user";
 import { useCallStore } from "@/store/modules/call";
 import { useSettingStore } from "@/store/modules/setting";
@@ -45,9 +44,8 @@ const { chatsMapper, singleMessageMapper, groupMessageMapper, friendsMapper } = 
 
 // 状态管理实例
 const callStore = useCallStore();
-const chatStore = useChatMainStore();
+const chatMessageStore = useChatStore();
 const userStore = useUserStore();
-const messageStore = useMessageStore();
 const settingStore = useSettingStore();
 const friendStore = useFriendsStore();
 
@@ -139,7 +137,7 @@ class MainManager {
   async initChatStore() {
     const t0 = performance.now();
     try {
-      await chatStore.handleInit();
+      await chatMessageStore.handleInitChat();
       log.prettySuccess("user", "本地会话初始化成功");
     } catch (err) {
       log.prettyError("user", "本地会话初始化失败", err);
@@ -152,7 +150,7 @@ class MainManager {
 
   initListen() {
     globalEventBus.on("message:recall", payload => {
-      messageStore.handleSendRecallMessage(payload);
+      chatMessageStore.handleSendRecallMessage(payload);
     });
   }
 
@@ -362,17 +360,17 @@ class MainManager {
         }
 
         const list: any = await chatsMapper.selectList();
-        chatStore.handleSortChatList(list);
+        chatMessageStore.handleSortChatList(list);
         log.prettyInfo("core", "会话数据批量更新成功");
       } else {
         const list: any = await chatsMapper.selectList();
-        chatStore.handleSortChatList(list);
+        chatMessageStore.handleSortChatList(list);
         log.prettyInfo("core", "会话无新数据，使用本地列表排序");
       }
     } catch (err) {
       log.prettyError("core", "更新会话数据失败", err);
       const list: any = await chatsMapper.selectList();
-      chatStore.handleSortChatList(list);
+      chatMessageStore.handleSortChatList(list);
     } finally {
       const t1 = performance.now();
       log.prettyInfo("core", `updateChatData 耗时 ${Math.round(t1 - t0)} ms`);
@@ -478,7 +476,7 @@ class MainManager {
         },
         trayEnter: async ({ position }) => {
           // 托盘悬浮：显示通知窗口（如果有未读消息）
-          const chatCount = chatStore.getHaveMessageChat.length;
+          const chatCount = chatMessageStore.getHaveMessageChat.length;
           if (chatCount > 0) {
             showOrCreateNotifyWindow(chatCount, position);
             // 监听通知窗口点击
@@ -486,19 +484,19 @@ class MainManager {
               "notify-win-click",
               async ({ payload }: any) => {
                 if (!payload?.chatId) return;
-                const item = chatStore.getChatById(payload.chatId);
+                const item = chatMessageStore.getChatById(payload.chatId);
                 if (!item) return;
                 log.prettyInfo("tray", `通知窗口点击：切换到会话 ${item.id}`);
                 try {
                   // 切换路由
                   router.push("/message");
                   // 并行执行关键操作
-                  await Promise.all([chatStore.handleChangeCurrentChat(item), messageStore.handleReset()]);
+                  await Promise.all([chatMessageStore.handleChangeCurrentChat(item), chatMessageStore.handleResetMessage()]);
                   // 优先显示主窗口
                   await ShowMainWindow();
                   await Promise.all([
-                    messageStore.handleGetMessageList(item),
-                    chatStore.handleUpdateReadStatus(item),
+                    chatMessageStore.handleGetMessageList(item),
+                    chatMessageStore.handleUpdateReadStatus(item),
                     hideNotifyWindow()
                   ]);
                 } catch (e) {
@@ -535,7 +533,7 @@ class MainManager {
       if (code === IMessageType.SINGLE_MESSAGE.code || code === IMessageType.GROUP_MESSAGE.code) {
         // 处理消息
         if (data?.actionType == 1) {
-          messageStore.handleReCallMessage(data);
+          chatMessageStore.handleReCallMessage(data);
         } else {
           // 处理消息
           const message = IMessage.fromPlainByType(data);
@@ -553,9 +551,9 @@ class MainManager {
           }
 
           // 更新或创建会话
-          chatStore.handleCreateOrUpdateChat(message, id);
+          chatMessageStore.handleCreateOrUpdateChat(message, id);
           // 插入新消息
-          messageStore.handleCreateMessage(id, message, code);
+          chatMessageStore.handleCreateMessage(id, message, code);
         }
       }
       if (code === IMessageType.VIDEO_MESSAGE.code) {

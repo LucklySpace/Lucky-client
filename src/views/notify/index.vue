@@ -38,12 +38,12 @@
 
 <script lang="ts" setup>
   import { StoresEnum } from "@/constants/index";
-  import { useChatMainStore } from "@/store/modules/chat";
+  import { useChatStore } from "@/store/modules/chat";
   import { hideNotifyWindow } from "@/windows/notify";
   import { useTauriEvent } from "@/hooks/useTauriEvent";
   import Chats from "@/database/entity/Chats";
 
-  const chatStore = useChatMainStore();
+  const chatStore = useChatStore();
 
   const { sendTo } = useTauriEvent();
 

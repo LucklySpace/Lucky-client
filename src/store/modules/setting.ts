@@ -1,6 +1,7 @@
 import { StoresEnum } from "@/constants";
 import { tauriStorage } from "@/store/plugins/TauriStorage";
 import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
 /**
  * 单个快捷键配置接口
@@ -41,61 +42,72 @@ interface Flie {
   path: string;
 }
 
-interface State {
+// 使用 setup 语法重构 Pinia store
+export const useSettingStore = defineStore(StoresEnum.SETTING, () => {
   // 语言
-  language: string;
+  const language = ref<string>("en-US");
   // 主题
-  theme: "light" | "dark" | "auto";
+  const theme = ref<"light" | "dark" | "auto">("auto");
   // 快捷键
-  shortcuts: Shortcut[];
-  // 通知声音
-  notification: {
-    message: boolean;
-    media: boolean;
-  };
-  // 水印
-  watermark: Watermark;
-  // 文件
-  file: Flie;
-  // 更新
-  update: Upadate;
-  // 主窗口关闭
-  close: "ask" | "minimize" | "exit";
-}
+  const shortcuts = ref<Shortcut[]>([]);
 
-export const useSettingStore = defineStore(StoresEnum.SETTING, {
-  state: (): State => ({
-    language: "en-US",
-    theme: "auto",
-    shortcuts: [],
-    notification: {
-      message: true,
-      media: true
-    },
-    watermark: {
-      enable: false,
-      text: ""
-    },
-    file: {
-      enable: false,
-      readonly: false,
-      path: ""
-    },
-    update: {
-      enable: false
-    },
-    close: "ask"
-  }),
-  getters: {
-    // 判断是否暗黑模式
-    getIsDark: state => (): boolean => state.theme == "dark",
-    // 根据名称获取快捷键
-    getShortcut:
-      state =>
-        (name: string): string | undefined =>
-          state.shortcuts.find(s => s.name === name)?.combination
-  },
-  actions: {},
+  // 通知
+  const notification = ref({
+    message: true,
+    media: true
+  });
+
+  // 水印
+  const watermark = ref<Watermark>({
+    enable: false,
+    text: ""
+  });
+
+  // 文件下载
+  const file = ref<Flie>({
+    enable: false,
+    readonly: false,
+    path: ""
+  });
+
+  // 应用更新
+  const update = ref<Upadate>({
+    enable: false
+  });
+
+  // 关闭方式
+  const close = ref<"ask" | "minimize" | "exit">("ask");
+
+  // Getters
+  /**
+   * 判断是否暗黑模式
+   */
+  const getIsDark = computed((): boolean => theme.value === "dark");
+
+  /**
+   * 根据名称获取快捷键
+   */
+  const getShortcut = computed(() => (name: string): string | undefined =>
+    shortcuts.value.find(s => s.name === name)?.combination
+  );
+
+  // 导出状态和方法
+  return {
+    // 状态
+    language,
+    theme,
+    shortcuts,
+    notification,
+    watermark,
+    file,
+    update,
+    close,
+
+    // Getters
+    getIsDark,
+    getShortcut
+  };
+}, {
   persist: [
     {
       key: `${StoresEnum.SETTING}_store`,

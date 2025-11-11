@@ -7,11 +7,11 @@ import {
   ShowCallWindow,
   waitForWindowReady
 } from "@/windows/call";
-import { useChatMainStore } from "@/store/modules/chat";
+import { useChatStore } from "@/store/modules/chat";
 import api from "@/api";
 import { LayoutMode, Participant } from "@/types/env";
 
-const chatStore = useChatMainStore();
+const chatStore = useChatStore();
 const logger = useLogger();
 
 interface State {
