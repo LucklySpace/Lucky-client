@@ -5,10 +5,10 @@
 
     <!-- 顶部：头像 -->
     <div class="avatar-wrap">
-      <el-avatar ref="avatarRef" :class="avatarClass" :src="userStore.avatar" shape="square"
-        @click="toggleAvatarPopover" />
-      <el-popover ref="avatarPopoverRef" :virtual-ref="avatarRef" placement="right" trigger="click" virtual-triggering
-        width="260">
+      <span ref="avatarRef" shape="square" class="el-avatar" :class="avatarClass" @click="toggleAvatarPopover">
+        <Avatar :avatar="userStore.avatar" :name="userStore.name" :width="44" :borderRadius="8" backgroundColor="white" color="#409eff"></Avatar>
+      </span>
+      <el-popover ref="avatarPopoverRef" :virtual-ref="avatarRef" placement="right" trigger="click" virtual-triggering width="260">
         <UserPopover :contact="userStore.userInfo" :is-me="true" />
       </el-popover>
     </div>
@@ -52,6 +52,7 @@
 import { computed, defineAsyncComponent, ref, unref } from "vue";
 import { ElMessage } from "element-plus";
 import System from "@/components/System/index.vue";
+import Avatar from "@/components/Avatar/index.vue";
 import { useUserStore } from "@/store/modules/user";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";

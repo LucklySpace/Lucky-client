@@ -78,6 +78,7 @@
       "enterGroup": "进入群聊",
       "viewMembers": "查看成员",
       "leaveGroup": "退出群",
+      "noAnnouncement": "暂无公告",
       "noSelectionOrEmpty": "未选择群聊或群信息为空",
       "type": {
         "default": "群组",
@@ -121,6 +122,10 @@
     },
     "errors": {
       "email": "请输入有效的邮箱地址。",
+      "remark": {
+        "empty": "备注不能为空",
+        "tooLong": "备注长度不能超过 20 个字符"
+      },
       "network": "网络错误，请重试。",
       "required": "{field}为必填项。"
     },
@@ -140,6 +145,7 @@
         "emoji": "表情",
         "screenshot": "屏幕截图",
         "pin": "置顶聊天",
+        "mute": "消息免打扰",
         "recorder": {
           "label": "屏幕录制",
           "start": "开始",
@@ -166,6 +172,7 @@
         "history": "历史消息"
       },
       "groupChat": {
+        "members": "群成员",
         "searchMembers": "搜索群成员",
         "viewMore": "查看更多",
         "collapse": "收起",
@@ -315,8 +322,7 @@
       "notification": {
         "call": "语音和视频通话通知声音",
         "label": "通知声音",
-        "newMsg": "新消息通知声音",
-        "mute": "消息免打扰"
+        "newMsg": "新消息通知声音"
       },
       "profile": {
         "address": "地址:",

@@ -133,6 +133,9 @@ export enum CacheEnum {
   VIDEO_CACHE = "video_cache"
 }
 
+/** 备注最大长度 */
+export const MAX_REMARK_LEN = 20;
+
 /** 文件类型枚举 */
 export enum FileType {
   Video = "video",

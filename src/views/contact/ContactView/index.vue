@@ -28,14 +28,17 @@
         <!-- 默认插槽：接收 item,index -->
         <template #default="{ item }">
           <li class="item" @click="onItemClick(item, key)">
-            <el-avatar v-if="item.avatar" :aria-hidden="false" :size="64" :src="item.avatar" class="av">
-              <template #default>
-                <div class="avatar-fallback">{{ initials(item.name) }}</div>
-              </template>
-            </el-avatar>
-
             <div class="txt no-select">
-              <div class="name">{{ item.name ?? item.groupName }}</div>
+              <div class="avatar">
+                <Avatar
+                  :avatar="item.avatar || ''"
+                  :name="displayName(item, key)"
+                  :width="36"
+                  :borderRadius="6"
+                  :backgroundColor="key === 'groups' ? '#ffb36b' : undefined"
+                />
+              </div>
+              <div class="name">{{ safeName(displayName(item, key)) }}</div>
               <div v-if="item.message" class="message">{{ item.message }}</div>
               <div v-if="item.memberCount" class="sub">{{ $t("contacts.count", { count: item.memberCount }) }}</div>
             </div>
@@ -54,8 +57,20 @@
 <script lang="ts" setup>
   import { computed, h, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
   import { useFriendsStore } from "@/store/modules/friends";
+  import { useChatStore } from "@/store/modules/chat";
   import { useI18n } from "vue-i18n";
+  import Avatar from "@/components/Avatar/index.vue";
+  import { IMessageType } from "@/constants";
 
+  const chatStore = useChatStore();
+
+  const groupInfo = computed(() => {
+    const { currentChat } = chatStore;
+    if (currentChat?.chatType == IMessageType.GROUP_MESSAGE.code) {
+      return { name: currentChat?.name, notification: currentChat?.notification };
+    }
+    return {};
+  });
   /**
    * keys + 联合类型 Key
    */
@@ -84,6 +99,29 @@
       contacts: store.contacts?.length ?? 0
     }
   }));
+
+  const safeName = (name: string) => {
+    const newName = name?.trim() ?? "未知用户";
+
+    // 限制名称长度，超出显示省略号
+    const maxLength = 6;
+    return newName.length > maxLength ? name.substring(0, maxLength) + "..." : newName;
+  };
+
+  // 群项显示名：优先取 chats.name，其次回退 item.name/groupName
+  function getGroupName(item: any): string {
+    const gid = item?.groupId || item?.id;
+    if (gid) {
+      const c = chatStore.chatList.find(c => String(c.chatId) === String(gid));
+      if (c?.name) return c.name;
+    }
+    return item?.name ?? item?.groupName ?? "";
+  }
+
+  // 统一的显示名：分组判断
+  function displayName(item: any, key: Key): string {
+    return key === 'groups' ? getGroupName(item) : (item?.remark ?? item?.name ?? '');
+  }
 
   function toggle(key: Key) {
     isOpen.value[key] = !isOpen.value[key];
@@ -137,17 +175,11 @@
     );
 
     // 注册所有 sentinel
-    sentinelRefs.value.forEach(s => {
+    sentinelRefs.value.forEach((s:any )=> {
       if (s) observer!.observe(s);
     });
   });
 
-  function initials(name?: string) {
-    const n = (name ?? "").trim();
-    if (!n) return "#";
-    const first = n[0];
-    return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
-  }
 
   onBeforeUnmount(() => {
     if (observer) {
@@ -451,11 +483,22 @@
 
   .txt {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
   }
 
+  .avatar {
+    width: 36px;
+    flex: 0 0 36px;
+  }
   .name {
     font-size: 14px;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .message {

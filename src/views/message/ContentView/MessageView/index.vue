@@ -143,10 +143,19 @@
       const scroller = scrollerRef.value;
       const el = scroller?.$el as HTMLElement | undefined;
       try {
+        // 先强制更新一次虚拟列表的尺寸/位置，避免高度未计算完成导致的未到底部问题
+        try {
+          (scroller as any)?.update?.();
+        } catch {}
         const length = props.data.length;
         (scroller as any).scrollToItem(length - 1 > 0 ? length - 1 : 0);
         await nextTick();
-        (scroller as any).scrollToBottom({ behavior });
+        // 某些版本无 scrollToBottom 方法， fallback 到 DOM 滚动
+        if ((scroller as any)?.scrollToBottom) {
+          (scroller as any).scrollToBottom({ behavior });
+        } else if (el) {
+          el.scrollTo({ top: el.scrollHeight, behavior });
+        }
       } catch (e) {
         // 兜底DOM操作
         if (el) el.scrollTop = el.scrollHeight;
@@ -154,7 +163,11 @@
         newMessageCount.value = 0;
         isAtBottom.value = true;
         await nextTick();
-        (scroller as any).scrollToBottom({ behavior });
+        if ((scroller as any)?.scrollToBottom) {
+          (scroller as any).scrollToBottom({ behavior });
+        } else if (el) {
+          el.scrollTo({ top: el.scrollHeight, behavior });
+        }
       }
     });
   }
@@ -194,6 +207,10 @@
       await nextTick();
       const el = scrollerRef.value?.$el as HTMLElement | undefined;
       if (!el) return;
+      // 每次数据量变化尽量让虚拟列表先完成一次重算
+      try {
+        (scrollerRef.value as any)?.update?.();
+      } catch {}
 
       // 加载更多场景
       if (isLoadingMore.value) {
@@ -206,7 +223,10 @@
       // 新消息到来
       const deltaCount = Math.max(0, newLen - (oldLen || 0));
       if (deltaCount > 0) {
-        if (isAtBottom.value) {
+        // 如果是自己发出的消息，则无论是否在底部都滚到底部（与主流 IM 一致）
+        const last = props.data[newLen - 1];
+        const fromSelf = !!last?.isOwner;
+        if (fromSelf || isAtBottom.value) {
           await scrollToBottom({ behavior: "smooth" });
         } else {
           newMessageCount.value += deltaCount;

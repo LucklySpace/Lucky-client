@@ -7,8 +7,9 @@
       <!-- 顶部：头像 + 基本信息 -->
       <el-row align="middle" class="card-top">
         <el-col :span="6" class="avatar-col no-select">
-          <!-- 使用 el-avatar 可自动处理图片裁切 & 可提供占位插槽 -->
-          <el-avatar :alt="friendInfo.name || 'avatar'" :size="84" :src="friendInfo.avatar ?? defaultImg"></el-avatar>
+          <span>
+            <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
+          </span>
         </el-col>
 
         <el-col :span="18" class="meta-col">
@@ -100,6 +101,7 @@ import { useFriendsStore } from "@/store/modules/friends";
 import { useChatStore } from "@/store/modules/chat";
 
 import defaultImg from "@/assets/avatar/default.jpg";
+import Avatar from "@/components/Avatar/index.vue";
 import { useCallStore } from "@/store/modules/call";
 
 type Friend = {

@@ -19,7 +19,7 @@
       <!-- 小窗口显示用户头像  -->
       <div v-if="!callEstablished" class="video-background">
         <img :src="callStore.getFriendAvatar" class="background-image lazy-img" />
-        <img :src="callStore.getFriendAvatar" class="user-avatar lazy-img" />
+        <Avatar :avatar="callStore.getFriendAvatar" :name="callStore.friendInfo?.name" :width="60" :borderRadius="5" class="user-avatar" />
         <div class="blur-layer"></div>
       </div>
       <video ref="smallVideoRef" autoplay muted></video>
@@ -72,6 +72,7 @@
 <script lang="ts" setup>
   import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
   import System from "@/components/System/index.vue";
+  import Avatar from "@/components/Avatar/index.vue";
   import { ConnectionStatus, StoresEnum, WebRTCType } from "@/constants";
   import { emit, listen, UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";

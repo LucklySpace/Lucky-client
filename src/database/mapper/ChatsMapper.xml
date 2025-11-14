@@ -10,6 +10,7 @@
         sequence INTEGER,
         name TEXT,
         avatar TEXT,
+        notification TEXT,
         unread INTEGER,
         id TEXT,
         message TEXT,

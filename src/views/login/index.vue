@@ -11,7 +11,7 @@
   <div class="login-control no-select">
     <div class="login-control-form">
       <div v-show="loginType != 'scan'" class="login-control-avatar">
-        <img :src="userStore.avatar" class="avatar lazy-img" />
+        <Avatar :avatar="defaultImg" :name="$t('login.label')" :width="64" :borderRadius="6" class="avatar" />
       </div>
 
       <!-- 用户名登录表单 -->
@@ -94,13 +94,13 @@
 <script lang="ts" setup>
   import svgIcon from "@/components/SvgIcon/index.vue";
   import system from "@/components/System/index.vue";
+  import Avatar from "@/components/Avatar/index.vue";
   import { ElMessage } from "element-plus";
-  import { onMounted, onUnmounted, ref } from "vue";
   import { useUserStore } from "@/store/modules/user";
   import api from "@/api";
   import RSA from "@/utils/Auth";
-  import { useI18n } from "vue-i18n";
   import { useMainManager } from "@/core";
+  import defaultImg from '@/assets/img/icon1.png';
 
   const { t } = useI18n();
 
@@ -324,9 +324,9 @@
     position: relative;
     width: 70px;
     height: 70px;
-    background-color: #ccc;
+    background-color: transparent;
     border-radius: 5px;
-    border: 1px solid #ccc;
+    border: transparent;
     margin: 5px;
   }
 

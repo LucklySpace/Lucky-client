@@ -17,14 +17,16 @@
               :class="{ selected: selected.has(contact.id) }"
               @click="toggleSelect(contact.id)"
             >
-              <img :src="contact.avatar" alt="" class="avatar lazy-img" />
+              <span class="avatar">
+                <Avatar :avatar="contact.avatar || ' '" :name="contact.name" :width="32" :borderRadius="3" />
+              </span>
               <span>{{ contact.name }}</span>
             </li>
           </ul>
           <!-- 右：已选联系人 -->
           <ul class="selected-list">
             <li v-for="id in Array.from(selected)" :key="id">
-              <img :src="getAvatar(id)" alt="" class="avatar lazy-img" />
+              <Avatar :avatar="getAvatar(id)" :name="getName(id)" :width="32" :borderRadius="16" />
               <span>{{ getName(id) }}</span>
               <button class="remove-btn" @click="toggleSelect(id)">×</button>
             </li>
@@ -41,6 +43,7 @@
 </template>
 
 <script lang="ts" setup>
+  import Avatar from "@/components/Avatar/index.vue";
   interface Contact {
     id: string;
     name: string;

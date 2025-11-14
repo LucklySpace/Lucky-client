@@ -57,7 +57,7 @@ export const useSearchStore = defineStore(StoresEnum.SEARCH, () => {
   }
 
   /**
-   * 联系人搜索：基于 Friends 表匹配 name/alias/location
+   * 联系人搜索：基于 Friends 表匹配 name/remark/location
    */
   async function searchFriends(query: string) {
     const qb = new QueryBuilder<any>();
@@ -68,7 +68,7 @@ export const useSearchStore = defineStore(StoresEnum.SEARCH, () => {
   }
 
   /**
-   * 群组搜索：基于 Friends 表匹配 name/alias/location
+   * 群组搜索：基于 Friends 表匹配 name/remark/location
    * 注意：当前实现与 searchFriends 相同，可能需要根据实际表结构调整
    */
   async function searchGroups(query: string) {

@@ -13,7 +13,7 @@
           <el-row height="48" style="width: 100%">
             <el-col :span="6">
               <div class="avator-div">
-                <img :class="`avator lazy-img`" :src="item.avatar" />
+                <Avatar :avatar="item.avatar || ' '" :name="item.name" :width="35" :borderRadius="5" class="avator" />
               </div>
             </el-col>
 
@@ -39,6 +39,7 @@
 <script lang="ts" setup>
   import { StoresEnum } from "@/constants/index";
   import { useChatStore } from "@/store/modules/chat";
+  import Avatar from "@/components/Avatar/index.vue";
   import { hideNotifyWindow } from "@/windows/notify";
   import { useTauriEvent } from "@/hooks/useTauriEvent";
   import Chats from "@/database/entity/Chats";
