@@ -156,10 +156,10 @@ const hasFriend = computed(() => {
 // 发送消息
 const handleSendMessage = async (fi: any) => {
   if (!fi) return;
-  await chatMessageStore.handleCurrentChangeByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
+  await chatMessageStore.handleChangeCurrentChatByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
 
   // 请求消息数量与列表
-  chatMessageStore.handleReset();
+  chatMessageStore.handleResetMessage();
   await chatMessageStore.handleGetMessageCount();
   await chatMessageStore.handleGetMessageList(chatMessageStore.currentChat);
   //await messageStore.handleSearchMessageUrl(chatStore.currentChat);
@@ -171,12 +171,12 @@ const handleSendMessage = async (fi: any) => {
 // 占位：发起通话
 async function handleCall(fi: any) {
   if (!fi) return;
-  await chatStore.handleCurrentChangeByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
+  await chatMessageStore.handleChangeCurrentChatByTarget(fi, IMessageType.SINGLE_MESSAGE.code);
 
   // 请求消息数量与列表
-  messageStore.handleGetMessageCount();
-  messageStore.handleGetMessageList(chatStore.currentChat);
-  messageStore.handleSearchMessageUrl(chatStore.currentChat);
+  chatMessageStore.handleGetMessageCount();
+  chatMessageStore.handleGetMessageList(chatMessageStore.currentChat);
+  chatMessageStore.handleSearchMessageUrl(chatMessageStore.currentChat);
 
   // 跳转到消息页面
   router.push("/message");
