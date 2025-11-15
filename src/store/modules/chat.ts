@@ -29,6 +29,8 @@ import { CreateScreenWindow } from "@/windows/screen";
 import { CreateRecordWindow } from "@/windows/record";
 import { highlightTextByTokens } from "@/utils/Strings";
 import { Segmenter } from "@/database";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { CHAT_CHANGED } from "@/constants/events";
 
 // 初始化数据库映射器
 const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
@@ -229,6 +231,15 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     }
 
     currentChat.value = chat;
+    try {
+      if (currentChat.value) {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value.chatId,
+          name: currentChat.value.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      }
+    } catch {}
     // 切换会话时重置消息状态
     handleResetMessage();
   };
@@ -245,6 +256,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (existingIdx !== -1) {
       await handleUpdateReadStatus(chatList.value[existingIdx], 0);
       currentChat.value = chatList.value[existingIdx];
+      try {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value?.chatId,
+          name: currentChat.value?.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      } catch {}
       return;
     }
 
@@ -256,6 +274,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       upsertChat(res);
       handleSortChatList();
       currentChat.value = res;
+      try {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value?.chatId,
+          name: currentChat.value?.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      } catch {}
       setError(null);
     } catch (e: any) {
       setError(e?.message || "创建会话失败");

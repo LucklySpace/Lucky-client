@@ -5,7 +5,7 @@
       <div class="friend-info no-select">
         <el-row :gutter="20" align="middle">
           <el-col :span="6">
-            <span ref="popRef" class="friend-avatar" @click="onClickOutside">
+            <span ref="popRef" class="friend-avatar" @click="toggleAvatarPopover">
               <Avatar
                 :avatar="singleInfo.avatar"
                 :name="singleInfo.remark || singleInfo.name"
@@ -29,7 +29,7 @@
           ref="remarkInputRef"
           v-model="form.remark"
           size="small"
-          @blur="saveRemark"
+          @blur="cancelEdit"
           @keyup.enter="saveRemark"
         />
       </el-form-item>
@@ -101,7 +101,7 @@
   import Avatar from "@/components/Avatar/index.vue";
   import UserPopover from "@/components/UserPopover/index.vue";
   import { globalEventBus } from "@/hooks/useEventBus";
-  import { CHAT_CHANGED } from "@/constants/events";
+  import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from "@/constants/events";
   import { MAX_REMARK_LEN } from "@/constants";
   import type { PopoverInstance } from "element-plus";
 
@@ -142,9 +142,11 @@
 
   //展示弹窗
   const InfoRef = ref<PopoverInstance>();
-  const popRef = ref();
-  const onClickOutside = async () => {
-    InfoRef.value?.hide();
+  const popRef = ref<HTMLElement | null>(null);
+  const toggleAvatarPopover = () => {
+    const pop = InfoRef.value as any;
+    if (pop?.popperRef?.isShow) pop.hide?.();
+    else pop?.show?.();
   };
 
   //备注功能
@@ -166,7 +168,7 @@
       return cancelEdit();
     }
     if (next.length > MAX_REMARK_LEN) {
-      ElMessage.error($t("errors.remark.tooLong"));
+      ElMessage.error($t("errors.remark.tooLong", { max: MAX_REMARK_LEN }));
       return;
     }
 
@@ -243,8 +245,20 @@
       loadUserInfo();
     }
   };
-  onMounted(() => globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any));
-  onUnmounted(() => globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any));
+  const onRemarkUpdated = (payload: any) => {
+    const id = String(chatStore.currentChat?.toId ?? '');
+    if (payload && String(payload.friendId) === id) loadUserInfo();
+  };
+
+  onMounted(() => {
+    globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
+    // 备注被其他入口（如头像卡片/联系人详情）修改时，及时刷新当前卡片信息
+    globalEventBus.on(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+  });
+  onUnmounted(() => {
+    globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
+    globalEventBus.off(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+  });
 
   /**
    *清空聊天记录

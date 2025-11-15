@@ -14,7 +14,8 @@
       "progress": "进度：{percent}%",
       "speed": "速度：{speed} B/s",
       "logout": "退出登录",
-      "all": "以下是全部消息内容"
+      "all": "以下是全部消息内容",
+      "noData": "暂无数据"
     },
     "actions": {
       "complete": "完成",
@@ -80,6 +81,12 @@
       "leaveGroup": "退出群",
       "noAnnouncement": "暂无公告",
       "noSelectionOrEmpty": "未选择群聊或群信息为空",
+      "notice": {
+        "prefix": "群公告",
+        "title": "群公告",
+        "view": "查看",
+        "known": "我已知晓"
+      },
       "type": {
         "default": "群组",
         "normal": "普通群",
@@ -124,7 +131,7 @@
       "email": "请输入有效的邮箱地址。",
       "remark": {
         "empty": "备注不能为空",
-        "tooLong": "备注长度不能超过 20 个字符"
+        "tooLong": "备注长度不能超过 {max} 个字符"
       },
       "network": "网络错误，请重试。",
       "required": "{field}为必填项。"

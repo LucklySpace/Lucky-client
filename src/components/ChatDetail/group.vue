@@ -6,7 +6,7 @@
         <!-- 搜索群成员 -->
         <el-form-item class="search-members" :label="$t('chat.groupChat.searchMembers')">
           <el-input
-            v-model="searchText"
+            v-model="ui.search"
             class="input-with-select"
             clearable
             :placeholder="$t('chat.groupChat.searchMembers')"
@@ -40,7 +40,7 @@
 
           <!-- 折叠按钮 -->
           <el-button v-if="filteredMembers.length > 16" class="group-footer" link type="primary" @click="toggleExpand">
-            {{ isExpanded ? $t("chat.groupChat.collapse") : $t("chat.groupChat.viewMore") }}
+            {{ ui.members.expanded ? $t("chat.groupChat.collapse") : $t("chat.groupChat.viewMore") }}
           </el-button>
         </el-form-item>
 
@@ -49,7 +49,7 @@
         <!-- 群聊名称 -->
         <el-form-item :label="$t('chat.groupChat.groupName')" class="group-header">
           <!-- 群聊名称编辑区域 -->
-          <div class="editable-field" @click="startEditGroupName" v-if="!isEditingGroupName">
+          <div class="editable-field" @click="startEditGroupName" v-if="!ui.edit.name.editing">
             <span class="field-text">{{ groupInfoData.name }}</span>
             <el-icon class="edit-icon"><Edit /></el-icon>
           </div>
@@ -57,7 +57,7 @@
           <div v-else class="edit-field" v-click-outside="checkAndCancelEditGroupName">
             <el-input
               ref="groupNameInputRef"
-              v-model="editingGroupName"
+              v-model="ui.edit.name.value"
               :placeholder="groupInfoData.name"
               @keydown.enter.prevent="saveGroupInfo"
               size="small"
@@ -67,7 +67,7 @@
 
         <!-- 群公告 -->
         <el-form-item :label="$t('chat.groupChat.groupNotice')" class="group-notice">
-          <div class="group-notice-display" @click="startEditGroupNotice" v-if="!isEditingGroupNotice">
+          <div class="group-notice-display" @click="startEditGroupNotice" v-if="!ui.edit.notice.editing">
             {{ groupInfoData.notification?.trim() ? groupInfoData.notification : $t("group.noAnnouncement") }}
           </div>
           <div v-else class="el-textarea" v-click-outside="checkAndCancelEditGroupNotice">
@@ -76,7 +76,7 @@
               type="textarea"
               :rows="3"
               style="width: 240px"
-              v-model="editingGroupNotice"
+              v-model="ui.edit.notice.value"
               :placeholder="groupInfoData.notification"
               @keydown.enter.prevent="saveGroupInfo"
             />
@@ -101,14 +101,14 @@
           <el-form-item class="switch-form-item" style="margin-bottom: 0">
             <div class="ordinary-btn">
               <span class="switch-label">{{ $t("chat.toolbar.mute") }}</span>
-              <span><el-switch v-model="messageMute" class="switch-btn" /></span>
+              <span><el-switch v-model="ui.switches.mute" class="switch-btn" /></span>
             </div>
           </el-form-item>
 
           <el-form-item class="switch-form-item" style="margin-bottom: 0">
             <div class="ordinary-btn">
               <span class="switch-label">{{ $t("chat.toolbar.pin") }}</span>
-              <el-switch v-model="top" class="switch-btn" />
+              <el-switch v-model="ui.switches.top" class="switch-btn" />
             </div>
           </el-form-item>
         </div>
@@ -135,7 +135,7 @@
       <!-- 原有弹窗保持不变 -->
       <el-dialog
         :destroy-on-close="true"
-        :model-value="inviteDialogVisible"
+        :model-value="ui.dialogs.invite"
         class="status_change"
         :title="$t('search.invite.title')"
         width="550"
@@ -144,7 +144,7 @@
       </el-dialog>
 
       <HistoryDialog
-        :visible="historyDialogParam.showDialog"
+        :visible="ui.dialogs.history"
         :title="$t('chat.toolbar.history')"
         @handleClose="toggleHistoryDialog"
       />
@@ -164,16 +164,24 @@
   import { ClickOutside as vClickOutside } from "element-plus";
   import Avatar from "@/components/Avatar/index.vue";
   import { globalEventBus } from "@/hooks/useEventBus";
-  import { CHAT_CHANGED, GROUP_RENAMED } from "@/constants/events";
+  import { CHAT_CHANGED, GROUP_RENAMED, GROUP_NOTICE_CHANGED } from "@/constants/events";
 
   const chatStore = useChatStore();
   const friendStore = useFriendsStore();
 
   const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
 
-  const searchText = ref("");
-  const isExpanded = ref(false);
-  const inviteDialogVisible = ref(false);
+  // 统一界面状态容器（避免零散 ref）
+  const ui = reactive({
+    search: "",
+    members: { expanded: false },
+    dialogs: { invite: false, history: false },
+    edit: {
+      name: { editing: false, value: "" },
+      notice: { editing: false, value: "" }
+    },
+    switches: {} as any
+  });
 
   //
 
@@ -209,6 +217,16 @@
     }
   };
 
+  const onBusGroupNoticeChanged = (payload: any) => {
+    if (!payload) return;
+    const cid = chatStore.currentChat?.chatId;
+    const target = payload.chatId ?? payload.groupId;
+    if (!cid || (target && String(target) !== String(cid))) return;
+    nextTick(() => {
+      if (payload.content !== undefined) groupInfoData.notification = payload.content || "暂无";
+    });
+  };
+
   // 更新群组信息的函数
   function updateGroupInfoData() {
     const currentChat = chatStore.currentChat;
@@ -224,11 +242,13 @@
 
     globalEventBus.on(GROUP_RENAMED as any, onBusGroupRenamed as any);
     globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
+    globalEventBus.on(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
   });
 
   onUnmounted(() => {
     globalEventBus.off(GROUP_RENAMED as any, onBusGroupRenamed as any);
     globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
+    globalEventBus.off(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
   });
 
   // 监听 currentChat 的变化
@@ -248,23 +268,21 @@
     if (Array.isArray(source)) members = source;
     else if (source && typeof source === 'object') members = Object.values(source);
 
-    const q = searchText.value.trim().toLowerCase();
+    const q = ui.search.trim().toLowerCase();
     if (!q) return members;
     return members.filter((m: any) => (m?.name || '').toLowerCase().includes(q));
   });
 
   /** 显示成员 */
-  const displayedMembers = computed(() => {
-    return isExpanded.value ? filteredMembers.value : filteredMembers.value.slice(0, 15);
-  });
+  const displayedMembers = computed(() => ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 15));
 
   /** 控制展开 */
   const toggleExpand = () => {
-    isExpanded.value = !isExpanded.value;
+    ui.members.expanded = !ui.members.expanded;
   };
 
   const handleInviteDialog = () => {
-    inviteDialogVisible.value = !inviteDialogVisible.value;
+    ui.dialogs.invite = !ui.dialogs.invite;
   };
 
   /** 邀请群成员 */
@@ -274,13 +292,12 @@
   };
 
   //编辑群聊名称
-  const isEditingGroupName = ref(false);
-  const editingGroupName = ref("");
+  // 名称编辑态使用 ui.edit.name
   const groupNameInputRef = ref();
 
   const startEditGroupName = () => {
-    isEditingGroupName.value = true;
-    editingGroupName.value = groupInfoData.name;
+    ui.edit.name.editing = true;
+    ui.edit.name.value = groupInfoData.name;
     nextTick(() => {
       if (groupNameInputRef.value) {
         groupNameInputRef.value.focus();
@@ -289,8 +306,8 @@
   };
 
   // 编辑发布群公告
-  const isEditingGroupNotice = ref(false);
-  const editingGroupNotice = ref(groupInfoData.notification ?? "");
+  // 公告编辑态使用 ui.edit.notice
+  ui.edit.notice.value = groupInfoData.notification ?? "";
 
   // 更新群聊信息
   const saveGroupInfo = async () => {
@@ -306,16 +323,16 @@
       notification?: string;
     } = { groupId, chatId };
 
-    if (editingGroupName.value.trim() && editingGroupName.value !== groupInfoData.name) {
-      updateData.groupName = editingGroupName.value;
+    if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
+      updateData.groupName = ui.edit.name.value;
     }
-    if (editingGroupNotice.value.trim() && editingGroupNotice.value !== groupInfoData.notification) {
-      updateData.notification = editingGroupNotice.value;
+    if (ui.edit.notice.value.trim() && ui.edit.notice.value !== groupInfoData.notification) {
+      updateData.notification = ui.edit.notice.value;
     }
 
     if (!updateData.groupName && !updateData.notification) {
-      isEditingGroupName.value = false;
-      isEditingGroupNotice.value = false;
+      ui.edit.name.editing = false;
+      ui.edit.notice.editing = false;
       return;
     }
 
@@ -323,16 +340,35 @@
       await chatStore.updateGroupInfo(updateData as any);
       if (updateData.groupName) groupInfoData.name = updateData.groupName;
       if (updateData.notification) groupInfoData.notification = updateData.notification;
-      isEditingGroupName.value = false;
-      isEditingGroupNotice.value = false;
+      ui.edit.name.editing = false;
+      ui.edit.notice.editing = false;
       ElMessage.success("群信息已更新");
+      // 广播群名变更（如有），以及群公告变更（如有）
+      if (updateData.groupName) {
+        try {
+          globalEventBus.emit(GROUP_RENAMED as any, {
+            groupId,
+            chatId,
+            groupName: updateData.groupName
+          } as any);
+        } catch {}
+      }
+      if (updateData.notification) {
+        try {
+          globalEventBus.emit(GROUP_NOTICE_CHANGED as any, {
+            chatId,
+            groupId,
+            content: updateData.notification
+          } as any);
+        } catch {}
+      }
     } catch (e) {
       ElMessage.error("更新失败");
     }
   };
 
   const checkAndCancelEditGroupName = () => {
-    if (editingGroupName.value.trim() && editingGroupName.value !== groupInfoData.name) {
+    if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
       ElMessageBox.confirm("检测到群名称有更改，是否保存更改？", "提示", {
         confirmButtonText: "保存",
         cancelButtonText: "不保存",
@@ -346,16 +382,16 @@
   };
 
   const cancelEditGroupName = () => {
-    isEditingGroupName.value = false;
-    editingGroupName.value = groupInfoData.name;
+    ui.edit.name.editing = false;
+    ui.edit.name.value = groupInfoData.name;
   };
 
   const startEditGroupNotice = () => {
-    isEditingGroupNotice.value = true;
-    editingGroupNotice.value = groupInfoData.notification ?? "";
+    ui.edit.notice.editing = true;
+    ui.edit.notice.value = groupInfoData.notification ?? "";
   };
   const checkAndCancelEditGroupNotice = () => {
-    if (editingGroupNotice.value.trim() && editingGroupNotice.value !== groupInfoData.notification) {
+    if (ui.edit.notice.value.trim() && ui.edit.notice.value !== groupInfoData.notification) {
       ElMessageBox.confirm("检测到群公告有更改，是否保存更改？", "提示", {
         confirmButtonText: "保存",
         cancelButtonText: "不保存",
@@ -372,17 +408,16 @@
     }
   };
   const cancelEditGroupNotice = () => {
-    isEditingGroupNotice.value = false;
-    editingGroupNotice.value = groupInfoData.notification ?? "";
+    ui.edit.notice.editing = false;
+    ui.edit.notice.value = groupInfoData.notification ?? "";
   };
 
   //查找聊天信息
   const switchHistoryMessage = () => {
-    historyDialogParam.showDialog = true;
+    ui.dialogs.history = true;
   };
-  const historyDialogParam = reactive({ showDialog: false });
   const toggleHistoryDialog = () => {
-    historyDialogParam.showDialog = !historyDialogParam.showDialog;
+    ui.dialogs.history = !ui.dialogs.history;
   };
 
   //置顶聊天
@@ -407,6 +442,9 @@
       if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats);
     }
   });
+
+  // 暴露给模板的开关容器（computed 可作为 v-model 使用）
+  ;(ui as any).switches = { top, mute: messageMute }
 
   const handleClearGroupMessage = () => {
     ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {

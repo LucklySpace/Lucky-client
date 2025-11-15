@@ -14,7 +14,8 @@
       "progress": "Progress: {percent}%",
       "speed": "Speed: {speed} B/s",
       "logout": "Logout",
-      "all": "All message content below"
+      "all": "All message content below",
+      "noData": "No data"
     },
     "actions": {
       "complete": "Done",
@@ -81,6 +82,12 @@
       "leaveGroup": "Leave Group",
       "noAnnouncement": "No announcement",
       "noSelectionOrEmpty": "No group selected or group information is empty",
+      "notice": {
+        "prefix": "Notice",
+        "title": "Group Notice",
+        "view": "View",
+        "known": "I have read"
+      },
       "type": {
         "default": "Group",
         "normal": "Public Group",
@@ -127,7 +134,7 @@
       "required": "{field} is required.",
       "remark": {
         "empty": "Remark cannot be empty",
-        "tooLong": "Remark cannot exceed 20 characters"
+        "tooLong": "Remark cannot exceed {max} characters"
       }
     },
     "notifications": {

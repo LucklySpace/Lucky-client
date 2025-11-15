@@ -2,6 +2,8 @@
   <div v-if="chatMessageStore.currentChat" ref="containerRef" class="message-container">
     <!-- 上半区：消息列表（EffectsManager 填满此区域） -->
     <div ref="topRef" class="message-content">
+      <!-- 群公告横幅（限制在消息内容区域内渲染） -->
+      <span class="group-notice"> <GroupNoticeBanner /> </span>
       <MessageView
         v-show="chatMessageStore.currentChat"
         :chat="chatMessageStore.currentChat"
@@ -30,6 +32,7 @@
   import InputView from "./InputView/index.vue";
   import { useChatStore } from "@/store/modules/chat";
   import EffectsManager from "@/components/EffectsManager/index.vue";
+  import GroupNoticeBanner from "@/components/ChatDetail/GroupNoticeBanner.vue";
 
   // stores
   const chatMessageStore = useChatStore();
@@ -132,6 +135,13 @@
       /* 初始占比：可在父级或 JS 中动态设置 */
       height: 70%;
       overflow: auto;
+      .group-notice {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1;
+      }
     }
 
     .drag-line {

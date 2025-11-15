@@ -134,7 +134,7 @@ export enum CacheEnum {
 }
 
 /** 备注最大长度 */
-export const MAX_REMARK_LEN = 20;
+export const MAX_REMARK_LEN = 30;
 
 /** 文件类型枚举 */
 export enum FileType {
