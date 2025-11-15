@@ -1,0 +1,18 @@
+syntax = "proto3";
+package im;
+
+import "google/protobuf/any.proto";
+
+message IMConnectMessage {
+  int32 code = 1;
+  string token = 2;
+  google.protobuf.Any data = 3;
+  map<string,string> metadata = 4;
+  string message = 5;
+  string request_id = 6;
+  int64 timestamp = 7;
+  string client_ip = 8;
+  string user_agent = 9;
+  string device_name = 10;
+  string device_type = 11;
+}

@@ -1,0 +1,21 @@
+<SQLStore className="Friends">
+    <SQL name="createTable">
+        CREATE TABLE IF NOT EXISTS friends (
+        userId TEXT,
+        friendId TEXT,
+        name TEXT,
+        remark TEXT,
+        avatar TEXT,
+        userSex INTEGER,
+        location TEXT,
+        black INTEGER,
+        flag TEXT,
+        birthday TEXT,
+        selfSignature TEXT,
+        sequence INTEGER)
+    </SQL>
+
+    <SQL name="findLast">
+        SELECT * from friends ORDER BY sequence desc limit 1
+    </SQL>
+</SQLStore>

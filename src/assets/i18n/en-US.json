@@ -1,0 +1,440 @@
+{
+  "$schema": "./i18n-schema.json",
+  "locale": "en-US",
+  "meta": {
+    "author": "Your Name",
+    "name": "English",
+    "updatedAt": "2025-07-15T10:30:00Z",
+    "version": "1.0.0"
+  },
+  "messages": {
+    "common": {
+      "loading": "Loading",
+      "justNow": "Just now",
+      "progress": "Progress: {percent}%",
+      "speed": "Speed: {speed} B/s",
+      "logout": "Logout",
+      "all": "All message content below",
+      "noData": "No data"
+    },
+    "actions": {
+      "complete": "Done",
+      "cancel": "Cancel",
+      "change": "Change",
+      "clear": "Clear Canvas",
+      "confirm": "Confirm",
+      "login": "Login",
+      "manage": "Manage",
+      "add": "Add",
+      "reset": "Reset to Defaults",
+      "save": "Save Changes",
+      "send": "Send",
+      "search": "Search",
+      "invite": "Invite",
+      "sendMsg": "Send Message",
+      "videoCall": "Call",
+      "openFolder": "Open Folder",
+      "download": "Download Update",
+      "update": "Check for Updates",
+      "viewHelp": "View Help"
+    },
+    "contacts": {
+      "newFriends": "New Friends",
+      "groupChat": "Group Chat",
+      "groupInfo": "Group Info",
+      "groupType": "Group Type",
+      "contacts": "Contacts",
+      "contactInfo": "Contact Info",
+      "count": "{count} People",
+      "id": "ID",
+      "idLabel": "ID: ",
+      "nickname": "Nickname",
+      "nicknameLabel": "Nickname:",
+      "region": "Region",
+      "regionLabel": "Region:",
+      "signature": "Signature",
+      "signatureLabel": "Signature:",
+      "noSelectionOrEmpty": "No contact selected or contact information is empty",
+      "noContactSelected": "No contact selected",
+      "contactInfoEmpty": "Contact information is empty",
+      "requestsList": "Friend Requests List",
+      "friendRequests": "Friend Requests",
+      "pendingRequests": "Pending requests ({count})",
+      "refreshRequestsList": "Refresh requests list",
+      "refresh": "Refresh",
+      "noRequests": "No friend requests",
+      "requestFrom": "Request from {name}",
+      "defaultRequestMsg": "wants to add you as a friend",
+      "accept": "Accept",
+      "reject": "Reject",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "delete": "Delete Contact",
+      "deleteGroup": "Delete Group"
+
+    },
+    "group": {
+      "memberLabel": "Members:",
+      "unknown": "Unknown",
+      "descriptionLabel": "Group Description:",
+      "enterGroup": "Enter Group",
+      "viewMembers": "View Members",
+      "leaveGroup": "Leave Group",
+      "noAnnouncement": "No announcement",
+      "noSelectionOrEmpty": "No group selected or group information is empty",
+      "notice": {
+        "prefix": "Notice",
+        "title": "Group Notice",
+        "view": "View",
+        "known": "I have read"
+      },
+      "type": {
+        "default": "Group",
+        "normal": "Public Group",
+        "private": "Private Group"
+      }
+    },
+    "invite": {
+      "groupInviteLabel": "Group Invite",
+      "accept": "Accept",
+      "decline": "Decline",
+      "from": "From",
+      "ariaLabelPrefix": "Invite",
+      "ariaLabelFrom": "From",
+      "status": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "unknown": "Unknown"
+      },
+      "msg": {
+        "joined": "Joined group: {name}",
+        "declined": "Invitation declined"
+      },
+      "err": {
+        "accept": "Failed to accept invitation, please try again",
+        "decline": "Failed to decline invitation, please try again"
+      }
+    },
+    "time": {
+      "justNow": "Just now",
+      "yesterday": "Yesterday",
+      "dayBeforeYesterday": "2 Day ago",
+      "weekday1": "Monday",
+      "weekday2": "Tuesday",
+      "weekday3": "Wednesday",
+      "weekday4": "Thursday",
+      "weekday5": "Friday",
+      "weekday6": "Saturday",
+      "weekday7": "Sunday"
+    },
+    "errors": {
+      "email": "Please enter a valid email.",
+      "network": "Network error, please try again.",
+      "required": "{field} is required.",
+      "remark": {
+        "empty": "Remark cannot be empty",
+        "tooLong": "Remark cannot exceed {max} characters"
+      }
+    },
+    "notifications": {
+      "ignoreAll": "Ignore All",
+      "haveNewMessage": "You have {count} new message",
+      "newMessages": "New message ({count})"
+    },
+    "chat": {
+      "empty": "Select a conversation to start chatting",
+      "group": "Chat Zone",
+      "invite": "invites you to a video call",
+      "more": "View More Messages",
+      "send": "Send",
+      "loading": "Loading...",
+      "toolbar": {
+        "emoji": "Emoji",
+        "screenshot": "Screenshot",
+        "pin": "Pin Chat",
+        "mute": "Do Not Disturb",
+        "recorder": {
+          "label": "Record",
+          "start": "Start",
+          "recording": "Recording…",
+          "stop": "Stop",
+          "cancel": "Cancel",
+          "save": "Save",
+          "status": {
+            "request_permission": "Requesting screen recording permission…",
+            "started": "Recording started",
+            "stopping": "Stopping recording…",
+            "completed": "Recording completed",
+            "canceled": "Canceling recording…",
+            "download_done": "Download complete"
+          },
+          "errors": {
+            "start_failed": "Failed to start recording",
+            "not_generated": "No recording file generated",
+            "stop_failed": "Failed to stop recording",
+            "cancel_failed": "Failed to cancel recording"
+          }
+        },
+        "file": "File",
+        "history": "History"
+      },
+      "groupChat": {
+        "members": "Member",
+        "searchMembers": "Search Group Members",
+        "viewMore": "View More",
+        "collapse": "Collapse",
+        "groupName": "Group Name",
+        "groupNotice": "Group Notice"
+      },
+      "input": {
+        "placeholder": "Type a message",
+        "mentionHint": "Type a message, use {at} to mention someone"
+      },
+      "mention": {
+        "you": "[Someone mentioned you]",
+        "all": "[@All]"
+      },
+      "draft": "[Draft]",
+      "placeholder": {
+        "image": "[Image]",
+        "video": "[Video]",
+        "audio": "[Audio]",
+        "file": "[File]",
+        "location": "[Location]",
+        "groupInvite": "[Group invite]",
+        "unknown": "[Unknown message type]"
+      }
+    },
+    "messages": {
+      "me": "Me",
+      "system": "System Message",
+      "loading": "Loading...",
+      "viewMoreMessages": "View More Messages",
+      "viewMoreHistory": "View More History",
+      "myAvatar": "My Avatar",
+      "userAvatar": "{name}'s Avatar",
+      "sentByMe": "Message sent by me",
+      "sentByUser": "Message sent by {name}",
+      "newMessageTip": "You have {count} new messages, click to view"
+    },
+    "login": {
+      "label": "Login",
+      "account": "Account Login",
+      "qrcode": "QR Code",
+      "loadingQR": "Loading QR Code...",
+      "phone": "Phone Login",
+      "sendCode": "Send Code",
+      "scan": "Scan to Login",
+      "username": "Username",
+      "inputUsername": "Enter username",
+      "accountNull": "Username or password is empty",
+      "qrcodeError": "Failed to send code",
+      "getQrcodeError": "Failed to get QR Code",
+      "qrcodeExpired": "QR Code expired",
+      "password": "Password",
+      "inputPassword": "Enter password",
+      "phoneNumber": "Phone Number",
+      "inputPhoneNumber": "Enter phone number",
+      "code": "Code",
+      "inputCode": "Enter code",
+      "loginSuccess": "Login successful",
+      "loginFail": "Login failed"
+    },
+    "profile": {
+      "changeAvatar": "Change Avatar",
+      "save": "Save",
+      "saveChanges": "Save Changes",
+      "updateSuccess": "Profile updated successfully",
+      "updateFailed": "Update failed, please try again",
+      "address": "Address:",
+      "birthday": "Birthday",
+      "enterAddress": "Enter address",
+      "enterMobile": "Enter phone number",
+      "enterNickname": "Enter nickname",
+      "enterSignature": "Enter signature",
+      "mobile": "Phone:",
+      "nickname": "Nickname:",
+      "selectBirthday": "Select birthday",
+      "sex": {
+        "female": "Female",
+        "label": "Gender:",
+        "male": "Male"
+      },
+      "signature": "Signature:"
+    },
+    "dialog": {
+      "confirmClearChat": "Are you sure you want to clear all chat history? This action cannot be undone",
+      "warning": "Warning",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "clearChatLog": "Clear Chat History"
+    },
+    "forward": {
+      "title": "Forward Message",
+      "forwardMessage": "Forward Message",
+      "searchContacts": "Search contacts...",
+      "cancel": "Cancel",
+      "confirmSend": "Confirm Send ({count})"
+    },
+    "screen": {
+      "pen": "Pen",
+      "addText": "Add Text",
+      "arrow": "Arrow",
+      "circle": "Circle",
+      "line": "Line",
+      "mosaic": "Mosaic",
+      "rect": "Rectangle",
+      "redo": "Redo",
+      "undo": "Undo"
+    },
+    "selectContact": {
+      "selected": "Selected Contacts ({count})",
+      "selecte": "Selecte Contact",
+      "list": "Contacts"
+    },
+    "settings": {
+      "label": "Settings",
+      "logout": "Logout",
+      "tabs": {
+        "about": "About",
+        "fileManagement": "File",
+        "general": "General",
+        "notification": "Notification",
+        "profile": "Profile",
+        "shortcut": "Shortcuts",
+        "theme": "Theme"
+      },
+      "general": {
+        "label": "General",
+        "language": "Language",
+        "select": "Select Language",
+        "clearChat": "Clear Chat History",
+        "storage": {
+          "cache": "Cache",
+          "manage": "Manage",
+          "clean": "Clean",
+          "cacheDesc": "Cache contains temporary chat data; clearing won't affect usage",
+          "chat": "Chat Data",
+          "chatDesc": "Includes chat images, videos, files, etc.",
+          "details": "Storage Details",
+          "desc": "Using {percent}% of disk",
+          "diskFree": "Free Disk Space",
+          "diskUsed": "Used Disk Space",
+          "other": "Other",
+          "otherDesc": "Includes runtime files and data of other accounts",
+          "used": "Used Space",
+          "label": "Storage Manager"
+        }
+      },
+      "about": {
+        "version": "Version",
+        "update": "Check for Updates",
+        "help": "Help",
+        "viewHelp": "View Help",
+        "updateInfo": "Update Info",
+        "newVersion": "New Version",
+        "date": "Release Date",
+        "body": "Release Notes",
+        "download": "Download Update",
+        "helpUrl": "https://help.wechat.com"
+      },
+      "notification": {
+        "call": "Call Notification Sound",
+        "label": "Notification Sound",
+        "newMsg": "New Message Sound",
+        "mute": "Mute notifications"
+      },
+      "profile": {
+        "address": "Address:",
+        "birthday": "Birthday",
+        "enterAddress": "Enter address",
+        "enterMobile": "Enter phone number",
+        "enterNickname": "Enter nickname",
+        "enterSignature": "Enter signature",
+        "mobile": "Phone:",
+        "nickname": "Nickname:",
+        "selectBirthday": "Select birthday",
+        "sex": {
+          "female": "Female",
+          "label": "Gender:",
+          "male": "Male"
+        },
+        "signature": "Signature:"
+      },
+      "shortcut": {
+        "click": "Press shortcut after clicking",
+        "conflict": "Detect Conflict",
+        "conflictTip": "Warn if conflicted",
+        "default": "Reset to Default",
+        "screen": "Screenshot",
+        "send": "Send Message"
+      },
+      "file": {
+        "change": "Change",
+        "fileManagement": "File Management",
+        "openFolder": "Open Folder",
+        "saveLocation": "Default Save Location",
+        "settings": "File Settings",
+        "switchAutoDownload": "Enable Auto Download (≤200MB)"
+      },
+      "theme": {
+        "auto": "Follow System",
+        "current": "Current Theme:",
+        "dark": "Dark",
+        "light": "Light"
+      }
+    },
+    "about": {
+      "checkingUpdate": "Checking for updates",
+      "noUpdate": "No updates available",
+      "downloadingUpdate": "Downloading update"
+    },
+    "bubble": {
+      "downloadButton": "Download button (shown when no local path)",
+      "handlePreview": "Handle preview",
+      "handleText": "Handle text message"
+    },
+    "search": {
+      "placeholder": "Search",
+      "resultsLabel": "Search results",
+      "tabs": {
+        "all": "All",
+        "friends": "Contacts",
+        "messages": "Messages"
+      },
+      "moreFriends": {
+        "title": "Search more friends",
+        "subtitle": "Enter username or keywords to search"
+      },
+      "section": {
+        "contacts": "Contacts",
+        "messages": "Messages"
+      },
+      "noResult": "No results found",
+      "count": "{count} related messages",
+      "selected": "Selected: {type}",
+      "error": {
+        "noResults": "No results"
+      },
+      "invite": {
+        "title": "Invite members"
+      },
+      "friendSearch": {
+        "title": "Search Friends",
+        "noResult": "No matching friends found",
+        "searchBtn": "Search"
+      },
+      "addFriend": {
+        "title": "Add Friend Verification",
+        "verifyLabel": "Verification",
+        "remarkLabel": "Remark",
+        "addButton": "Add",
+        "addedLabel": "Already Added"
+      },
+      "message": {
+        "sentRequest": "Friend request sent to {name}"
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+/**
+ * 主题变量（亮色模式）
+ * 可通过 html[data-theme="dark"] 切换到暗色模式
+ */
+
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --background-color: #2b2d42;
+  --text-color: #edf2f4;
+
+  /* 侧边栏 */
+  --side-bg-color: #409eff; /* sidebar 背景色 */
+  --side-font-color: #474343; /* sidebar 文字颜色 */
+  --side-active-color: #474343; /* sidebar 激活文字颜色 */
+  --side-active-bg-color: #e0e0e0; /* sidebar 激活背景色 */
+  --side-border-right-color: #e4e4e4; /* 右边框色*/
+  --side-hover-color: #ffffff; /* sidebar 悬浮文字颜色 */
+  --side-hover-bg-color: #409eff; /* sidebar 悬浮背景色 */
+
+  /* 顶部导航 */
+  --header-bg-color: #ffffff; /* header 背景色 */
+  --header-font-color: #333333; /* header 文字颜色 */
+  --header-active-color: #409eff; /* header 激活文字颜色 */
+  --header-active-bg-color: #ffffff; /* header 激活背景色 */
+  --header-border-bottom-color: #e4e4e4; /* header 下边框色 */
+  --header-hover-color: #409eff; /* header 悬浮文字颜色 */
+
+  /* 内容区 */
+  --content-bg-color: #ffffff; /* content 背景色 */
+  --content-font-color: #333333; /* content 文字颜色 */
+  --content-bubble-font-color: #333333; /* content 气泡文字颜色 */
+  --content-active-color: #409eff; /* content 激活文字颜色 */
+  --content-active-bg-color: #ffffff; /* content 激活背景色 */
+  --content-drag-line-color: #e4e4e4; /* 拖拽分隔条颜色 */
+  --content-hover-color: #409eff; /* content 悬浮文字颜色 */
+  --content-message-font-color: #90969b; /* content 消息文字颜色 */
+
+  /* 输入框 */
+  --input-button-icon-color: #6a6a6a; /* 输入框按钮图标颜色 */
+  --input-font-color: #141414; /* 输入框文本颜色 */
+
+  /* 主区域（卡片、面板等） */
+  --main-bg-color: transparent; /* 主区域背景色 */
+  --main-border-color: #e3e9ee; /* 主区域边框色*/
+  --main-border-radius: 5px; /* 主区域圆角 */
+  --main-box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 主区域阴影 */
+
+  --main-red-color: #ff4d4f; /* 徽标红色 */
+}
+
+/**
+ * 暗色模式变量
+ * 当 html 元素上设置 data-theme="dark" 时生效
+ */
+html[data-theme="dark"] {
+  /* 侧边栏 */
+  --side-bg-color: #1e1e1e; /* sidebar 背景色 */
+  --side-font-color: #e5eaf3; /* sidebar 文字颜色 */
+  --side-active-color: #333333; /* sidebar 激活文字颜色 */
+  --side-active-bg-color: #8a8686; /* sidebar 激活背景色 */
+  --side-border-right-color: #8a8686; /* 右边框色*/
+  --side-hover-color: #ffffff; /* sidebar 悬浮文字颜色 */
+  --side-hover-bg-color: #333333; /* sidebar 悬浮背景色 */
+
+  /* 顶部导航 */
+  --header-bg-color: #1e1e1e; /* header 背景色 */
+  --header-font-color: #e5eaf3; /* header 文字颜色 */
+  --header-active-color: #409eff; /* header 激活文字颜色 */
+  --header-active-bg-color: #1f1f1f; /* header 激活背景色 */
+  --header-border-bottom-color: #8a8686; /* header 下边框色 */
+  --header-hover-color: #409eff; /* header 悬浮文字颜色 */
+
+  /* 内容区 */
+  --content-bg-color: #424141; /* content 背景色 */
+  --content-font-color: #e5eaf3; /* content 文字颜色 */
+  --content-bubble-font-color: #212325; /* content 气泡文字颜色 */
+  --content-active-color: #409eff; /* content 激活文字颜色 */
+  --content-active-bg-color: #1b1b1b; /* content 激活背景色 */
+  --content-drag-line-color: #8a8686; /* 拖拽分隔条颜色 */
+  --content-hover-color: #409eff; /* content 悬浮文字颜色 */
+  --content-message-font-color: #d4d2d2; /* content 消息文字颜色 */
+
+  /* 输入框 */
+  --input-button-icon-color: #a7a2a2; /* 输入框按钮图标颜色 */
+  --input-font-color: #d4d2d2; /* 输入框文本颜色 */
+
+  /* 主区域（卡片、面板等） */
+  --main-bg-color: transparent; /* 主区域背景色 */
+  --main-border-color: #121212; /* 主区域边框色*/
+  --main-border-radius: 5px; /* 主区域圆角 */
+  --main-box-shadow: 0 0 8px rgba(0, 0, 0, 0.5); /* 主区域阴影 */
+
+  --main-red-color: #ff4d4f; /* 徽标红色 */
+}

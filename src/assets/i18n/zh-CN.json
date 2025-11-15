@@ -1,0 +1,438 @@
+{
+  "$schema": "./i18n-schema.json",
+  "locale": "zh-CN",
+  "meta": {
+    "author": "Your Name",
+    "name": "简体中文",
+    "updatedAt": "2025-07-15T10:30:00Z",
+    "version": "1.0.0"
+  },
+  "messages": {
+    "common": {
+      "loading": "加载中",
+      "justNow": "刚刚",
+      "progress": "进度：{percent}%",
+      "speed": "速度：{speed} B/s",
+      "logout": "退出登录",
+      "all": "以下是全部消息内容",
+      "noData": "暂无数据"
+    },
+    "actions": {
+      "complete": "完成",
+      "cancel": "取消",
+      "change": "更改",
+      "clear": "清空画布",
+      "confirm": "确定",
+      "login": "登 录",
+      "manage": "管理",
+      "add": "添加",
+      "reset": "恢复默认设置",
+      "save": "保存修改",
+      "send": "发送",
+      "search": "搜索",
+      "invite": "邀请",
+      "sendMsg": "发送消息",
+      "videoCall": "视频通话",
+      "openFolder": "打开文件夹",
+      "download": "下载更新",
+      "update": "检查更新",
+      "viewHelp": "查看帮助"
+    },
+    "contacts": {
+      "newFriends": "新的朋友",
+      "groupChat": "群聊",
+      "groupInfo": "群组信息",
+      "groupType": "群组类型",
+      "contacts": "联系人",
+      "contactInfo": "联系人信息",
+      "count": "{count} 人",
+      "delete": "删除好友",
+      "deleteGroup": "退出群聊",
+      "id": "ID",
+      "idLabel": "ID: ",
+      "nickname": "昵称",
+      "nicknameLabel": "昵称：",
+      "region": "地区",
+      "regionLabel": "地区：",
+      "signature": "个性签名",
+      "signatureLabel": "个性签名：",
+      "noSelectionOrEmpty": "未选择联系人或联系人信息为空",
+      "noContactSelected": "未选择联系人",
+      "contactInfoEmpty": "联系人信息为空",
+      "requestsList": "好友申请列表",
+      "friendRequests": "好友申请",
+      "pendingRequests": "待处理申请({count})",
+      "refreshRequestsList": "刷新申请列表",
+      "refresh": "刷新",
+      "noRequests": "暂无好友申请",
+      "requestFrom": "来自 {name} 的申请",
+      "defaultRequestMsg": "请求添加你为好友",
+      "accept": "同意",
+      "reject": "拒绝",
+      "accepted": "已同意",
+      "rejected": "已拒绝"
+    },
+    "group": {
+      "memberLabel": "成员数：",
+      "unknown": "未知",
+      "descriptionLabel": "群简介：",
+      "enterGroup": "进入群聊",
+      "viewMembers": "查看成员",
+      "leaveGroup": "退出群",
+      "noAnnouncement": "暂无公告",
+      "noSelectionOrEmpty": "未选择群聊或群信息为空",
+      "notice": {
+        "prefix": "群公告",
+        "title": "群公告",
+        "view": "查看",
+        "known": "我已知晓"
+      },
+      "type": {
+        "default": "群组",
+        "normal": "普通群",
+        "private": "私密群"
+      }
+    },
+    "invite": {
+      "groupInviteLabel": "群聊邀请",
+      "accept": "接受",
+      "decline": "拒绝",
+      "from": "来自",
+      "ariaLabelPrefix": "邀请",
+      "ariaLabelFrom": "来自",
+      "status": {
+        "pending": "待处理",
+        "accepted": "已同意",
+        "declined": "已拒绝",
+        "unknown": "未知状态"
+      },
+      "msg": {
+        "joined": "已加入群：{name}",
+        "declined": "已拒绝邀请"
+      },
+      "err": {
+        "accept": "接受邀请失败，请重试",
+        "decline": "拒绝邀请失败，请重试"
+      }
+    },
+    "time": {
+      "justNow": "刚刚",
+      "yesterday": "昨天",
+      "dayBeforeYesterday": "前天",
+      "weekday1": "星期一",
+      "weekday2": "星期二",
+      "weekday3": "星期三",
+      "weekday4": "星期四",
+      "weekday5": "星期五",
+      "weekday6": "星期六",
+      "weekday7": "星期日"
+    },
+    "errors": {
+      "email": "请输入有效的邮箱地址。",
+      "remark": {
+        "empty": "备注不能为空",
+        "tooLong": "备注长度不能超过 {max} 个字符"
+      },
+      "network": "网络错误，请重试。",
+      "required": "{field}为必填项。"
+    },
+    "notifications": {
+      "ignoreAll": "忽略全部",
+      "haveNewMessage": "你有{count}条新消息",
+      "newMessages": "新消息 ({count})"
+    },
+    "chat": {
+      "empty": "请选择一个会话开始聊天",
+      "group": "聊天区",
+      "invite": "邀请您进行视频通话",
+      "more": "查看更多消息",
+      "send": "发送",
+      "loading": "加载中...",
+      "toolbar": {
+        "emoji": "表情",
+        "screenshot": "屏幕截图",
+        "pin": "置顶聊天",
+        "mute": "消息免打扰",
+        "recorder": {
+          "label": "屏幕录制",
+          "start": "开始",
+          "recording": "录制中…",
+          "stop": "停止",
+          "cancel": "取消",
+          "save": "保存",
+          "status": {
+            "request_permission": "请求屏幕录制权限…",
+            "started": "录制已开始",
+            "stopping": "停止录制…",
+            "completed": "录制完成",
+            "canceled": "录制取消",
+            "download_done": "下载完成"
+          },
+          "errors": {
+            "start_failed": "启动录制失败",
+            "not_generated": "未生成录制文件",
+            "stop_failed": "停止录制失败",
+            "cancel_failed": "取消录制失败"
+          }
+        },
+        "file": "文件",
+        "history": "历史消息"
+      },
+      "groupChat": {
+        "members": "群成员",
+        "searchMembers": "搜索群成员",
+        "viewMore": "查看更多",
+        "collapse": "收起",
+        "groupName": "群聊名称",
+        "groupNotice": "群公告"
+      },
+      "input": {
+        "placeholder": "输入消息",
+        "mentionHint": "输入消息，使用 {at} 开始提及某人"
+      },
+      "mention": {
+        "you": "[有人@你]",
+        "all": "[@所有人]"
+      },
+      "draft": "[草稿]",
+      "placeholder": {
+        "image": "[图片]",
+        "video": "[视频]",
+        "audio": "[语音]",
+        "file": "[文件]",
+        "location": "[位置]",
+        "groupInvite": "[群聊邀请]",
+        "unknown": "[未知消息类型]"
+      }
+    },
+    "messages": {
+      "me": "我",
+      "system": "系统消息",
+      "loading": "加载中...",
+      "viewMoreMessages": "查看更多消息",
+      "viewMoreHistory": "查看更多历史消息",
+      "myAvatar": "我的头像",
+      "userAvatar": "{name}的头像",
+      "sentByMe": "我发送的消息",
+      "sentByUser": "{name}发送的消息",
+      "newMessageTip": "有 {count} 条新消息，点击查看"
+    },
+    "login": {
+      "label": "登录",
+      "account": "账号密码登录",
+      "qrcode": "二维码",
+      "loadingQR": "加载二维码中...",
+      "phone": "手机号登录",
+      "sendCode": "发送验证码",
+      "scan": "扫码登录",
+      "username": "用户名",
+      "inputUsername": "请输入用户名",
+      "accountNull": "用户名或密码为空",
+      "qrcodeError": "验证码发送失败",
+      "getQrcodeError": "获取二维码失败",
+      "qrcodeExpired": "二维码已过期",
+      "password": "密码",
+      "inputPassword": "请输入密码",
+      "phoneNumber": "手机号",
+      "inputPhoneNumber": "请输入手机号",
+      "code": "验证码",
+      "inputCode": "请输入验证码",
+      "loginSuccess": "登录成功",
+      "loginFail": "登录失败"
+    },
+    "profile": {
+      "changeAvatar": "更换头像",
+      "save": "保存",
+      "saveChanges": "保存修改",
+      "updateSuccess": "个人信息更新成功",
+      "updateFailed": "更新失败，请重试",
+      "address": "地址:",
+      "birthday": "生日",
+      "enterAddress": "请输入地址",
+      "enterMobile": "请输入手机号",
+      "enterNickname": "请输入昵称",
+      "enterSignature": "请输入个性签名",
+      "mobile": "手机号:",
+      "nickname": "昵称:",
+      "selectBirthday": "选择生日",
+      "sex": {
+        "female": "女",
+        "label": "性别:",
+        "male": "男"
+      },
+      "signature": "签名:"
+    },
+    "dialog": {
+      "confirmClearChat": "确定要清空所有聊天记录吗？此操作不可恢复",
+      "warning": "警告",
+      "confirm": "确定",
+      "cancel": "取消",
+      "clearChatLog": "清空聊天记录"
+    },
+    "forward": {
+      "title": "转发消息",
+      "forwardMessage": "转发消息",
+      "searchContacts": "搜索联系人...",
+      "cancel": "取消",
+      "confirmSend": "确认发送 ({count})"
+    },
+    "screen": {
+      "pen": "笔",
+      "addText": "添加文字",
+      "arrow": "箭头",
+      "circle": "圆形",
+      "line": "线段",
+      "mosaic": "马赛克",
+      "rect": "矩形",
+      "redo": "重做",
+      "undo": "撤销"
+    },
+    "selectContact": {
+      "selected": "已选择的联系人 ({count})",
+      "selecte": "选择联系人",
+      "list": "联系人列表"
+    },
+    "settings": {
+      "label": "设置",
+      "logout": "退出登录",
+      "tabs": {
+        "about": "关于",
+        "fileManagement": "文件管理",
+        "general": "通用设置",
+        "notification": "消息通知",
+        "profile": "个人资料",
+        "shortcut": "快捷键",
+        "theme": "主题设置"
+      },
+      "general": {
+        "label": "通用",
+        "language": "语言",
+        "select": "选择语言",
+        "clearChat": "清空聊天记录",
+        "storage": {
+          "cache": "缓存",
+          "manage": "管理",
+          "clean": "清理",
+          "cacheDesc": "缓存是使用聊天过程中产生的临时数据，清理缓存不会影响软件的正常使用",
+          "chat": "聊天数据",
+          "chatDesc": "可清理聊天中的图片、视频、文件等数据",
+          "details": "存储明细",
+          "desc": "占据磁盘{percent}%存储空间",
+          "diskFree": "磁盘可用空间",
+          "diskUsed": "磁盘已用空间",
+          "other": "其他",
+          "otherDesc": "包含运行程序的必要文件、其他账号的数据等",
+          "used": "已用空间",
+          "label": "存储空间管理"
+        }
+      },
+      "notification": {
+        "call": "语音和视频通话通知声音",
+        "label": "通知声音",
+        "newMsg": "新消息通知声音"
+      },
+      "profile": {
+        "address": "地址:",
+        "birthday": "生日",
+        "enterAddress": "请输入地址",
+        "enterMobile": "请输入手机号",
+        "enterNickname": "请输入昵称",
+        "enterSignature": "请输入个性签名",
+        "mobile": "手机号:",
+        "nickname": "昵称:",
+        "selectBirthday": "选择生日",
+        "sex": {
+          "female": "女",
+          "label": "性别:",
+          "male": "男"
+        },
+        "signature": "签名:"
+      },
+      "shortcut": {
+        "click": "点击后按快捷键",
+        "conflict": "检测冲突",
+        "conflictTip": "冲突时提醒",
+        "default": "恢复默认设置",
+        "screen": "截取屏幕",
+        "send": "发送消息"
+      },
+      "file": {
+        "change": "更改",
+        "fileManagement": "文件管理",
+        "openFolder": "打开文件夹",
+        "saveLocation": "文件的默认保存位置",
+        "settings": "文件设置",
+        "switchAutoDownload": "开启文件自动下载 (200MB以内)"
+      },
+      "about": {
+        "version": "版本号",
+        "update": "检查更新",
+        "help": "帮助",
+        "viewHelp": "查看帮助",
+        "updateInfo": "更新信息",
+        "newVersion": "新版本",
+        "date": "发布日期",
+        "body": "更新说明",
+        "download": "下载更新",
+        "helpUrl": "https://help.wechat.com"
+      },
+      "theme": {
+        "auto": "跟随系统",
+        "current": "当前主题：",
+        "dark": "暗黑",
+        "light": "蓝白"
+      }
+    },
+    "about": {
+      "checkingUpdate": "检查更新中",
+      "noUpdate": "没有更新",
+      "downloadingUpdate": "下载更新中"
+    },
+    "bubble": {
+      "downloadButton": "下载按钮（当本地无路径时显示）",
+      "handlePreview": "处理预览",
+      "handleText": "处理文本消息"
+    },
+    "search": {
+      "placeholder": "搜索",
+      "resultsLabel": "搜索结果",
+      "tabs": {
+        "all": "全部",
+        "friends": "联系人",
+        "messages": "消息"
+      },
+      "moreFriends": {
+        "title": "搜索更多好友",
+        "subtitle": "输入账号或关键词搜索好友"
+      },
+      "section": {
+        "contacts": "联系人",
+        "messages": "消息"
+      },
+      "noResult": "未找到匹配项",
+      "count": "共{count}条相关聊天记录",
+      "selected": "已选择：{type}",
+      "error": {
+        "noResults": "无搜索结果"
+      },
+      "invite": {
+        "title": "邀请成员"
+      },
+      "friendSearch": {
+        "title": "搜索好友",
+        "noResult": "未找到匹配的好友",
+        "searchBtn": "搜索"
+      },
+      "addFriend": {
+        "title": "添加好友验证",
+        "verifyLabel": "验证信息",
+        "remarkLabel": "备注",
+        "addButton": "添加",
+        "addedLabel": "已添加"
+      },
+      "message": {
+        "sentRequest": "已发送添加请求给 {name}"
+      }
+    }
+  }
+}

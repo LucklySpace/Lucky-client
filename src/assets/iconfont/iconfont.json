@@ -1,0 +1,933 @@
+{
+  "id": "4223986",
+  "name": "im",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "577354",
+      "name": "扫码",
+      "font_class": "saoma",
+      "unicode": "e749",
+      "unicode_decimal": 59209
+    },
+    {
+      "icon_id": "23287739",
+      "name": "录屏",
+      "font_class": "luping",
+      "unicode": "e631",
+      "unicode_decimal": 58929
+    },
+    {
+      "icon_id": "42900289",
+      "name": "mti-关闭静音",
+      "font_class": "mti-guanbijingyin",
+      "unicode": "e9d2",
+      "unicode_decimal": 59858
+    },
+    {
+      "icon_id": "807273",
+      "name": "静音",
+      "font_class": "jingyin",
+      "unicode": "e663",
+      "unicode_decimal": 58979
+    },
+    {
+      "icon_id": "3376332",
+      "name": "聊天",
+      "font_class": "liaotian",
+      "unicode": "e625",
+      "unicode_decimal": 58917
+    },
+    {
+      "icon_id": "36561225",
+      "name": "mac_放大",
+      "font_class": "mac_top_green",
+      "unicode": "e6df",
+      "unicode_decimal": 59103
+    },
+    {
+      "icon_id": "36561226",
+      "name": "mac_缩小",
+      "font_class": "mac_top_yellow",
+      "unicode": "e6e0",
+      "unicode_decimal": 59104
+    },
+    {
+      "icon_id": "36561619",
+      "name": "mac_放大悬浮",
+      "font_class": "mac_top_ghover",
+      "unicode": "e6e1",
+      "unicode_decimal": 59105
+    },
+    {
+      "icon_id": "36561636",
+      "name": "mac_缩小悬浮",
+      "font_class": "mac_top_yhover",
+      "unicode": "e6e2",
+      "unicode_decimal": 59106
+    },
+    {
+      "icon_id": "36561224",
+      "name": "mac_关闭",
+      "font_class": "mac_top_red",
+      "unicode": "e6df",
+      "unicode_decimal": 59103
+    },
+    {
+      "icon_id": "36561643",
+      "name": "mac_关闭悬浮",
+      "font_class": "mac_top_rhover",
+      "unicode": "e6e4",
+      "unicode_decimal": 59108
+    },
+    {
+      "icon_id": "13728634",
+      "name": "向右箭头",
+      "font_class": "right",
+      "unicode": "e8e6",
+      "unicode_decimal": 59622
+    },
+    {
+      "icon_id": "40095116",
+      "name": "人工智能-copy",
+      "font_class": "rengongzhineng",
+      "unicode": "e621",
+      "unicode_decimal": 58913
+    },
+    {
+      "icon_id": "1309150",
+      "name": "工具,写,编辑,钢笔,铅笔,设备,写作,线性,扁平,填充,单色,简约,圆润",
+      "font_class": "24",
+      "unicode": "e6af",
+      "unicode_decimal": 59055
+    },
+    {
+      "icon_id": "1770896",
+      "name": "撤销",
+      "font_class": "chexiao",
+      "unicode": "e659",
+      "unicode_decimal": 58969
+    },
+    {
+      "icon_id": "4354249",
+      "name": "形状-矩形",
+      "font_class": "xingzhuang-juxing",
+      "unicode": "eb97",
+      "unicode_decimal": 60311
+    },
+    {
+      "icon_id": "10048847",
+      "name": "圆形",
+      "font_class": "yuanxing",
+      "unicode": "e626",
+      "unicode_decimal": 58918
+    },
+    {
+      "icon_id": "10591744",
+      "name": "直线_图形对象_jurassic",
+      "font_class": "jurassic_line",
+      "unicode": "e68d",
+      "unicode_decimal": 59021
+    },
+    {
+      "icon_id": "11668348",
+      "name": "长箭头",
+      "font_class": "righttop",
+      "unicode": "e618",
+      "unicode_decimal": 58904
+    },
+    {
+      "icon_id": "16365890",
+      "name": "完成 确定",
+      "font_class": "wanchengqueding",
+      "unicode": "e69b",
+      "unicode_decimal": 59035
+    },
+    {
+      "icon_id": "31331984",
+      "name": "取消",
+      "font_class": "quxiao",
+      "unicode": "e620",
+      "unicode_decimal": 58912
+    },
+    {
+      "icon_id": "33299726",
+      "name": "马赛克",
+      "font_class": "masaike",
+      "unicode": "e759",
+      "unicode_decimal": 59225
+    },
+    {
+      "icon_id": "7381652",
+      "name": "聊天记录",
+      "font_class": "liaotianjilu",
+      "unicode": "e619",
+      "unicode_decimal": 58905
+    },
+    {
+      "icon_id": "282425",
+      "name": "设置",
+      "font_class": "33",
+      "unicode": "e60c",
+      "unicode_decimal": 58892
+    },
+    {
+      "icon_id": "487468",
+      "name": "设置",
+      "font_class": "shezhi1",
+      "unicode": "e6b4",
+      "unicode_decimal": 59060
+    },
+    {
+      "icon_id": "1083696",
+      "name": "联系人",
+      "font_class": "lianxiren3",
+      "unicode": "e685",
+      "unicode_decimal": 59013
+    },
+    {
+      "icon_id": "5635245",
+      "name": "联系人",
+      "font_class": "lianxiren4",
+      "unicode": "e60f",
+      "unicode_decimal": 58895
+    },
+    {
+      "icon_id": "6449654",
+      "name": "设置",
+      "font_class": "User",
+      "unicode": "e610",
+      "unicode_decimal": 58896
+    },
+    {
+      "icon_id": "6755739",
+      "name": "设置",
+      "font_class": "shezhix",
+      "unicode": "e611",
+      "unicode_decimal": 58897
+    },
+    {
+      "icon_id": "6788630",
+      "name": "联系人",
+      "font_class": "lianxiren5",
+      "unicode": "e612",
+      "unicode_decimal": 58898
+    },
+    {
+      "icon_id": "6840246",
+      "name": "联系人",
+      "font_class": "lianxiren6",
+      "unicode": "e680",
+      "unicode_decimal": 59008
+    },
+    {
+      "icon_id": "10091562",
+      "name": "联系人2",
+      "font_class": "lianxiren7",
+      "unicode": "e63a",
+      "unicode_decimal": 58938
+    },
+    {
+      "icon_id": "10360045",
+      "name": "联系人",
+      "font_class": "lianxiren8",
+      "unicode": "e645",
+      "unicode_decimal": 58949
+    },
+    {
+      "icon_id": "10440364",
+      "name": "设置",
+      "font_class": "shezhi2",
+      "unicode": "e657",
+      "unicode_decimal": 58967
+    },
+    {
+      "icon_id": "12519062",
+      "name": "联系人",
+      "font_class": "lianxiren9",
+      "unicode": "e673",
+      "unicode_decimal": 58995
+    },
+    {
+      "icon_id": "17334984",
+      "name": "人员名单",
+      "font_class": "renyuanmingdan",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "37898457",
+      "name": "联系人-copy",
+      "font_class": "lianxiren10",
+      "unicode": "e617",
+      "unicode_decimal": 58903
+    },
+    {
+      "icon_id": "7186162",
+      "name": "联系人",
+      "font_class": "lianxiren--",
+      "unicode": "e635",
+      "unicode_decimal": 58933
+    },
+    {
+      "icon_id": "9176331",
+      "name": "会话日志",
+      "font_class": "huihuarizhi",
+      "unicode": "e670",
+      "unicode_decimal": 58992
+    },
+    {
+      "icon_id": "9335661",
+      "name": "联系人",
+      "font_class": "lianxiren-copy-copy",
+      "unicode": "e607",
+      "unicode_decimal": 58887
+    },
+    {
+      "icon_id": "10081831",
+      "name": "发起会话",
+      "font_class": "faqihuihua",
+      "unicode": "e650",
+      "unicode_decimal": 58960
+    },
+    {
+      "icon_id": "12853591",
+      "name": "消息",
+      "font_class": "xiaoxi",
+      "unicode": "e638",
+      "unicode_decimal": 58936
+    },
+    {
+      "icon_id": "13066379",
+      "name": "消息",
+      "font_class": "xiaoxi3",
+      "unicode": "fe71",
+      "unicode_decimal": 65137
+    },
+    {
+      "icon_id": "16197613",
+      "name": "消息",
+      "font_class": "xiaoxi1",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "19987558",
+      "name": "联系人",
+      "font_class": "lianxiren1",
+      "unicode": "e609",
+      "unicode_decimal": 58889
+    },
+    {
+      "icon_id": "21366492",
+      "name": "消息",
+      "font_class": "xiaoxi2",
+      "unicode": "e6a5",
+      "unicode_decimal": 59045
+    },
+    {
+      "icon_id": "23383577",
+      "name": "联系人",
+      "font_class": "lianxiren2",
+      "unicode": "e60a",
+      "unicode_decimal": 58890
+    },
+    {
+      "icon_id": "24858542",
+      "name": "消息 气泡",
+      "font_class": "Rrl_s_140",
+      "unicode": "e613",
+      "unicode_decimal": 58899
+    },
+    {
+      "icon_id": "4840017",
+      "name": "截图",
+      "font_class": "jietu",
+      "unicode": "e60e",
+      "unicode_decimal": 58894
+    },
+    {
+      "icon_id": "4841628",
+      "name": "截图",
+      "font_class": "jietu1",
+      "unicode": "e61f",
+      "unicode_decimal": 58911
+    },
+    {
+      "icon_id": "11821872",
+      "name": "截图",
+      "font_class": "jietu2",
+      "unicode": "e64f",
+      "unicode_decimal": 58959
+    },
+    {
+      "icon_id": "34939272",
+      "name": "截图",
+      "font_class": "jietu3",
+      "unicode": "e70e",
+      "unicode_decimal": 59150
+    },
+    {
+      "icon_id": "16399024",
+      "name": "视频",
+      "font_class": "shipin1",
+      "unicode": "e85f",
+      "unicode_decimal": 59487
+    },
+    {
+      "icon_id": "8371987",
+      "name": "视频-3",
+      "font_class": "shipin-",
+      "unicode": "e62d",
+      "unicode_decimal": 58925
+    },
+    {
+      "icon_id": "7069152",
+      "name": "播放",
+      "font_class": "bofang1",
+      "unicode": "e737",
+      "unicode_decimal": 59191
+    },
+    {
+      "icon_id": "29515587",
+      "name": "Markdown",
+      "font_class": "Markdown",
+      "unicode": "e6db",
+      "unicode_decimal": 59099
+    },
+    {
+      "icon_id": "36133548",
+      "name": "markdown",
+      "font_class": "markdown",
+      "unicode": "e72f",
+      "unicode_decimal": 59183
+    },
+    {
+      "icon_id": "2438876",
+      "name": "file-b-3",
+      "font_class": "file-b-5",
+      "unicode": "e658",
+      "unicode_decimal": 58968
+    },
+    {
+      "icon_id": "2438878",
+      "name": "file-b-1",
+      "font_class": "file-b-7",
+      "unicode": "e65b",
+      "unicode_decimal": 58971
+    },
+    {
+      "icon_id": "2438879",
+      "name": "file-b-2",
+      "font_class": "file-b-8",
+      "unicode": "e65e",
+      "unicode_decimal": 58974
+    },
+    {
+      "icon_id": "2438880",
+      "name": "file-b-5",
+      "font_class": "file-b-9",
+      "unicode": "e660",
+      "unicode_decimal": 58976
+    },
+    {
+      "icon_id": "2438881",
+      "name": "file-b-9",
+      "font_class": "file-b-10",
+      "unicode": "e661",
+      "unicode_decimal": 58977
+    },
+    {
+      "icon_id": "2438885",
+      "name": "file-b-10",
+      "font_class": "file-b-12",
+      "unicode": "e664",
+      "unicode_decimal": 58980
+    },
+    {
+      "icon_id": "2438886",
+      "name": "file-b-15",
+      "font_class": "file-b-13",
+      "unicode": "e665",
+      "unicode_decimal": 58981
+    },
+    {
+      "icon_id": "2438887",
+      "name": "file-b-12",
+      "font_class": "file-b-14",
+      "unicode": "e667",
+      "unicode_decimal": 58983
+    },
+    {
+      "icon_id": "2438888",
+      "name": "file-b-14",
+      "font_class": "file-b-15",
+      "unicode": "e668",
+      "unicode_decimal": 58984
+    },
+    {
+      "icon_id": "2438889",
+      "name": "file-b-13",
+      "font_class": "file-b-16",
+      "unicode": "e669",
+      "unicode_decimal": 58985
+    },
+    {
+      "icon_id": "2438891",
+      "name": "file-b-17",
+      "font_class": "file-b-18",
+      "unicode": "e66b",
+      "unicode_decimal": 58987
+    },
+    {
+      "icon_id": "2438892",
+      "name": "file-b-16",
+      "font_class": "file-b-19",
+      "unicode": "e66c",
+      "unicode_decimal": 58988
+    },
+    {
+      "icon_id": "2438893",
+      "name": "file-b-19",
+      "font_class": "file-b-20",
+      "unicode": "e66d",
+      "unicode_decimal": 58989
+    },
+    {
+      "icon_id": "2438894",
+      "name": "file-b-18",
+      "font_class": "file-b-21",
+      "unicode": "e66e",
+      "unicode_decimal": 58990
+    },
+    {
+      "icon_id": "2438946",
+      "name": "file-b-8",
+      "font_class": "file-b-22",
+      "unicode": "e66f",
+      "unicode_decimal": 58991
+    },
+    {
+      "icon_id": "3269710",
+      "name": "file-b-0",
+      "font_class": "file-b-7-copy-copy",
+      "unicode": "e605",
+      "unicode_decimal": 58885
+    },
+    {
+      "icon_id": "1740664",
+      "name": "file_rar",
+      "font_class": "file_rar",
+      "unicode": "e72b",
+      "unicode_decimal": 59179
+    },
+    {
+      "icon_id": "2438875",
+      "name": "file-b-4",
+      "font_class": "file-b-",
+      "unicode": "e652",
+      "unicode_decimal": 58962
+    },
+    {
+      "icon_id": "2438877",
+      "name": "file-b-0",
+      "font_class": "file-b-1",
+      "unicode": "e653",
+      "unicode_decimal": 58963
+    },
+    {
+      "icon_id": "2438882",
+      "name": "file-b-6",
+      "font_class": "file-b-2",
+      "unicode": "e654",
+      "unicode_decimal": 58964
+    },
+    {
+      "icon_id": "2438890",
+      "name": "file-b-7",
+      "font_class": "file-b-3",
+      "unicode": "e656",
+      "unicode_decimal": 58966
+    },
+    {
+      "icon_id": "705706",
+      "name": "播放",
+      "font_class": "bofang",
+      "unicode": "e630",
+      "unicode_decimal": 58928
+    },
+    {
+      "icon_id": "1265731",
+      "name": "左旋转",
+      "font_class": "zuoxuanzhuan",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "1265765",
+      "name": "右旋转",
+      "font_class": "youxuanzhuan",
+      "unicode": "e603",
+      "unicode_decimal": 58883
+    },
+    {
+      "icon_id": "4777227",
+      "name": "缩小",
+      "font_class": "suoxiao",
+      "unicode": "ec13",
+      "unicode_decimal": 60435
+    },
+    {
+      "icon_id": "4777229",
+      "name": "放大",
+      "font_class": "fangda1",
+      "unicode": "ec14",
+      "unicode_decimal": 60436
+    },
+    {
+      "icon_id": "6135531",
+      "name": "居中",
+      "font_class": "juzhong",
+      "unicode": "e67f",
+      "unicode_decimal": 59007
+    },
+    {
+      "icon_id": "1200189",
+      "name": "放大",
+      "font_class": "fangda",
+      "unicode": "e60d",
+      "unicode_decimal": 58893
+    },
+    {
+      "icon_id": "28195959",
+      "name": "视频通话",
+      "font_class": "shipintonghua",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
+      "icon_id": "37887595",
+      "name": "视频通话",
+      "font_class": "shipintonghua1",
+      "unicode": "e825",
+      "unicode_decimal": 59429
+    },
+    {
+      "icon_id": "17761920",
+      "name": "视频通话",
+      "font_class": "videoCall",
+      "unicode": "e765",
+      "unicode_decimal": 59237
+    },
+    {
+      "icon_id": "827645",
+      "name": "麦克风",
+      "font_class": "maikefeng",
+      "unicode": "e65f",
+      "unicode_decimal": 58975
+    },
+    {
+      "icon_id": "6776381",
+      "name": "摄像头_实体",
+      "font_class": "shexiangtou_shiti",
+      "unicode": "eca5",
+      "unicode_decimal": 60581
+    },
+    {
+      "icon_id": "10144684",
+      "name": "扬声器",
+      "font_class": "yangshengqi",
+      "unicode": "e61e",
+      "unicode_decimal": 58910
+    },
+    {
+      "icon_id": "12995543",
+      "name": "挂断",
+      "font_class": "guaduan",
+      "unicode": "e6e3",
+      "unicode_decimal": 59107
+    },
+    {
+      "icon_id": "19203975",
+      "name": "发送中",
+      "font_class": "fasongzhong",
+      "unicode": "e67b",
+      "unicode_decimal": 59003
+    },
+    {
+      "icon_id": "9826666",
+      "name": "成功",
+      "font_class": "chenggong",
+      "unicode": "e616",
+      "unicode_decimal": 58902
+    },
+    {
+      "icon_id": "24535832",
+      "name": "处理中",
+      "font_class": "chulizhong",
+      "unicode": "efd0",
+      "unicode_decimal": 61392
+    },
+    {
+      "icon_id": "6380510",
+      "name": "添加好友",
+      "font_class": "tianjiahaoyou",
+      "unicode": "e61d",
+      "unicode_decimal": 58909
+    },
+    {
+      "icon_id": "16010357",
+      "name": "加",
+      "font_class": "jia",
+      "unicode": "e608",
+      "unicode_decimal": 58888
+    },
+    {
+      "icon_id": "9814888",
+      "name": "男性",
+      "font_class": "nanxing",
+      "unicode": "e604",
+      "unicode_decimal": 58884
+    },
+    {
+      "icon_id": "582603",
+      "name": "失败",
+      "font_class": "71shibai",
+      "unicode": "e64a",
+      "unicode_decimal": 58954
+    },
+    {
+      "icon_id": "4136484",
+      "name": "女性",
+      "font_class": "nvxing",
+      "unicode": "e623",
+      "unicode_decimal": 58915
+    },
+    {
+      "icon_id": "568990",
+      "name": "通讯录",
+      "font_class": "tongxunlu",
+      "unicode": "e655",
+      "unicode_decimal": 58965
+    },
+    {
+      "icon_id": "955123",
+      "name": "提醒",
+      "font_class": "tixing",
+      "unicode": "e639",
+      "unicode_decimal": 58937
+    },
+    {
+      "icon_id": "991642",
+      "name": "最小化",
+      "font_class": "zuixiaohua",
+      "unicode": "e624",
+      "unicode_decimal": 58916
+    },
+    {
+      "icon_id": "1092123",
+      "name": "电话",
+      "font_class": "dianhua",
+      "unicode": "e61b",
+      "unicode_decimal": 58907
+    },
+    {
+      "icon_id": "1278125",
+      "name": "上传",
+      "font_class": "shangchuan",
+      "unicode": "e666",
+      "unicode_decimal": 58982
+    },
+    {
+      "icon_id": "1305399",
+      "name": "保存",
+      "font_class": "baocun",
+      "unicode": "e63b",
+      "unicode_decimal": 58939
+    },
+    {
+      "icon_id": "1314337",
+      "name": "购物车",
+      "font_class": "gouwuche",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "1314419",
+      "name": "设置",
+      "font_class": "shezhi",
+      "unicode": "e606",
+      "unicode_decimal": 58886
+    },
+    {
+      "icon_id": "1471079",
+      "name": "表情",
+      "font_class": "biaoqing-xue",
+      "unicode": "e632",
+      "unicode_decimal": 58930
+    },
+    {
+      "icon_id": "2076242",
+      "name": " 图片",
+      "font_class": "tupian",
+      "unicode": "e889",
+      "unicode_decimal": 59529
+    },
+    {
+      "icon_id": "2118506",
+      "name": "下载",
+      "font_class": "xiazai",
+      "unicode": "e65c",
+      "unicode_decimal": 58972
+    },
+    {
+      "icon_id": "2667537",
+      "name": "联系人",
+      "font_class": "lianxiren",
+      "unicode": "e622",
+      "unicode_decimal": 58914
+    },
+    {
+      "icon_id": "2672187",
+      "name": "电脑",
+      "font_class": "diannao",
+      "unicode": "e64e",
+      "unicode_decimal": 58958
+    },
+    {
+      "icon_id": "2742649",
+      "name": "朋友圈",
+      "font_class": "pengyouquan",
+      "unicode": "e672",
+      "unicode_decimal": 58994
+    },
+    {
+      "icon_id": "2854379",
+      "name": "网络中断",
+      "font_class": "wangluozhongduan",
+      "unicode": "e60b",
+      "unicode_decimal": 58891
+    },
+    {
+      "icon_id": "4166140",
+      "name": "朋友",
+      "font_class": "pengyou",
+      "unicode": "e61a",
+      "unicode_decimal": 58906
+    },
+    {
+      "icon_id": "5111465",
+      "name": "语言-空",
+      "font_class": "yuyan-kong",
+      "unicode": "e692",
+      "unicode_decimal": 59026
+    },
+    {
+      "icon_id": "5387837",
+      "name": "语音_o",
+      "font_class": "yuyin_o",
+      "unicode": "eb6c",
+      "unicode_decimal": 60268
+    },
+    {
+      "icon_id": "5391770",
+      "name": "winfo-icon-截图",
+      "font_class": "winfo-icon-jietu",
+      "unicode": "e65d",
+      "unicode_decimal": 58973
+    },
+    {
+      "icon_id": "6337458",
+      "name": "取消链接",
+      "font_class": "quxiaolianjie",
+      "unicode": "ec80",
+      "unicode_decimal": 60544
+    },
+    {
+      "icon_id": "6583375",
+      "name": "文件",
+      "font_class": "wenjian",
+      "unicode": "e686",
+      "unicode_decimal": 59014
+    },
+    {
+      "icon_id": "7386716",
+      "name": "文件",
+      "font_class": "wenjian1",
+      "unicode": "e633",
+      "unicode_decimal": 58931
+    },
+    {
+      "icon_id": "8288853",
+      "name": "警告",
+      "font_class": "jinggao",
+      "unicode": "e84f",
+      "unicode_decimal": 59471
+    },
+    {
+      "icon_id": "8767303",
+      "name": "手机",
+      "font_class": "shouji",
+      "unicode": "e615",
+      "unicode_decimal": 58901
+    },
+    {
+      "icon_id": "10315188",
+      "name": "会话",
+      "font_class": "huihua",
+      "unicode": "e63c",
+      "unicode_decimal": 58940
+    },
+    {
+      "icon_id": "15346596",
+      "name": "关闭",
+      "font_class": "guanbi",
+      "unicode": "e6a8",
+      "unicode_decimal": 59048
+    },
+    {
+      "icon_id": "27670778",
+      "name": "搜索",
+      "font_class": "sousuo",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "28410457",
+      "name": "撤回",
+      "font_class": "chehui",
+      "unicode": "e65a",
+      "unicode_decimal": 58970
+    },
+    {
+      "icon_id": "28719944",
+      "name": "最大化-大",
+      "font_class": "zuidahua-da",
+      "unicode": "e693",
+      "unicode_decimal": 59027
+    },
+    {
+      "icon_id": "29711699",
+      "name": "三点",
+      "font_class": "sandian",
+      "unicode": "e634",
+      "unicode_decimal": 58932
+    },
+    {
+      "icon_id": "29941086",
+      "name": "视频",
+      "font_class": "shipin",
+      "unicode": "e662",
+      "unicode_decimal": 58978
+    },
+    {
+      "icon_id": "248980",
+      "name": "search",
+      "font_class": "search",
+      "unicode": "e699",
+      "unicode_decimal": 59033
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+/*禁止选择样式*/
+.no-select {
+  -webkit-user-select: none;
+  /*webkit浏览器*/
+  -moz-user-select: none;
+  /*火狐*/
+  -ms-user-select: none;
+  /*IE10*/
+  user-select: none;
+}
+
+.no-button {
+  background: rgba(0, 0, 0, 0);
+  border-color: transparent;
+  background-color: transparent;
+  border: 0;
+  margin: 0px 8px 0px 8px;
+  cursor: pointer;
+}
+
+.no-button:hover {
+  border: none;
+  /* 悬停时去除边框 */
+}
+
+.el-dialog__header {
+  /* 样式规则 */
+  height: 35px !important;
+  padding-bottom: 10px !important;
+}
+
+.el-date-editor.el-input, .el-date-editor.el-input__wrapper {
+  width: 100% !important;
+}
+
+/* 定义滚动条宽度 */
+@mixin scroll-bar($width: 5px) {
+  /* 背景色为透明 */
+  &::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar {
+    width: $width;
+    height: 10px;
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+/*遮罩边框圆角*/
+.el-overlay {
+  border-radius: var(--main-border-radius);
+}
+
+.el-drawer__body {
+  padding: 2px !important;
+  /* padding: var(--el-drawer-padding-primary); */
+}
+
+.el-drawer__header {
+  margin-bottom: 10px !important;
+}
+
+.el-divider--horizontal {
+  margin: 12px 0 !important;
+}
+
+/* at 弹窗样式  */
+.active-text,
+.at-user {
+  display: inline-block;
+  vertical-align: baseline;
+  font-size: 15px; // 保持和输入框一致
+  line-height: 1.5; // 保持和输入框一致
+  //padding: 0 4px;
+  color: blue;
+  user-select: none;
+  margin: 0 1px;
+}
+
+/* 会话@高亮 */
+.mention-highlight {
+  color: red;
+  // padding: 0 4px;
+  // border-radius: 3px;
+}
+
+/* 会话草稿高亮 */
+.mention-highlight-draft {
+  color: red;
+  // padding: 0 4px;
+  // border-radius: 3px;
+}
+
+
+.copy-btn {
+  background-color: transparent;
+  color: #797979;
+  border: none;
+  float: right;
+  padding: 2px 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.copy-btn:hover {
+  background-color: #eee;
+  // transform: scale(1.05);
+}

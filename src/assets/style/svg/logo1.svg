@@ -1,0 +1,9 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <title>IM图标 - 信封</title>
+    <!-- 蓝色圆角矩形背景 -->
+    <rect x="0" y="0" width="64" height="64" rx="10" ry="10" fill="#007BFF"/>
+    <!-- 白色信封主体 -->
+    <path d="M16 24 h32 v20 h-32 z" fill="#FFFFFF"/>
+    <!-- 信封封口 -->
+    <path d="M16 24 l16 12 l16-12" fill="#007BFF"/>
+</svg>

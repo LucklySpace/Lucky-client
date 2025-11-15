@@ -1,0 +1,76 @@
+{
+  "productName": "Lucky",
+  "version": "0.1.0",
+  "identifier": "com.xy.im",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "login",
+        "title": "Login",
+        "fullscreen": false,
+        "height": 400,
+        "width": 280,
+        "center": true,
+        "resizable": false,
+        "decorations": false,
+        "visible": true,
+        "url": "/login",
+        "transparent": true,
+        "shadow": false
+      },
+      {
+        "label": "preview",
+        "title": "Preview",
+        "fullscreen": false,
+        "height": 650,
+        "width": 800,
+        "center": true,
+        "resizable": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "url": "/preview",
+        "transparent": true,
+        "shadow": false
+      }
+    ],
+    "withGlobalTauri": true,
+    "security": {
+      "csp": {
+        "default-src": "'self' tauri: tauri://localhost http://tauri.localhost https://tauri.localhost",
+        "script-src": "'self' 'unsafe-inline' 'unsafe-eval' 'sha256-00p01c5a...' 'sha256-...' ",
+        "img-src": "'self' asset: http://asset.localhost blob: data:",
+        "connect-src": "ipc: http://ipc.localhost"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    }
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "active": true,
+    "targets": "all",
+    "macOS": {
+      "entitlements": "./src-tauri/Info.plist"
+    },
+    "externalBin": ["bin/ffmpeg"],
+    "resources": ["bin/*", "Info.plist"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3NUZBMENGNUMyQzlBNjgKUldSb21peGN6NkJmRitDRTNBVm0zc2ZFUzRBVTBJQXdYbXdnUWprTEFEejJnS3dKb1pKaGt2RFUK",
+      "endpoints": []
+    }
+  }
+}

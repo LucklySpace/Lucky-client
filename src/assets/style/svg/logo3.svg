@@ -1,0 +1,9 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <title>IM Icon with Envelope</title>
+    <!-- 绿色圆角矩形背景 -->
+    <rect x="0" y="0" width="64" height="64" rx="10" ry="10" fill="#007BFF"/>
+    <!-- 白色信封主体 -->
+    <path d="M16 20 h32 v24 h-32 z" fill="#FFFFFF" stroke-width="2"/>
+    <!-- 信封口（上部折叠） -->
+    <path d="M16 20 l16 12 l16-12" fill="none" stroke="#007BFF" stroke-width="2"/>
+</svg>

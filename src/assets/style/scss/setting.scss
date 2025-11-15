@@ -1,0 +1,171 @@
+.setting-container {
+  margin-top: 20px;
+  padding: 0 20px;
+
+  /* 通用表单行容器，用于布局 label + 控件 */
+  .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 18px; /* 行间距，根据需要调整 */
+
+    /* 左侧 label 区域 */
+    .row-label {
+      width: 80px; // 固定宽度（确保对齐）
+      font-size: clamp(12px, 14px, 14px); // 优先用最大字体，超出则缩小
+      font-weight: 500; // 更清晰的字体
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0; // 禁止收缩
+      color: #606266;
+    }
+
+    /* 右侧控件区域 */
+    .row-control {
+      flex: 1; /* 占据剩余宽度 */
+      display: flex;
+      align-items: center;
+      margin-left: 10px;
+
+      /* 统一最小宽度 */
+      :deep(.el-select),
+      :deep(.el-button),
+      :deep(.el-input) {
+        min-width: 160px;
+      }
+
+      /* 并列控件间的间距 */
+      > *:not(:last-child) {
+        margin-right: 12px;
+      }
+    }
+  }
+
+  /* 如果你在 <el-form> 中用 label-width="0"，需要覆盖掉默认 margin */
+  .el-form-item__content {
+    margin-left: 0;
+  }
+
+  .el-icon {
+    margin-right: 5px;
+  }
+
+  .el-button,
+  .el-input,
+  .el-select__wrapper {
+    width: 200px !important;
+  }
+}
+
+.file-container {
+  margin-top: 20px;
+  padding: 0 20px;
+
+  // 每一行都用 .form-row 和两个子区域
+  .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 18px;
+
+    // 左侧 label
+    .row-label {
+      width: 80px; // 固定宽度
+      flex-shrink: 0;
+      font-size: clamp(12px, 14px, 14px);
+      color: #606266;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // 右侧控件
+    .row-control {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      margin-left: 10px;
+
+      // 统一控件最小宽度
+      :deep(.el-checkbox),
+      :deep(.el-input),
+      :deep(.el-button) {
+        min-width: 160px;
+      }
+
+      // 并列控件间隙
+      > *:not(:last-child) {
+        margin-right: 12px;
+      }
+    }
+  }
+
+  /* 专门针对提示行 */
+  .form-row.hint-row {
+    margin-top: -8px; /* 微调与上行的距离 */
+    margin-bottom: 16px;
+
+    .row-control {
+      /* 让提示文字单占一行 */
+      display: block;
+      min-height: 1em;
+    }
+  }
+
+  .el-icon {
+    margin-right: 5px;
+  }
+
+  .hint-text {
+    display: block;
+    margin-left: 0; /* row-control 本身在右侧 */
+    font-size: 12px;
+    color: #909399;
+  }
+
+  // 覆盖 el-form-item 默认的 margin-left（若使用 el-form）
+  .el-form-item__content {
+    margin-left: 0;
+  }
+}
+
+.setting-dialog {
+  .el-dialog {
+    margin: 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+
+    // .el-dialog__body {
+    //   flex: 1;
+    //   overflow-y: auto;
+    //   padding: 20px 0;
+    // }
+
+    .el-tabs {
+      height: 100%;
+    }
+  }
+
+  // el-tabs  item 宽度
+  .el-tabs--left .el-tabs__header.is-left,
+  .el-tabs--left .el-tabs__header.is-right,
+  .el-tabs--left .el-tabs__nav-scroll,
+  .el-tabs--left .el-tabs__nav-wrap.is-left,
+  .el-tabs--left .el-tabs__nav-wrap.is-right,
+  .el-tabs--right .el-tabs__header.is-left,
+  .el-tabs--right .el-tabs__header.is-right,
+  .el-tabs--right .el-tabs__nav-scroll,
+  .el-tabs--right .el-tabs__nav-wrap.is-left,
+  .el-tabs--right .el-tabs__nav-wrap.is-right {
+    height: 100%;
+    width: 100px;
+
+    .el-tabs__item {
+      width: 100%;
+    }
+  }
+}
