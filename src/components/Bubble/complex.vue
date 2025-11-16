@@ -10,7 +10,7 @@
     <div :aria-label="ariaLabel" class="mixed-bubble__inner" tabindex="0">
       <!-- 头像（可选） -->
       <div v-if="showAvatar" aria-hidden="true" class="mixed-bubble__avatar-wrap">
-        <img :alt="message.name || message.chatId || 'avatar'" :src="avatarUrl" class="mixed-bubble__avatar" />
+        <Avatar :avatar="avatarUrl || ''" :name="message.name || message.chatId" :width="44" :borderRadius="8" class="mixed-bubble__avatar" />
       </div>
 
       <!-- 内容：按 parts 顺序渲染 -->
@@ -158,6 +158,7 @@
    */
 
   import { computed, reactive } from "vue";
+  import Avatar from "@/components/Avatar/index.vue";
   import { useI18n } from "vue-i18n";
   import { ElMessage } from "element-plus";
 

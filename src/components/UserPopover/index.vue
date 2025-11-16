@@ -99,8 +99,7 @@
   import { useFriendsStore } from "@/store/modules/friends";
   import { MAX_REMARK_LEN } from "@/constants";
   import Avatar from "@/components/Avatar/index.vue";
-import { save } from "@tauri-apps/plugin-dialog";
-
+  
   const { t: $t } = useI18n();
   const friendStore = useFriendsStore();
   // contact 类型（保持向后兼容，字段可选）
@@ -166,7 +165,7 @@ import { save } from "@tauri-apps/plugin-dialog";
   const saveRemark = async () => {
     if (!props.contact?.friendId) return;
     const next = (remark.value || "").trim();
-    console.log('next', next);
+    console.log("next", next);
     if (!next) {
       ElMessage.warning($t("errors.remark.empty"));
       return;

@@ -69,7 +69,7 @@
         <!-- 群公告（仅管理员/群主可编辑） -->
         <el-form-item :label="$t('chat.groupChat.groupNotice')" class="group-notice">
           <div
-            class="group-notice-display"
+            :class="['group-notice-display', { 'no-permission': !canEditNotice }]"
             @click="canEditNotice ? startEditGroupNotice() : onNoPermission()"
             v-if="!ui.edit.notice.editing"
           >
@@ -103,6 +103,8 @@
 
           <el-divider />
 
+          
+
           <el-form-item class="switch-form-item" style="margin-bottom: 0">
             <div class="ordinary-btn">
               <span class="switch-label">{{ $t("chat.toolbar.mute") }}</span>
@@ -118,7 +120,7 @@
           </el-form-item>
         </div>
 
-        <el-divider></el-divider>
+        <el-divider />
 
         <div class="group-footer">
           <el-form-item style="margin-bottom: 0" class="danger">
@@ -155,6 +157,7 @@
       />
     </div>
   </el-scrollbar>
+      
 </template>
 
 <script lang="ts" setup>
@@ -195,6 +198,7 @@
 
   /**
    * 获取群详情
+   * —— 改为 reactive（变量名不变）
    * —— 改为 reactive（变量名不变）
    */
   const groupInfoData = reactive({
@@ -274,12 +278,8 @@
     globalEventBus.off(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
   });
 
-  // 监听 currentChat 的变化
-  watch(
-    () => chatStore.currentChat?.chatId,
-    () => nextTick(() => updateGroupInfoData()),
-    { immediate: true }
-  );
+  // 首次挂载时初始化（后续通过 EventBus 同步，无需 watch）
+  // 已在 onMounted 中调用 updateGroupInfoData()
 
   /**
    * 获取群成员
@@ -310,6 +310,7 @@
     ui.dialogs.invite = !ui.dialogs.invite;
   };
 
+  /** 邀请群成员 */
   /** 邀请群成员 */
   const handleAddGroupMember = (arr: any) => {
     if (arr && arr.length <= 0) return;
@@ -525,18 +526,24 @@
 </script>
 
 <!-- 样式保持备份版 -->
+<!-- 样式保持备份版 -->
 <style lang="scss" scoped>
   /* 定义滚动条宽度 */
   @mixin scroll-bar($width: 6px) {
     &::-webkit-scrollbar-track {
       border-radius: 10px;
       background-color: #ddd;
+      background-color: #ddd;
     }
     &::-webkit-scrollbar {
       width: thin;
       height: 10px;
       color: none;
+      width: thin;
+      height: 10px;
+      color: none;
       background-color: transparent;
+      transition: opacity 0.3s ease;
       transition: opacity 0.3s ease;
     }
     &::-webkit-scrollbar-thumb {
@@ -555,8 +562,11 @@
       &:hover {
         background-color: rgba(155, 155, 155, 0.2);
       }
+      background-color: rgba(155, 155, 155, 0.2);
     }
   }
+
+  
 
   :deep(.el-divider) {
     position: relative;
@@ -569,14 +579,81 @@
     color: #888;
   }
 
-  .group-container {
-    padding: 18px;
-    overflow-x: hidden;
-    overflow-y: auto; /* 改为 auto */
-    @include scroll-bar();
-  }
+  
 
   .group-header {
+    /* 群聊名称编辑区域样式 */
+    .editable-field {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+
+      .field-text {
+        border: none;
+        flex: 1;
+        font-size: 14px;
+        color: var(--main-text-color);
+        word-break: break-all;
+      }
+
+      .edit-icon {
+        margin-left: 8px;
+        color: #999;
+        font-size: 12px;
+      }
+    }
+
+    /* 编辑输入框容器样式 */
+    .edit-field {
+      width: 100%;
+      padding: 4px 0;
+      .el-input {
+        margin-bottom: 8px;
+        :deep(.el-input__inner) {
+          font-size: 14px;
+          padding: 1px 1px;
+          border-radius: 4px;
+          border: 1px solid transparent;
+        }
+      }
+    }
+
+    /* 群公告样式 */
+    .group-notice {
+      /* 群公告显示样式 */
+      .group-notice-display {
+        font-size: 13px;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .el-textarea {
+        :deep(.el-textarea__inner) {
+          font-size: 13px;
+          color: #666;
+          border-radius: 4px;
+          border: 1px solid #dcdfe6;
+
+          &:focus {
+            border-color: #409eff;
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+          }
+        }
+      }
+    }
+
+    /* 表单项目样式 */
+    .group-title {
+      :deep(.el-form-item) {
+        .el-form-item__label {
+          font-size: 13px;
+          color: #666;
+          padding: 0 0 6px 0;
+        }
+      }
+    }
     /* 群聊名称编辑区域样式 */
     .editable-field {
       display: flex;
@@ -661,11 +738,20 @@
 
   .group-footer {
     // margin-top: 10px;
+    // margin-top: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    align-items: center;
     width: 100%;
 
+    :deep(.el-form-item) {
+      display: flex;
+      width: 100%;
+      .el-form-item__content {
+        flex: 1;
+      }
+    }
     :deep(.el-form-item) {
       display: flex;
       width: 100%;
@@ -709,11 +795,50 @@
       width: auto; // 1. 允许 el-form-item 本身宽度自适应
       .el-form-item__content {
         flex: initial; // 2. 阻止内容区伸展，让其包裹按钮即可
+      display: flex;
+      border: none;
+      height: auto;
+      padding: 5px 8px;
+      background: transparent;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--main-text-color);
+      font-weight: 400;
+      width: 100%;
+
+      // 开关行（消息免打扰、置顶聊天）
+
+      .switch-label {
+        font-size: 14px;
+        color: var(--main-text-color);
       }
+      .switch-btn {
+        cursor: pointer;
+        --el-switch-button-size: 16px;
+        --el-switch-width: 36px;
+      }
+    }
+    :deep(.el-form-item:not(.danger)) {
+      display: flex;
+      width: 100%;
+      .el-form-item__content {
+        flex: 1;
+      }
+    }
+    :deep(.el-form-item.danger) {
+      width: auto; // 1. 允许 el-form-item 本身宽度自适应
+      .el-form-item__content {
+        flex: initial; // 2. 阻止内容区伸展，让其包裹按钮即可
+      }
+    }
     }
     .danger-btn {
       color: var(--main-red-color);
       text-align: center;
+      font-weight: 500;
+
+      border: none;
+      background: transparent;
       font-weight: 500;
 
       border: none;
@@ -752,6 +877,11 @@
     text-overflow: ellipsis;
   }
 
+  /* 无权限时的鼠标样式（覆盖通用 pointer） */
+  .group-notice .group-notice-display.no-permission {
+    cursor: default;
+  }
+
   .add-btn {
     width: 35px;
     height: 35px;
@@ -782,3 +912,4 @@
     }
   }
 </style>
+
