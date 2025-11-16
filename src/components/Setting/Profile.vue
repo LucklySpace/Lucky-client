@@ -14,8 +14,8 @@
               class="avatar-uploader"
             >
               <div class="avatar-wrap">
-                <!-- 正确的 shape 属性 -->
-                <el-avatar :size="80" :src="userAvatar" />
+                <!-- 统一使用封装的头像组件 -->
+                <Avatar :avatar="userAvatar" :name="profileForm.name || userStore.userInfo?.name" :width="80" :borderRadius="8" />
                 <!-- 覆盖层图标：在 avatar 上方显示 -->
                 <div class="avatar-overlay" title="更换头像">
                   <!-- 如果你使用 Element Plus 图标组件（推荐），请在 script 中 import 并用 <el-icon> 包裹 -->
@@ -92,6 +92,7 @@
   import { useUserStore } from "@/store/modules/user";
   import { ElMessage } from "element-plus";
   import { Camera } from "@element-plus/icons-vue";
+  import Avatar from "@/components/Avatar/index.vue";
 
   const userStore = useUserStore();
   const userAvatar = ref("");

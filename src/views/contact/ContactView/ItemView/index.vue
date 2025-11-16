@@ -3,7 +3,7 @@
     <el-row height="60">
       <el-col :span="6">
         <div>
-          <img :src="data.avatar" class="contact-item-avatar" />
+          <Avatar :avatar="data.avatar || ''" :name="data.name" :width="45" :borderRadius="3" />
         </div>
       </el-col>
       <el-col :span="18">
@@ -16,6 +16,7 @@
 </template>
 
 <script lang="ts" setup>
+  import Avatar from "@/components/Avatar/index.vue";
   defineProps({
     data: {
       type: Object,

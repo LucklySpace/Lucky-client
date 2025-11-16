@@ -39,8 +39,21 @@
         @click="handleSelectAvatar"
         class="msg__avatar msg__avatar--left lazy-img no-select"
       >
-        <Avatar :avatar="message.avatar" :name="message.remark ?? message.name" :width="35" />
+          <Avatar
+            :avatar="message.avatar"
+            :name="message.remark ?? message.name"
+            :width="35"
+          ></Avatar>
+          <!-- {{ message.avatar }}, {{ message.name }} -->
       </span>
+      <!-- <el-image
+        v-show="!message.isOwner"
+        ref="leftAvatarRef"
+        :src="message.avatar"
+        class="msg__avatar msg__avatar--left lazy-img no-select"
+        loading="lazy"
+        @click="handleSelectAvatar"
+      /> -->
 
       <!-- 消息内容 -->
       <div :class="['msg__content', { 'msg__content--owner': message.isOwner }]">
@@ -66,13 +79,25 @@
 
       <!-- 右侧头像（仅本人） -->
       <span
+         v-show="message.isOwner"
+         @click="handleSelectAvatar"
+         class="msg__avatar msg__avatar--right lazy-img no-select">
+          <Avatar
+          ref="rightAvatarRef"
+          :avatar="message.avatar"
+          :name="message.name"
+          :width="35"
+          :borderRadius="3"
+        ></Avatar>
+       </span>
+      <!-- <el-image
         v-show="message.isOwner"
         ref="rightAvatarRef"
-        @click="handleSelectAvatar"
+        :src="message.avatar"
         class="msg__avatar msg__avatar--right lazy-img no-select"
-      >
-        <Avatar :avatar="message.avatar" :name="message.name" :width="35" :borderRadius="3" />
-      </span>
+        loading="lazy"
+        @click="handleSelectAvatar"
+      /> -->
     </section>
 
     <!-- 头像弹出 -->
@@ -239,9 +264,8 @@
       // 头像（左右两个变体）
       & > .msg__avatar {
         order: 1;
-        width: $avatar-size;
-        height: $avatar-size;
         flex: 0 0 $avatar-size;
+        margin-top: 16px;
         border-radius: 6px;
         cursor: pointer;
         transition: transform $transition-fast ease, box-shadow $transition-fast ease;
@@ -270,7 +294,8 @@
         flex-direction: column;
         flex: 1 1 auto;
         min-width: 0;
-        max-width: $max-content-width;
+        // 限制内容宽度：总宽度减去头像和间距，避免与头像同排时换行
+        max-width: calc(100% - #{$avatar-size} - #{$gap});
 
         &--owner {
           align-items: flex-end;
@@ -309,10 +334,11 @@
           height: $avatar-size-sm;
           flex: 0 0 $avatar-size-sm;
           margin: 0 8px;
+          box-sizing: border-box;
         }
 
         .msg__content {
-          max-width: 100%;
+          max-width: calc(100% - #{$avatar-size-sm} - 8px);
         }
       }
     }

@@ -21,8 +21,4 @@
         SELECT * from chats ORDER BY sequence desc limit 1
     </SQL>
 
-<<<<<<< HEAD
 </SQLStore>
-=======
-</SQLStore>
->>>>>>> 4080f865e3462643c2d093fde3d0a7dc0c4519f0
