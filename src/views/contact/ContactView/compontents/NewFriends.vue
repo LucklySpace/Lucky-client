@@ -26,11 +26,9 @@
           role="listitem"
         >
           <div class="requests__left">
-            <el-avatar :aria-hidden="false" :size="64" :src="req.avatar" class="requests__avatar">
-              <template #default>
-                <div class="requests__avatar-fallback">{{ initials(req.name) }}</div>
-              </template>
-            </el-avatar>
+            <span class="requests__avatar">
+              <Avatar :avatar="req.avatar || ' '" :name="req.name" :width="64" :borderRadius="6" />
+            </span>
           </div>
 
           <div class="requests__center">
@@ -84,6 +82,7 @@
   import { computed, reactive } from "vue";
   import { ElMessage } from "element-plus";
   import { useFriendsStore } from "@/store/modules/friends";
+  import Avatar from "@/components/Avatar/index.vue";
 
   /* -------------------- store & data -------------------- */
   const friendStore = useFriendsStore() as any;

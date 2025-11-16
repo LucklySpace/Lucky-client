@@ -70,4 +70,8 @@ export default class Chats extends BaseEntity {
   /** 最后一条消息时间戳（毫秒） */
   @Column("messageTime", "INTEGER", true)
   messageTime?: number;
+
+  /** 群公告 */
+  @Column("notification", "TEXT", true)
+  notification?: string;
 }

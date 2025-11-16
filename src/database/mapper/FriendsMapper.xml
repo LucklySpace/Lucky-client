@@ -4,7 +4,7 @@
         userId TEXT,
         friendId TEXT,
         name TEXT,
-        alias TEXT,
+        remark TEXT,
         avatar TEXT,
         userSex INTEGER,
         location TEXT,

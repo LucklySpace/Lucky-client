@@ -1,4 +1,4 @@
-import { IMessageType, StoresEnum } from "@/constants";
+import { IMessageType, StoresEnum, MAX_REMARK_LEN } from "@/constants";
 import api from "@/api/index";
 import { useMappers } from "@/database";
 import { storage } from "@/utils/Storage";
@@ -6,16 +6,18 @@ import Chats from "@/database/entity/Chats";
 import { useUserStore } from "./user";
 import { useChatStore } from "@/store/modules/chat";
 import { ref, computed } from "vue";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from "@/constants/events";
 
 // mappers（DB 操作）
-const { friendsMapper } = useMappers();
+const { friendsMapper, chatsMapper } = useMappers();
 
 // 定义联系人接口
 interface Friend {
   userId: string;
   friendId: string;
   name: string;
-  alias?: string;
+  remark?: string;
   avatar?: string;
   location?: string;
   flag?: number;
@@ -100,23 +102,41 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
     console.log("okok delete");
     // 当前会话为单聊
     if (chat.chatType == IMessageType.SINGLE_MESSAGE.code) {
-      api.DeleteContact({ fromId: getOwnerId.value, toId: chat.id }).then(async () => {
+      api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId }).then(async () => {
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
         // 删除联系人
-        await friendsMapper.deleteById(chat.id, "friendId");
-        // 重载联系人
-        await loadContacts();
+        try {
+          await friendsMapper.deleteById(chat.toId, "friendId");
+          await friendsMapper.deleteFTSById?.(chat.toId as any);
+        } catch {
+          console.error("删除联系人失败");
+        }
+        // 本地联系人列表即时更新
+        try {
+          const idx = contacts.value.findIndex((c: any) => String(c.friendId) === String(chat.toId));
+          if (idx !== -1) contacts.value.splice(idx, 1);
+          if (shipInfo.value && String(shipInfo.value.friendId) === String(chat.toId)) shipInfo.value = {};
+        } catch {}
+        // 异步重载联系人以与服务端对齐（非阻塞）
+        loadContacts();
       });
     } else {
-      api.QuitGroups({ userId: getOwnerId.value, groupId: chat.id }).then(async () => {
+      api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId }).then(async () => {
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
-        // 删除群聊
+        // 本地群列表即时更新
+        try {
+          const gIdx = groups.value.findIndex((g: any) => String(g.groupId) === String(chat.toId));
+          if (gIdx !== -1) groups.value.splice(gIdx, 1);
+          if (shipInfo.value && String((shipInfo.value as any).groupId) === String(chat.toId)) shipInfo.value = {};
+        } catch {}
+        // 可选：异步刷新群列表
+        loadGroups();
       });
     }
   };
@@ -207,6 +227,65 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
     );
   };
 
+  /**
+   * 修改好友备注
+   */
+  const updateFriendRemark = async (friendId: string, remark: string) => {
+    const next = String(remark ?? "").trim();
+    if (!friendId || !next) return;
+    if (next.length > MAX_REMARK_LEN) throw new Error('REMARK_TOO_LONG');
+
+    const currentRemark = (shipInfo.value && shipInfo.value.friendId === friendId ? shipInfo.value.remark :
+      (contacts.value?.find?.((c: any) => c?.friendId === friendId)?.remark)) || "";
+    if (String(currentRemark || "").trim() === next) return;
+
+    await api.updateFriendRemark({ fromId: getOwnerId.value, toId: friendId, remark: next });
+
+    try {
+      const idx = contacts.value.findIndex((c: any) => c?.friendId === friendId);
+      if (idx !== -1) contacts.value[idx].remark = next;
+      if (shipInfo.value && shipInfo.value.friendId === friendId) shipInfo.value.remark = next;
+    } catch {}
+
+    try {
+      const idx = chatMessageStore.chatList.findIndex(
+        (c: any) => c?.chatType === IMessageType.SINGLE_MESSAGE.code && String(c?.toId) === String(friendId)
+      );
+      if (idx !== -1) {
+        const chat = chatMessageStore.chatList[idx];
+        chat.name = next;
+        await chatsMapper.updateById(chat.chatId, { name: next } as Chats);
+        await chatsMapper.insertOrUpdateFTS({ chatId: chat.chatId, name: next } as any);
+      }
+      if (
+        chatMessageStore.currentChat &&
+        chatMessageStore.currentChat.chatType === IMessageType.SINGLE_MESSAGE.code &&
+        String(chatMessageStore.currentChat.toId) === String(friendId)
+      ) {
+        (chatMessageStore.currentChat as any).name = next;
+        try {
+          globalEventBus.emit(CHAT_CHANGED as any, {
+            chatId: chatMessageStore.currentChat.chatId,
+            name: next,
+            notification: (chatMessageStore.currentChat as any)?.notification
+          });
+        } catch {}
+      }
+    } catch {}
+
+    try {
+      globalEventBus.emit(FRIEND_REMARK_UPDATED as any, { friendId, remark: next } as any);
+    } catch {}
+
+    try {
+      await friendsMapper.updateById(friendId, { remark: next } as any);
+    } catch {}
+  };
+
+  /**
+   * 更新群组信息（群名称/公告）
+   */
+
   // 返回 store 实例的所有属性和方法
   return {
     // 状态
@@ -229,7 +308,8 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
     loadGroups,
     loadContacts,
     handleSearchFriendInfo,
-    handleGetContactInfo
+    handleGetContactInfo,
+    updateFriendRemark
   };
 }, {
   persist: [

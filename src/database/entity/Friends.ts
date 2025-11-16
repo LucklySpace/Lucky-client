@@ -26,9 +26,9 @@ export default class Friends extends BaseEntity {
   @Column("name", "TEXT")
   name!: string;
 
-  /** 备注名／别名 */
-  @Column("alias", "TEXT", true)
-  alias?: string;
+  /** 备注名 */
+  @Column("remark", "TEXT", true)
+  remark?: string;
 
   /** 好友头像 URL */
   @Column("avatar", "TEXT", true)

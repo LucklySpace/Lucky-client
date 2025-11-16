@@ -2,7 +2,7 @@
   <div class="chat-item no-select">
     <el-row height="60">
       <el-col :span="3">
-        <img :src="data.avatar" class="avatar lazy-img" />
+        <Avatar :avatar="data.avatar" :name="data.name" :width="45" :borderRadius="8" />
       </el-col>
 
       <el-col :span="21">
@@ -30,6 +30,7 @@
 <script lang="ts" setup>
   // import { useFriendlyTime } from "@/utils/Date";
   import { useTimeFormat } from "@/hooks/useTimeFormat";
+  import Avatar from "@/components/Avatar/index.vue";
 
   const { useFriendlyTime } = useTimeFormat();
   defineProps({
@@ -59,14 +60,7 @@
       background-color: #ddd;
     }
 
-    .avatar {
-      position: relative;
-      width: 45px;
-      height: 45px;
-      background-color: #ccc;
-      border-radius: 8px;
-      margin: 8px;
-    }
+    .avatar { margin: 8px; display: inline-block; }
 
     .content {
       width: 100%;

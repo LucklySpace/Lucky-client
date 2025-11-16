@@ -5,18 +5,15 @@
       <!-- 顶部：头像 + 基本信息 -->
       <el-row align="middle" class="card-top">
         <el-col :span="6" class="avatar-col no-select">
-          <el-avatar :size="84" :src="avatarSrc">
-            <!-- fallback slot: show initials when no avatar or load error -->
-            <template #default>
-              <div class="avatar-fallback">{{ initials }}</div>
-            </template>
-          </el-avatar>
+          <span>
+            <Avatar :avatar="avatarSrc || ' '" :name="displayName" :width="84" :borderRadius="6" backgroundColor="#ffb36b" />
+          </span>
         </el-col>
 
         <el-col :span="18" class="meta-col">
           <div class="meta-row">
             <div class="name-and-meta">
-              <div class="name">{{ groupInfo.groupName }}</div>
+              <div class="name">{{ displayName }}</div>
 
               <div class="meta-tags">
                 <span class="tag">{{ groupTypeText }}</span>
@@ -38,6 +35,12 @@
         <div v-if="groupInfo.description" class="info-row signature">
           <strong class="no-select">{{ $t("group.descriptionLabel") }} </strong>
           <span>{{ groupInfo.description }}</span>
+        </div>
+
+        <!-- 群公告（从 chats 读取） -->
+        <div class="info-row" v-if="groupNoticeText">
+          <strong class="no-select">{{ $t('chat.groupChat.groupNotice') }}</strong>
+          <span>{{ groupNoticeText }}</span>
         </div>
       </div>
 
@@ -71,6 +74,7 @@ import { IMessageType } from "@/constants";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useChatStore } from "@/store/modules/chat";
 import { useI18n } from "vue-i18n";
+import Avatar from "@/components/Avatar/index.vue";
 
 type Group = {
   groupId: string;
@@ -108,6 +112,18 @@ const groupInfo = computed<Group>(() => {
   return friendStore.shipInfo ?? {};
 });
 
+// 关联到 chats 的该群会话行（把群名/公告来源切到 chats）
+const relatedChat = computed(() => {
+  const gid = (groupInfo.value as any)?.groupId;
+  if (!gid) return null;
+  return chatStore.chatList.find(c => String(c.chatId) === String(gid)) || null;
+});
+
+// 展示名：优先用 chats.name，其次回退 groupInfo.groupName
+const displayName = computed(() => {
+  return relatedChat.value?.name ?? groupInfo.value.groupName ?? '';
+});
+
 // 是否存在有效群数据
 const hasGroup = computed(() => {
   const g = groupInfo.value;
@@ -115,7 +131,13 @@ const hasGroup = computed(() => {
 });
 
 /* Avatar 回退逻辑：优先使用 groupInfo.avatar；若为空或加载出错显示首字母 */
-const avatarSrc = ref<string | undefined>(groupInfo.value.avatar);
+const avatarSrc = ref<string | undefined>(relatedChat.value?.avatar ?? groupInfo.value.avatar);
+watch(
+  () => [relatedChat.value?.avatar, groupInfo.value.avatar],
+  () => {
+    avatarSrc.value = relatedChat.value?.avatar ?? groupInfo.value.avatar;
+  }
+);
 // watch(
 //   () => groupInfo.value.avatar,
 //   v => {
@@ -124,12 +146,12 @@ const avatarSrc = ref<string | undefined>(groupInfo.value.avatar);
 // );
 
 /* 首字母（群名） */
-const initials = computed(() => {
-  const n = (groupInfo.value.groupName ?? "").trim();
-  if (!n) return "#";
-  const first = n[0];
-  return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
-});
+// const initials = computed(() => {
+//   const n = (displayName.value ?? "").trim();
+//   if (!n) return "#";
+//   const first = n[0];
+//   return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
+// });
 
 /* 人性化文本显示 */
 const groupTypeText = computed(() => {
@@ -141,6 +163,12 @@ const groupTypeText = computed(() => {
     default:
       return t("group.type.default");
   }
+});
+
+// 群公告文本（来自 chats.notification）
+const groupNoticeText = computed(() => {
+  const txt = (relatedChat.value as any)?.notification ?? '';
+  return (txt || '').trim();
 });
 
 // const applyJoinText = computed(() => {

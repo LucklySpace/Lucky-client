@@ -17,6 +17,7 @@ import SingleMessage from "@/database/entity/SingleMessage";
 import GroupMessage from "@/database/entity/GroupMessage";
 import { QueryBuilder, FTSQueryBuilder, useMappers, PageResult } from "@/database";
 import { useUserStore } from "./user";
+import { useFriendsStore } from "./friends";
 import { appIsMinimizedOrHidden, ShowMainWindow } from "@/windows/main";
 import { storage } from "@/utils/Storage";
 import { useChatInput } from "@/hooks/useChatInput";
@@ -28,7 +29,8 @@ import { CreateScreenWindow } from "@/windows/screen";
 import { CreateRecordWindow } from "@/windows/record";
 import { highlightTextByTokens } from "@/utils/Strings";
 import { Segmenter } from "@/database";
-import { ref, computed, reactive } from "vue";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { CHAT_CHANGED } from "@/constants/events";
 
 // 初始化数据库映射器
 const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
@@ -229,6 +231,15 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     }
 
     currentChat.value = chat;
+    try {
+      if (currentChat.value) {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value.chatId,
+          name: currentChat.value.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      }
+    } catch {}
     // 切换会话时重置消息状态
     handleResetMessage();
   };
@@ -245,6 +256,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (existingIdx !== -1) {
       await handleUpdateReadStatus(chatList.value[existingIdx], 0);
       currentChat.value = chatList.value[existingIdx];
+      try {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value?.chatId,
+          name: currentChat.value?.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      } catch {}
       return;
     }
 
@@ -256,6 +274,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       upsertChat(res);
       handleSortChatList();
       currentChat.value = res;
+      try {
+        globalEventBus.emit(CHAT_CHANGED as any, {
+          chatId: currentChat.value?.chatId,
+          name: currentChat.value?.name,
+          notification: (currentChat.value as any)?.notification
+        } as any);
+      } catch {}
       setError(null);
     } catch (e: any) {
       setError(e?.message || "创建会话失败");
@@ -393,7 +418,34 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       });
       chatList.value.splice(idx, 1);
     }
-    if (currentChat.value?.chatId === chat.chatId) currentChat.value = null;
+    if (currentChat.value?.chatId === chat.chatId) {
+      // 清空当前会话及其相关的消息/成员/草稿等 store 数据
+      currentChat.value = null;
+      try {
+        // 清空当前消息区
+        messageList.value = [];
+        historyMessageList.value = [];
+        messageCount.value = 0;
+        messageNum.value = 1;
+        currentUrls.value = [];
+      } catch {}
+      try {
+        // 清空当前群成员缓存
+        // 兼容数组或对象形态
+        if (Array.isArray(currentChatGroupMemberMap.value)) {
+          currentChatGroupMemberMap.value = [] as any;
+        } else {
+          currentChatGroupMemberMap.value = {} as any;
+        }
+      } catch {}
+    }
+
+    // 删除草稿
+    try {
+      if (chatDraftMap.value && Object.prototype.hasOwnProperty.call(chatDraftMap.value, chat.chatId as any)) {
+        delete (chatDraftMap.value as any)[chat.chatId as any];
+      }
+    } catch {}
   };
 
   /**
@@ -960,17 +1012,94 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
    * @param chat 会话对象
    */
   const handleClearMessage = async (chat: Chats) => {
+    const ownerId = getOwnerId.value;
     if (chat.chatType !== IMessageType.SINGLE_MESSAGE.code) {
-      await groupMessageMapper.clearChatHistory(chat.id, getOwnerId.value);
+      // 群聊：使用群ID（toId）
+      await groupMessageMapper.clearChatHistory(String(chat.toId), String(ownerId));
       handleResetMessage();
       await handleGetMessageList(chat);
       return;
     }
 
-    await singleMessageMapper.deleteByFormIdAndToId(chat.id, getOwnerId.value);
-    await singleMessageMapper.deleteByFormIdAndToIdVirtual(getOwnerId.value, chat.id);
+    // 单聊：使用对端ID（toId）与当前用户ID
+    await singleMessageMapper.deleteByFormIdAndToId(String(ownerId), String(chat.toId));
+    await singleMessageMapper.deleteByFormIdAndToIdVirtual(String(ownerId), String(chat.toId));
     handleResetMessage();
     await handleGetMessageList(chat);
+  };
+
+  /**
+   * 更新群资料（群名称/公告），后端用 groupId，前端本地用 chatId
+   */
+  const updateGroupInfo = async (groupDto: {
+    groupId: string; // 服务端群ID（toId）
+    chatId?: string; // 本地会话ID
+    userId?: string;
+    groupName?: string;
+    avatar?: string;
+    introduction?: string;
+    notification?: string;
+  }) => {
+    // 构造后端所需 payload，仅包含允许字段
+    const ownerId = getOwnerId.value;
+    const payload: any = {
+      groupId: groupDto.groupId,
+      userId: groupDto.userId ?? ownerId
+    };
+    if (typeof groupDto.groupName !== 'undefined') payload.groupName = groupDto.groupName;
+    if (typeof groupDto.avatar !== 'undefined') payload.avatar = groupDto.avatar;
+    if (typeof groupDto.introduction !== 'undefined') payload.introduction = groupDto.introduction;
+    if (typeof groupDto.notification !== 'undefined') payload.notification = groupDto.notification;
+
+    const result = await api.updateGroupInfo(payload);
+    if (!result) throw new Error("UPDATE_GROUP_INFO_FAILED");
+
+    const chatKey = groupDto.chatId ?? groupDto.groupId;
+
+    if (groupDto.groupName !== undefined) {
+      const idx = findChatIndex(chatList.value, chatKey);
+      if (idx !== -1) {
+        chatList.value[idx].name = groupDto.groupName as any;
+        await chatsMapper.updateById(chatKey, { name: groupDto.groupName } as Chats);
+        await chatsMapper.insertOrUpdateFTS({ chatId: chatKey, name: groupDto.groupName } as any);
+      }
+      if (currentChat.value && currentChat.value.chatId === chatKey) {
+        (currentChat.value as any).name = groupDto.groupName as any;
+      }
+
+      // 同步联系人-群列表（若使用到）
+      try {
+        const friendsStore = useFriendsStore();
+        const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(groupDto.groupId));
+        if (gIdx !== -1) friendsStore.groups[gIdx].groupName = groupDto.groupName;
+        if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(groupDto.groupId)) {
+          (friendsStore.shipInfo as any).groupName = groupDto.groupName;
+        }
+      } catch {}
+    }
+
+    if (groupDto.notification !== undefined) {
+      const idx = chatList.value.findIndex((c: any) => String(c.chatId) === String(chatKey));
+      if (idx !== -1) {
+        (chatList.value[idx] as any).notification = groupDto.notification;
+        await chatsMapper.updateById(chatKey, { notification: groupDto.notification } as any);
+        // FTS 仅索引 name，这里不必更新 notification 进 FTS
+      }
+      if (currentChat.value && currentChat.value.chatId === chatKey) {
+        (currentChat.value as any).notification = groupDto.notification;
+      }
+
+      try {
+        const friendsStore = useFriendsStore();
+        const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(groupDto.groupId));
+        if (gIdx !== -1) (friendsStore.groups[gIdx] as any).notification = groupDto.notification;
+        if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(groupDto.groupId)) {
+          (friendsStore.shipInfo as any).notification = groupDto.notification;
+        }
+      } catch {}
+    }
+
+    return result;
   };
 
   /**
@@ -1258,6 +1387,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     handleDeleteMessageFromList,
     handleAddGroupMember,
     handleApproveGroupInvite,
+    updateGroupInfo,
     handleUpdateMessage,
     handleClearMessage,
     handleShowScreenshot,

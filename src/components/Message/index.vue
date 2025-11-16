@@ -33,14 +33,14 @@
       </div>
 
       <!-- 左侧头像（仅当非本人） -->
-      <el-image
+      <span
         v-show="!message.isOwner"
         ref="leftAvatarRef"
-        :src="message.avatar"
-        class="msg__avatar msg__avatar--left lazy-img no-select"
-        loading="lazy"
         @click="handleSelectAvatar"
-      />
+        class="msg__avatar msg__avatar--left lazy-img no-select"
+      >
+        <Avatar :avatar="message.avatar" :name="message.remark ?? message.name" :width="35" />
+      </span>
 
       <!-- 消息内容 -->
       <div :class="['msg__content', { 'msg__content--owner': message.isOwner }]">
@@ -65,14 +65,14 @@
       </div>
 
       <!-- 右侧头像（仅本人） -->
-      <el-image
+      <span
         v-show="message.isOwner"
         ref="rightAvatarRef"
-        :src="message.avatar"
-        class="msg__avatar msg__avatar--right lazy-img no-select"
-        loading="lazy"
         @click="handleSelectAvatar"
-      />
+        class="msg__avatar msg__avatar--right lazy-img no-select"
+      >
+        <Avatar :avatar="message.avatar" :name="message.name" :width="35" :borderRadius="3" />
+      </span>
     </section>
 
     <!-- 头像弹出 -->
@@ -104,6 +104,7 @@
   const SystemBubble = defineAsyncComponent(() => import("@/components/Bubble/system.vue"));
   const GroupInviteBubble = defineAsyncComponent(() => import("@/components/Bubble/groupInvite.vue"));
   const UserPopover = defineAsyncComponent(() => import("@/components/UserPopover/index.vue"));
+  import Avatar from "@/components/Avatar/index.vue";
   import { useFriendsStore } from "@/store/modules/friends";
   import { useUserStore } from "@/store/modules/user";
   import { MessageContentType } from "@/constants";

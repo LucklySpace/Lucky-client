@@ -22,12 +22,12 @@
         class="chat-item__badge"
         color="#ff4d4f"
       >
-        <el-image
-          :alt="`${data.name || '用户'} 的头像`"
-          :src="data.avatar"
-          class="chat-item__avatar-img lazy-img"
-          loading="lazy"
-          @error="onAvatarError"
+        <Avatar
+          :avatar="data.avatar || ' '"
+          :name="data.groupName ?? data.name"
+          :width="40"
+          :borderRadius="4"
+          :backgroundColor="isGroup ? '#ffb36b' : undefined"
         />
       </el-badge>
     </div>
@@ -65,12 +65,14 @@
 
   import { computed } from "vue";
   import { useTimeFormat } from "@/hooks/useTimeFormat";
-  import defaultImg from "@/assets/avatar/default.jpg";
+  import { IMessageType } from "@/constants";
+  import Avatar from "@/components/Avatar/index.vue";
 
   const { useFriendlyTime } = useTimeFormat();
 
   /* -------------------- 类型定义 -------------------- */
   interface ChatData {
+    groupName?: string;
     name?: string;
     avatar?: string;
     message?: string; // 可能为空
@@ -102,6 +104,9 @@
   const unreadLabel = computed(() =>
     props.data.unread && props.data.unread > 0 ? `${props.data.unread} 条未读` : "无未读"
   );
+
+  // 是否群聊（用于统一群聊头像占位色）
+  const isGroup = computed(() => (props.data as any)?.chatType === IMessageType.GROUP_MESSAGE.code || !!(props.data as any)?.groupName);
 
   // 将 message 转为纯文本（用于 title / aria）
   const plainTextMessage = computed(() => {
@@ -185,10 +190,7 @@
   });
 
   /* -------------------- 图片错误回退 -------------------- */
-  function onAvatarError(e: Event) {
-    const img = e.target as HTMLImageElement;
-    if (img) img.src = defaultImg;
-  }
+  // Avatar 组件已处理占位/错误，无需本地 onError
 </script>
 
 <style lang="scss" scoped>

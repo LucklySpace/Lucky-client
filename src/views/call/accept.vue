@@ -4,7 +4,7 @@
     <div class="user-info">
       <!-- 用户头像 -->
       <div class="user-avatar-container">
-        <img :src="callStore.friendInfo.avatar" alt="User Avatar" class="user-avatar lazy-img" />
+        <Avatar :avatar="callStore.friendInfo.avatar || ' '" :name="callStore.friendInfo.name" :width="50" :borderRadius="4" />
       </div>
       <!-- 用户名和邀请信息 -->
       <div class="text-info">
@@ -41,6 +41,7 @@
   import { useCallStore } from "@/store/modules/call";
   import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
   import { useSettingStore } from "@/store/modules/setting";
+  import Avatar from "@/components/Avatar/index.vue";
   // 声音
   const { playLoop, stopLoop } = useAudioPlayer();
 

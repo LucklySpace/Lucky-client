@@ -2,18 +2,9 @@
   <div aria-label="联系人卡片" class="contact-card-wrap" role="region">
     <!-- 顶部：头像 + 基本信息 -->
     <div v-if="hasContact" class="contact-card__top">
-      <el-avatar
-        :alt="`头像 - ${safeName}`"
-        :size="64"
-        :src="avatarSrc"
-        class="contact-card__avatar"
-        @error="onAvatarError"
-      >
-        <!-- Avatar 的占位符（当图片加载失败或没有图片时显示首字母） -->
-        <template #default>
-          <div class="avatar-fallback">{{ fallbackInitials }}</div>
-        </template>
-      </el-avatar>
+      <span class="contact-card__avatar">
+        <Avatar :avatar="avatarSrc" :name="safeName" :width="64" :borderRadius="6"></Avatar>
+      </span>
 
       <div class="contact-card__meta">
         <div class="contact-card__title">
@@ -38,11 +29,9 @@
 
     <!-- 占位：当 contact 为空时显示提示（避免页面空白） -->
     <div v-else aria-live="polite" class="contact-card__empty" role="status">
-      <el-avatar :size="64" class="contact-card__avatar empty-avatar">
-        <template #default>
-          <div class="avatar-fallback">?</div>
-        </template>
-      </el-avatar>
+      <span class="contact-card__avatar empty-avatar">
+        <Avatar :name="'?'" :width="64" :borderRadius="6"></Avatar>
+      </span>
       <div class="empty-text">
         <div class="empty-title">未选择联系人</div>
         <div class="empty-sub">请选择联系人以查看详细信息</div>
@@ -52,6 +41,15 @@
     <!-- 信息项列表（自动过滤空项） -->
     <el-divider v-if="hasContact"></el-divider>
     <div v-if="hasContact" class="contact-card__info">
+      <div class="info-row">
+        <span class="info-label">{{ $t("search.addFriend.remarkLabel") }}:</span>
+        <div v-if="!isEditingRemark" class="info-value" @click="isEditingRemark = true">
+          <span>{{ remark || safeName }}</span>
+        </div>
+        <div v-else class="info-value" v-click-outside="handleClickOutside">
+          <el-input v-model="remark" size="small" @keyup.enter="saveRemark" />
+        </div>
+      </div>
       <div v-for="item in infoList" :key="item.label" class="info-row">
         <div class="info-label">{{ item.label }}</div>
         <div class="info-value">{{ item.value }}</div>
@@ -96,7 +94,13 @@
 
   import { computed, ref, watch } from "vue";
   import defaultImg from "@/assets/avatar/default.jpg";
+  import { ClickOutside as vClickOutside } from "element-plus";
+  import { useFriendsStore } from "@/store/modules/friends";
+  import { MAX_REMARK_LEN } from "@/constants";
+  import Avatar from "@/components/Avatar/index.vue";
 
+  const { t: $t } = useI18n();
+  const friendStore = useFriendsStore();
   // contact 类型（保持向后兼容，字段可选）
   type Contact = {
     avatar?: string | null;
@@ -147,10 +151,33 @@
     { immediate: true }
   );
 
-  /* 若图片加载失败，回退到默认图片 */
-  function onAvatarError() {
-    avatarSrc.value = defaultImg;
-  }
+  /* 备注编辑 */
+  const remark = ref<string>(props.contact?.remark ?? props.contact?.name ?? "");
+  const isEditingRemark = ref<boolean>(false);
+  watch(
+    () => props.contact,
+    newContact => {
+      if (newContact) remark.value = newContact.remark ?? newContact.name ?? "";
+    },
+    { immediate: true }
+  );
+  const saveRemark = async () => {
+    if (!props.contact?.friendId) return;
+    const next = (remark.value || '').trim();
+    if (!next) { ElMessage.warning($t('errors.remark.empty')); return; }
+    if (next.length > MAX_REMARK_LEN) { ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN })); return; }
+    try {
+      isEditingRemark.value = false;
+      await friendStore.updateFriendRemark(props.contact.friendId, next);
+    } catch (e) {
+      isEditingRemark.value = true;
+    }
+  };
+  const cancelEdit = () => {
+    remark.value = props.contact?.remark ?? props.contact?.name ?? "";
+    isEditingRemark.value = false;
+  };
+  const handleClickOutside = () => { if (isEditingRemark.value) cancelEdit(); };
 
   /* 安全显示姓名，若缺失则显示占位文本 */
   const safeName = computed(() => {

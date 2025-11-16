@@ -41,7 +41,7 @@
                     </el-col>
 
                     <el-col :span="6" style="display: flex; align-items: center">
-                      <el-image :src="row.avatar || defaultImg" class="selection-item-avatar" fit="cover" />
+                      <Avatar :avatar="row.avatar || ' '" :name="row.name" :width="35" />
                     </el-col>
 
                     <el-col :span="15">
@@ -63,12 +63,7 @@
             <el-row :gutter="20">
               <el-col v-for="(item, index) in selectItem" :key="item.friendId" :span="8">
                 <div style="position: relative">
-                  <el-image
-                    :alt="item.name"
-                    :src="item.avatar || defaultImg"
-                    class="member-avatar"
-                    fit="cover"
-                  ></el-image>
+                  <Avatar :avatar="item.avatar || ' '" :name="item.name" :width="45" class="member-avatar" />
                   <el-button
                     :aria-label="`移除 ${item.name}`"
                     circle
@@ -100,6 +95,7 @@
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
   import { useDebounceFn } from "@vueuse/core";
   import defaultImg from "@/assets/avatar/default.jpg";
+  import Avatar from "@/components/Avatar/index.vue";
   import { useFriendsStore } from "@/store/modules/friends";
 
   const emit = defineEmits<{

@@ -37,22 +37,7 @@
               class="msg__avatar msg__avatar--left no-select"
               role="img"
             >
-              <!-- 优先渲染 img（若存在 avatar 且未标记为加载失败） -->
-              <template v-if="getAvatar(msg.userId) && !avatarLoadError[msg.userId ?? '']">
-                <img
-                  :alt="`头像 ${getName(msg.userId) ?? msg.userId ?? '用户'}`"
-                  :src="getAvatar(msg.userId)"
-                  class="avatar-img"
-                  draggable="false"
-                  @error="onAvatarError(msg.userId)"
-                  @load="onAvatarLoad(msg.userId)"
-                />
-              </template>
-
-              <!-- 回退到首字母 -->
-              <template v-else>
-                <span class="avatar-initial">{{ avatarInitial(msg.userId) }}</span>
-              </template>
+              <Avatar :avatar="getAvatar(msg.userId) || ''" :name="getName(msg.userId) || msg.userId" :width="40" :borderRadius="5" class="avatar-img" />
             </div>
 
             <!-- 内容容器 -->
@@ -77,19 +62,7 @@
               class="msg__avatar msg__avatar--me msg__avatar--right no-select"
               role="img"
             >
-              <template v-if="getAvatar(msg.userId) && !avatarLoadError[msg.userId ?? '']">
-                <img
-                  :alt="`我的头像 ${getName(msg.userId) ?? msg.userId ?? '我'}`"
-                  :src="getAvatar(msg.userId)"
-                  class="avatar-img"
-                  draggable="false"
-                  @error="onAvatarError(msg.userId)"
-                  @load="onAvatarLoad(msg.userId)"
-                />
-              </template>
-              <template v-else>
-                <span class="avatar-initial">{{ avatarInitial(msg.userId) }}</span>
-              </template>
+              <Avatar :avatar="getAvatar(msg.userId) || ''" :name="getName(msg.userId) || msg.userId" :width="40" :borderRadius="5" class="avatar-img" />
             </div>
           </template>
         </div>
@@ -127,6 +100,7 @@
 
   import { Participant } from "@/types/env";
   import { computed, defineEmits, defineProps, nextTick, reactive, ref, watch } from "vue";
+  import Avatar from "@/components/Avatar/index.vue";
 
   /* ========== props / emits ========== */
   const props = defineProps<{

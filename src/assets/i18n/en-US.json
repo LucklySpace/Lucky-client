@@ -14,7 +14,8 @@
       "progress": "Progress: {percent}%",
       "speed": "Speed: {speed} B/s",
       "logout": "Logout",
-      "all": "All message content below"
+      "all": "All message content below",
+      "noData": "No data"
     },
     "actions": {
       "complete": "Done",
@@ -79,7 +80,14 @@
       "enterGroup": "Enter Group",
       "viewMembers": "View Members",
       "leaveGroup": "Leave Group",
+      "noAnnouncement": "No announcement",
       "noSelectionOrEmpty": "No group selected or group information is empty",
+      "notice": {
+        "prefix": "Notice",
+        "title": "Group Notice",
+        "view": "View",
+        "known": "I have read"
+      },
       "type": {
         "default": "Group",
         "normal": "Public Group",
@@ -123,7 +131,11 @@
     "errors": {
       "email": "Please enter a valid email.",
       "network": "Network error, please try again.",
-      "required": "{field} is required."
+      "required": "{field} is required.",
+      "remark": {
+        "empty": "Remark cannot be empty",
+        "tooLong": "Remark cannot exceed {max} characters"
+      }
     },
     "notifications": {
       "ignoreAll": "Ignore All",
@@ -141,6 +153,7 @@
         "emoji": "Emoji",
         "screenshot": "Screenshot",
         "pin": "Pin Chat",
+        "mute": "Do Not Disturb",
         "recorder": {
           "label": "Record",
           "start": "Start",
@@ -167,6 +180,7 @@
         "history": "History"
       },
       "groupChat": {
+        "members": "Member",
         "searchMembers": "Search Group Members",
         "viewMore": "View More",
         "collapse": "Collapse",

@@ -25,7 +25,7 @@
     <el-popover ref="popoverRef" :teleported="true" :virtual-ref="headerInputRef" placement="bottom-start"
       popper-class="search-popover" trigger="focus" virtual-triggering width="360" @hide="handleClear">
       <!-- Popover 内容：完整搜索结果面板 -->
-      <div :aria-label="$t('search.resultsLabel')" class="search-popover__content" role="dialog">
+  <div :aria-label="$t('search.resultsLabel')" class="search-popover__content" role="dialog">
         <!-- tabs -->
         <div class="search-popover__tabs">
           <button :class="['search-popover__tab', activeTab === 'all' ? 'search-popover__tab--active' : '']"
@@ -71,11 +71,12 @@
                 :class="{ 'search-popover__list-item--focused': isFocused(flatIndex('friend', idx)) }"
                 class="search-popover__list-item" @click="selectResult('friend', f)"
                 @mousemove="setHover(flatIndex('friend', idx))">
-                <img v-if="f.avatar" :src="f.avatar" class="search-popover__avatar" />
-                <div v-else class="search-popover__avatar-fallback">{{ initials(f.name || f.alias) }}</div>
+                <span class="search-popover__avatar">
+                  <Avatar :avatar="f.avatar || ''" :name="f.remark ?? f.name" :width="44" :borderRadius="4" />
+                </span>
                 <div class="search-popover__meta">
                   <div class="search-popover__row">
-                    <div class="search-popover__name" v-html="highlight(f.alias || f.name)"></div>
+                    <div class="search-popover__name" v-html="highlight(f.remark || f.name)"></div>
                     <div v-if="f.location" class="search-popover__tag" v-html="highlight(f.location ?? '')"></div>
                   </div>
                   <div class="search-popover__row search-popover__row--sub">
@@ -95,8 +96,15 @@
                 :class="{ 'search-popover__list-item--focused': isFocused(flatIndex('message', idx)) }"
                 class="search-popover__list-item" @click="selectResult('message', m)"
                 @mousemove="setHover(flatIndex('message', idx))">
-                <img v-if="m.avatar" :src="m.avatar" class="search-popover__avatar" />
-                <div v-else class="search-popover__avatar-fallback">{{ initials(m.name) }}</div>
+                <span class="search-popover__avatar">
+                  <Avatar
+                    :avatar="m.avatar || ''"
+                    :name="m.name"
+                    :width="44"
+                    :borderRadius="4"
+                    :backgroundColor="m.chatType === IMessageType.GROUP_MESSAGE.code ? '#ffb36b' : undefined"
+                  />
+                </span>
                 <div class="search-popover__meta">
                   <div class="search-popover__row">
                     <div class="search-popover__name">{{ m.name || "未知" }}</div>
@@ -198,7 +206,9 @@ import { computed, nextTick, ref, unref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import SelectContact from "../SelectContact/index.vue";
 import { useSearchStore } from "@/store/modules/search";
-import { useFriendsStore } from "@/store/modules/friends";
+  import { useFriendsStore } from "@/store/modules/friends";
+  import Avatar from "@/components/Avatar/index.vue";
+  import { IMessageType } from "@/constants";
 import { ElMessage } from "element-plus";
 import { escapeHtml } from "@/utils/Strings";
 import { useTimeFormat } from "@/hooks/useTimeFormat";
@@ -223,7 +233,7 @@ interface Friend {
   userId: string;
   friendId: string;
   name: string;
-  alias?: string;
+  remark?: string;
   avatar?: string;
   location?: string;
   flag?: number;

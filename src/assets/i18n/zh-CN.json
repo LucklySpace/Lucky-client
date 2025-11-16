@@ -14,7 +14,8 @@
       "progress": "进度：{percent}%",
       "speed": "速度：{speed} B/s",
       "logout": "退出登录",
-      "all": "以下是全部消息内容"
+      "all": "以下是全部消息内容",
+      "noData": "暂无数据"
     },
     "actions": {
       "complete": "完成",
@@ -78,7 +79,14 @@
       "enterGroup": "进入群聊",
       "viewMembers": "查看成员",
       "leaveGroup": "退出群",
+      "noAnnouncement": "暂无公告",
       "noSelectionOrEmpty": "未选择群聊或群信息为空",
+      "notice": {
+        "prefix": "群公告",
+        "title": "群公告",
+        "view": "查看",
+        "known": "我已知晓"
+      },
       "type": {
         "default": "群组",
         "normal": "普通群",
@@ -121,6 +129,10 @@
     },
     "errors": {
       "email": "请输入有效的邮箱地址。",
+      "remark": {
+        "empty": "备注不能为空",
+        "tooLong": "备注长度不能超过 {max} 个字符"
+      },
       "network": "网络错误，请重试。",
       "required": "{field}为必填项。"
     },
@@ -140,6 +152,7 @@
         "emoji": "表情",
         "screenshot": "屏幕截图",
         "pin": "置顶聊天",
+        "mute": "消息免打扰",
         "recorder": {
           "label": "屏幕录制",
           "start": "开始",
@@ -166,6 +179,7 @@
         "history": "历史消息"
       },
       "groupChat": {
+        "members": "群成员",
         "searchMembers": "搜索群成员",
         "viewMore": "查看更多",
         "collapse": "收起",
@@ -315,8 +329,7 @@
       "notification": {
         "call": "语音和视频通话通知声音",
         "label": "通知声音",
-        "newMsg": "新消息通知声音",
-        "mute": "消息免打扰"
+        "newMsg": "新消息通知声音"
       },
       "profile": {
         "address": "地址:",

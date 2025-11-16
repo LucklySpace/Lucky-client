@@ -155,6 +155,12 @@ export default {
   /** 获取群成员 */
   GetGroupMember: (data: any) => Http.post("/service/api/v1/group/member", data),
 
+  /** 更新群聊信息 */
+  updateGroupInfo: (data: any) => Http.post("/service/api/v1/group/update", data),
+
+  /** 更新修改好友备注名 **/
+  updateFriendRemark: (data: any) => Http.post("/service/api/v1/relationship/updateFriendRemark", data),
+
   /** 同意或拒绝群聊邀请 */
   ApproveGroup: (data: any) => Http.post("/service/api/v1/group/approve", data),
 

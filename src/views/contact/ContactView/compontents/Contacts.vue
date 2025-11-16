@@ -7,8 +7,9 @@
       <!-- 顶部：头像 + 基本信息 -->
       <el-row align="middle" class="card-top">
         <el-col :span="6" class="avatar-col no-select">
-          <!-- 使用 el-avatar 可自动处理图片裁切 & 可提供占位插槽 -->
-          <el-avatar :alt="friendInfo.name || 'avatar'" :size="84" :src="friendInfo.avatar ?? defaultImg"></el-avatar>
+          <span>
+            <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
+          </span>
         </el-col>
 
         <el-col :span="18" class="meta-col">
@@ -46,6 +47,21 @@
 
       <!-- 信息详情 -->
       <div class="info-section">
+        <div v-if="friendInfo.name" class="info-row">
+          <strong class="no-select">{{ $t('search.addFriend.remarkLabel') }}</strong>
+          <template v-if="!isEditingRemark">
+            <span class="remark-text" @click="startEditRemark">{{ remark || (friendInfo as any).name }}</span>
+          </template>
+          <template v-else>
+            <el-input
+              v-model="remark"
+              size="small"
+              class="remark-input"
+              @keyup.enter="saveRemark"
+              @blur="cancelEdit"
+            />
+          </template>
+        </div>
         <div v-if="friendInfo.name" class="info-row">
           <strong class="no-select">{{ $t("contacts.nicknameLabel") }}</strong> <span>{{ friendInfo.name }}</span>
         </div>
@@ -98,9 +114,10 @@ import { useRouter } from "vue-router";
 import { IMessageType } from "@/constants";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useChatStore } from "@/store/modules/chat";
-
-import defaultImg from "@/assets/avatar/default.jpg";
+import Avatar from "@/components/Avatar/index.vue";
 import { useCallStore } from "@/store/modules/call";
+import { ElMessage } from 'element-plus';
+import { MAX_REMARK_LEN } from '@/constants';
 
 type Friend = {
   avatar?: string;
@@ -111,6 +128,7 @@ type Friend = {
   selfSignature?: string;
   online?: boolean;
 };
+const $t = useI18n().t;
 
 const router = useRouter();
 const callStore = useCallStore();
@@ -127,6 +145,38 @@ const hasFriend = computed(() => {
   // 如果对象为空或没有 name 则判为空
   return friendInfo.value && Object.keys(friendInfo.value).length > 0;
 });
+
+// 备注编辑
+const remark = ref<string>('');
+const isEditingRemark = ref<boolean>(false);
+
+watch(friendInfo, (nf) => {
+  if (nf) remark.value = (nf as any).remark ?? (nf as any).name ?? '';
+}, { immediate: true });
+
+function startEditRemark() {
+  if (!hasFriend.value) return;
+  isEditingRemark.value = true;
+}
+
+async function saveRemark() {
+  const next = (remark.value || '').trim();
+  const id = (friendInfo.value as any)?.friendId;
+  if (!id) return;
+  if (!next) { ElMessage.warning($t('errors.remark.empty') as any); return; }
+  if (next.length > MAX_REMARK_LEN) { ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN }) as any); return; }
+  try {
+    await friendStore.updateFriendRemark(id, next);
+    isEditingRemark.value = false;
+  } catch (e) {
+    ElMessage.error('保存失败');
+  }
+}
+
+function cancelEdit() {
+  remark.value = (friendInfo.value as any)?.remark ?? (friendInfo.value as any)?.name ?? '';
+  isEditingRemark.value = false;
+}
 
 // 头像回退逻辑：优先使用 store 的 avatar，否则显示默认资源
 //const DEFAULT_AVATAR = "/images/default-avatar.png";
@@ -303,6 +353,9 @@ async function handleCall(fi: any) {
         min-width: 84px;
       }
     }
+
+    .remark-text { cursor: pointer; color: var(--main-text-color); }
+    .remark-input { max-width: 220px; margin-right: 6px; }
 
     .signature {
       color: #495057;

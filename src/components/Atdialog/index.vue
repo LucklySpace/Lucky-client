@@ -23,8 +23,9 @@
       @mouseenter="hoverAt(i)"
     >
       <div class="avatar-wrap">
-        <img v-if="item.avatar" :src="item.avatar" alt="" class="avatar lazy-img" />
-        <div v-else class="avatar avatar-fallback">{{ getInitials(item.name) }}</div>
+        <span class="avatar">
+          <Avatar :avatar="item.avatar || '无'" :name="item.name" :width="30" :borderRadius="3" />
+        </span>
       </div>
 
       <div class="meta">
@@ -48,6 +49,7 @@
    */
 
   import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+  import Avatar from "@/components/Avatar/index.vue";
 
   // 简单 User 接口（按需扩展）
   type User = { userId: string; name: string; avatar?: string | null };
