@@ -109,13 +109,11 @@
  * - 提供 handleCall 与 handleSendMessage 两个出口（handleCall 可在未来接入通话逻辑）
  */
 
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { IMessageType } from "@/constants";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useChatStore } from "@/store/modules/chat";
-
-import defaultImg from "@/assets/avatar/default.jpg";
 import Avatar from "@/components/Avatar/index.vue";
 import { useCallStore } from "@/store/modules/call";
 import { ElMessage } from 'element-plus';
@@ -130,6 +128,7 @@ type Friend = {
   selfSignature?: string;
   online?: boolean;
 };
+const $t = useI18n().t;
 
 const router = useRouter();
 const callStore = useCallStore();

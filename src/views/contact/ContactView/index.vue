@@ -58,7 +58,6 @@
   import { computed, h, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
   import { useFriendsStore } from "@/store/modules/friends";
   import { useChatStore } from "@/store/modules/chat";
-  import { useI18n } from "vue-i18n";
   import Avatar from "@/components/Avatar/index.vue";
   import { IMessageType } from "@/constants";
 
@@ -180,6 +179,12 @@
     });
   });
 
+  // function initials(name?: string) {
+  //   const n = (name ?? "").trim();
+  //   if (!n) return "#";
+  //   const first = n[0];
+  //   return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
+  // }
 
   onBeforeUnmount(() => {
     if (observer) {

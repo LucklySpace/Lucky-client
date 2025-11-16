@@ -146,12 +146,12 @@ watch(
 // );
 
 /* 首字母（群名） */
-const initials = computed(() => {
-  const n = (displayName.value ?? "").trim();
-  if (!n) return "#";
-  const first = n[0];
-  return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
-});
+// const initials = computed(() => {
+//   const n = (displayName.value ?? "").trim();
+//   if (!n) return "#";
+//   const first = n[0];
+//   return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
+// });
 
 /* 人性化文本显示 */
 const groupTypeText = computed(() => {

@@ -72,6 +72,7 @@
 
   /* -------------------- 类型定义 -------------------- */
   interface ChatData {
+    groupName?: string;
     name?: string;
     avatar?: string;
     message?: string; // 可能为空
