@@ -338,6 +338,8 @@
           groupNameInputRef.value.focus();
         }
       });
+    } else {
+      ElMessage.warning("只有群主才能修改群名称");
     }
   };
 
