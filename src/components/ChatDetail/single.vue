@@ -23,13 +23,14 @@
       <el-form-item :label="$t('search.addFriend.remarkLabel')" prop="remark" class="remark-form">
         <div v-if="!isEditingRemark" class="remark-display" @click="startEditRemark">
           {{ form.remark || singleInfo.name || $t("common.noData") }}
+          <el-icon class="edit-icon"><Edit /></el-icon>
         </div>
         <el-input
           v-else
           ref="remarkInputRef"
           v-model="form.remark"
           size="small"
-          @blur="cancelEdit"
+          @blur="saveRemark"
           @keyup.enter="saveRemark"
         />
       </el-form-item>
@@ -352,6 +353,11 @@
 
       &:hover {
         color: #409eff;
+      }
+      .edit-icon {
+        margin-left: 8px;
+        color: #999;
+        font-size: 13px;
       }
     }
   }

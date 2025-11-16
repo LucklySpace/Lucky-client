@@ -51,11 +51,12 @@
           <!-- 群聊名称编辑区域 -->
           <div class="editable-field" @click="startEditGroupName" v-if="!ui.edit.name.editing">
             <span class="field-text">{{ groupInfoData.name }}</span>
-            <el-icon class="edit-icon"><Edit /></el-icon>
+            <el-icon v-if="isOwner" class="edit-icon"><Edit /></el-icon>
           </div>
           <!-- 编辑输入框 -->
           <div v-else class="edit-field" v-click-outside="checkAndCancelEditGroupName">
             <el-input
+              v-if="isOwner"
               ref="groupNameInputRef"
               v-model="ui.edit.name.value"
               :placeholder="groupInfoData.name"
@@ -65,9 +66,13 @@
           </div>
         </el-form-item>
 
-        <!-- 群公告 -->
+        <!-- 群公告（仅管理员/群主可编辑） -->
         <el-form-item :label="$t('chat.groupChat.groupNotice')" class="group-notice">
-          <div class="group-notice-display" @click="startEditGroupNotice" v-if="!ui.edit.notice.editing">
+          <div
+            class="group-notice-display"
+            @click="canEditNotice ? startEditGroupNotice() : onNoPermission()"
+            v-if="!ui.edit.notice.editing"
+          >
             {{ groupInfoData.notification?.trim() ? groupInfoData.notification : $t("group.noAnnouncement") }}
           </div>
           <div v-else class="el-textarea" v-click-outside="checkAndCancelEditGroupNotice">
@@ -75,7 +80,7 @@
               ref="groupNoticeRef"
               type="textarea"
               :rows="3"
-              style="width: 240px"
+              style="width: 255px"
               v-model="ui.edit.notice.value"
               :placeholder="groupInfoData.notification"
               @keydown.enter.prevent="saveGroupInfo"
@@ -154,10 +159,9 @@
 
 <script lang="ts" setup>
   import SelectContact from "@/components/SelectContact/index.vue";
-  import { reactive } from 'vue';
+  import { reactive } from "vue";
   import { ElMessageBox, ElMessage } from "element-plus";
   import { useChatStore } from "@/store/modules/chat";
-  import { useFriendsStore } from "@/store/modules/friends";
   import { IMessageType } from "@/constants";
   import Chats from "@/database/entity/Chats";
   import HistoryDialog from "@/components/History/index.vue";
@@ -167,7 +171,6 @@
   import { CHAT_CHANGED, GROUP_RENAMED, GROUP_NOTICE_CHANGED } from "@/constants/events";
 
   const chatStore = useChatStore();
-  const friendStore = useFriendsStore();
 
   const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
 
@@ -198,6 +201,26 @@
     name: "",
     notification: "暂无"
   });
+
+  // 当前用户群内角色：0 普通成员，1 管理员，2 群主（仅用于“群公告”权限判断）
+  const myMember = computed(() => {
+    const raw = (chatStore as any).currentChatGroupMemberMap;
+    const source: any = Array.isArray(raw?.value ?? raw) ? raw?.value ?? raw : Object.values(raw?.value ?? raw ?? {});
+    const me = String(chatStore.getOwnerId || "");
+    return source.find((m: any) => String(m?.userId ?? m?.id) === me);
+  });
+  const myRole = computed<number>(() => {
+    const m = myMember.value as any;
+    const roleLike = m?.role ?? m?.memberRole ?? m?.roleType ?? 0;
+    const n = Number(roleLike);
+    return Number.isFinite(n) ? n : 0;
+  });
+  const isAdmin = computed(() => myRole.value === 1);
+  const canEditNotice = computed(() => isOwner.value || isAdmin.value);
+
+  const onNoPermission = () => {
+    ElMessage.warning("只有管理员或群主可以修改群公告");
+  };
 
   // 事件处理器（用于 EventBus 订阅/反订阅）
   const onBusGroupRenamed = (payload: any) => {
@@ -266,15 +289,17 @@
     const source: any = raw?.value ?? raw;
     let members: any[] = [];
     if (Array.isArray(source)) members = source;
-    else if (source && typeof source === 'object') members = Object.values(source);
+    else if (source && typeof source === "object") members = Object.values(source);
 
     const q = ui.search.trim().toLowerCase();
     if (!q) return members;
-    return members.filter((m: any) => (m?.name || '').toLowerCase().includes(q));
+    return members.filter((m: any) => (m?.name || "").toLowerCase().includes(q));
   });
 
   /** 显示成员 */
-  const displayedMembers = computed(() => ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 15));
+  const displayedMembers = computed(() =>
+    ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 15)
+  );
 
   /** 控制展开 */
   const toggleExpand = () => {
@@ -292,17 +317,28 @@
   };
 
   //编辑群聊名称
+  //判断是否为群主
+  const isOwner = computed(() => {
+    const currentChat = chatStore.currentChat;
+    if (!currentChat) return false;
+    const me = chatStore.getOwnerId;
+    if (!me) return false;
+    return currentChat.ownerId === me;
+  });
+
   // 名称编辑态使用 ui.edit.name
   const groupNameInputRef = ref();
 
   const startEditGroupName = () => {
-    ui.edit.name.editing = true;
-    ui.edit.name.value = groupInfoData.name;
-    nextTick(() => {
-      if (groupNameInputRef.value) {
-        groupNameInputRef.value.focus();
-      }
-    });
+    if (isOwner.value) {
+      ui.edit.name.editing = true;
+      ui.edit.name.value = groupInfoData.name;
+      nextTick(() => {
+        if (groupNameInputRef.value) {
+          groupNameInputRef.value.focus();
+        }
+      });
+    }
   };
 
   // 编辑发布群公告
@@ -327,7 +363,12 @@
       updateData.groupName = ui.edit.name.value;
     }
     if (ui.edit.notice.value.trim() && ui.edit.notice.value !== groupInfoData.notification) {
-      updateData.notification = ui.edit.notice.value;
+      // 仅管理员/群主可修改群公告
+      if (!canEditNotice.value) {
+        onNoPermission();
+      } else {
+        updateData.notification = ui.edit.notice.value;
+      }
     }
 
     if (!updateData.groupName && !updateData.notification) {
@@ -346,20 +387,26 @@
       // 广播群名变更（如有），以及群公告变更（如有）
       if (updateData.groupName) {
         try {
-          globalEventBus.emit(GROUP_RENAMED as any, {
-            groupId,
-            chatId,
-            groupName: updateData.groupName
-          } as any);
+          globalEventBus.emit(
+            GROUP_RENAMED as any,
+            {
+              groupId,
+              chatId,
+              groupName: updateData.groupName
+            } as any
+          );
         } catch {}
       }
       if (updateData.notification) {
         try {
-          globalEventBus.emit(GROUP_NOTICE_CHANGED as any, {
-            chatId,
-            groupId,
-            content: updateData.notification
-          } as any);
+          globalEventBus.emit(
+            GROUP_NOTICE_CHANGED as any,
+            {
+              chatId,
+              groupId,
+              content: updateData.notification
+            } as any
+          );
         } catch {}
       }
     } catch (e) {
@@ -387,6 +434,10 @@
   };
 
   const startEditGroupNotice = () => {
+    if (!canEditNotice.value) {
+      onNoPermission();
+      return;
+    }
     ui.edit.notice.editing = true;
     ui.edit.notice.value = groupInfoData.notification ?? "";
   };
@@ -444,7 +495,7 @@
   });
 
   // 暴露给模板的开关容器（computed 可作为 v-model 使用）
-  ;(ui as any).switches = { top, mute: messageMute }
+  (ui as any).switches = { top, mute: messageMute };
 
   const handleClearGroupMessage = () => {
     ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {

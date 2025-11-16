@@ -45,8 +45,9 @@
         <span class="info-label">{{ $t("search.addFriend.remarkLabel") }}:</span>
         <div v-if="!isEditingRemark" class="info-value" @click="isEditingRemark = true">
           <span>{{ remark || safeName }}</span>
+          <el-icon class="edit-icon"><Edit /></el-icon>
         </div>
-        <div v-else class="info-value" v-click-outside="handleClickOutside">
+        <div v-else class="info-value" v-click-outside="saveRemark">
           <el-input v-model="remark" size="small" @keyup.enter="saveRemark" />
         </div>
       </div>
@@ -98,6 +99,7 @@
   import { useFriendsStore } from "@/store/modules/friends";
   import { MAX_REMARK_LEN } from "@/constants";
   import Avatar from "@/components/Avatar/index.vue";
+import { save } from "@tauri-apps/plugin-dialog";
 
   const { t: $t } = useI18n();
   const friendStore = useFriendsStore();
@@ -163,9 +165,16 @@
   );
   const saveRemark = async () => {
     if (!props.contact?.friendId) return;
-    const next = (remark.value || '').trim();
-    if (!next) { ElMessage.warning($t('errors.remark.empty')); return; }
-    if (next.length > MAX_REMARK_LEN) { ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN })); return; }
+    const next = (remark.value || "").trim();
+    console.log('next', next);
+    if (!next) {
+      ElMessage.warning($t("errors.remark.empty"));
+      return;
+    }
+    if (next.length > MAX_REMARK_LEN) {
+      ElMessage.error($t("errors.remark.tooLong", { max: MAX_REMARK_LEN }));
+      return;
+    }
     try {
       isEditingRemark.value = false;
       await friendStore.updateFriendRemark(props.contact.friendId, next);
@@ -173,11 +182,16 @@
       isEditingRemark.value = true;
     }
   };
-  const cancelEdit = () => {
-    remark.value = props.contact?.remark ?? props.contact?.name ?? "";
-    isEditingRemark.value = false;
-  };
-  const handleClickOutside = () => { if (isEditingRemark.value) cancelEdit(); };
+  // const cancelEdit = () => {
+  //   remark.value = props.contact?.remark ?? props.contact?.name ?? "";
+  //   isEditingRemark.value = false;
+  // };
+  //失焦取消编辑
+  // const handleClickOutside = () => {
+  //   if (isEditingRemark.value) {
+  //     cancelEdit();
+  //   }
+  // };
 
   /* 安全显示姓名，若缺失则显示占位文本 */
   const safeName = computed(() => {
@@ -343,6 +357,11 @@
           font-size: 13px;
           color: #333;
           word-break: break-word;
+          align-items: baseline;
+          .edit-icon {
+            margin-left: 4px;
+            color: #7e7878;
+          }
         }
       }
     }

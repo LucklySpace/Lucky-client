@@ -46,11 +46,12 @@
       <el-divider class="card-divider" />
 
       <!-- 信息详情 -->
-      <div class="info-section">
+      <div class="info-section"> 
         <div v-if="friendInfo.name" class="info-row">
           <strong class="no-select">{{ $t('search.addFriend.remarkLabel') }}</strong>
           <template v-if="!isEditingRemark">
             <span class="remark-text" @click="startEditRemark">{{ remark || (friendInfo as any).name }}</span>
+            <el-icon class="edit-icon"><Edit /></el-icon>
           </template>
           <template v-else>
             <el-input
@@ -58,7 +59,7 @@
               size="small"
               class="remark-input"
               @keyup.enter="saveRemark"
-              @blur="cancelEdit"
+              @blur="saveRemark"
             />
           </template>
         </div>
@@ -172,11 +173,12 @@ async function saveRemark() {
     ElMessage.error('保存失败');
   }
 }
+//失焦不保存
 
-function cancelEdit() {
-  remark.value = (friendInfo.value as any)?.remark ?? (friendInfo.value as any)?.name ?? '';
-  isEditingRemark.value = false;
-}
+// function cancelEdit() {
+//   remark.value = (friendInfo.value as any)?.remark ?? (friendInfo.value as any)?.name ?? '';
+//   isEditingRemark.value = false;
+// }
 
 // 头像回退逻辑：优先使用 store 的 avatar，否则显示默认资源
 //const DEFAULT_AVATAR = "/images/default-avatar.png";
@@ -355,6 +357,7 @@ async function handleCall(fi: any) {
     }
 
     .remark-text { cursor: pointer; color: var(--main-text-color); }
+    .edit-icon {font-size: 12px; color: #6b6b6b; margin-left: 4px;}
     .remark-input { max-width: 220px; margin-right: 6px; }
 
     .signature {
