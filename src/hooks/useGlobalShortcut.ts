@@ -23,6 +23,8 @@ export interface ShortcutConfig {
 // 全局单例状态
 const registry = new Map<string, ShortcutConfig>();
 let initialized = false;
+// 同名执行中标志（避免并发覆盖）
+const inFlightMap = new Map<string, boolean>();
 
 //归一化处理, 统一修饰键&顺序, 仅用于匹配/校验, 真正注册仍用原串
 function normalizeCombo(raw: string): string {
@@ -192,37 +194,44 @@ export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
     nextCombo: string,
     handler: ShortcutHandler
   ): Promise<boolean> {
-    //节流处理, 防止快速切换造成的问题
+    // 节流处理（同名），防止快速切换造成的问题
     const now = Date.now();
     const last = lastCallAt.get(name) || 0;
     if (now - last < THROTTLE) {
-      try {
-        log.warn?.(`[Shortcut] throttle skip: ${name}`);
-      } catch {}
-      return false; //不接受连续处理
+      try { log.warn?.(`[Shortcut] throttle skip: ${name}`); } catch {}
+      return false;
     }
     lastCallAt.set(name, now);
 
-    const ok = await internalRegister({ name, combination: nextCombo, handler });
-
-    if (!ok) {
-      //回退, 尽量回复旧组合
-      if (prevCombo) {
-        try {
-          await tauriRegister(prevCombo, handler);
-        } catch {}
-        registry.set(name, { name, combination: prevCombo, handler });
-        const idx = settingStore.shortcuts.findIndex(s => s.name === name);
-        if (idx >= 0) settingStore.shortcuts[idx].combination = prevCombo;
-      }
-      try {
-        if (nextCombo !== prevCombo)
-          ElMessage?.warning?.(`快捷键 ${nextCombo} 不可用，已恢复至 ${prevCombo || "（无）"}`);
-        else ElMessage?.warning?.(`快捷键 ${nextCombo} 不可用， 请重新设置`);
-      } catch {}
+    // in-flight：同名执行中直接跳过
+    if (inFlightMap.get(name)) {
+      try { log.info?.(`[Shortcut] in-flight skip: ${name}`); } catch {}
       return false;
     }
-    return true;
+    inFlightMap.set(name, true);
+
+    try {
+      // 先删旧再注新，避免遗留（失败再回退）
+      if (prevCombo && prevCombo !== nextCombo) {
+        try { await tauriUnregister(prevCombo); } catch {}
+      }
+
+      const ok = await internalRegister({ name, combination: nextCombo, handler });
+      if (!ok) {
+        // 回退：尽量恢复旧组合
+        if (prevCombo) {
+          try { await tauriRegister(prevCombo, handler); } catch {}
+          registry.set(name, { name, combination: prevCombo, handler });
+          const idx = settingStore.shortcuts.findIndex(s => s.name === name);
+          if (idx >= 0) settingStore.shortcuts[idx].combination = prevCombo;
+        }
+        try { ElMessage?.warning?.(`快捷键 ${nextCombo} 不可用，已恢复至 ${prevCombo || '（无）'}`); } catch {}
+        return false;
+      }
+      return true;
+    } finally {
+      inFlightMap.set(name, false);
+    }
   }
 
   /**
