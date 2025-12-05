@@ -32,6 +32,15 @@ export function createUseCanvasTool(
   // 临时快照：开始绘制前保存一份，用于交互式预览
   let tempSnapshot: ImageData | null = null;
 
+  // 增加颜色选择器
+  let styleConfig: { color: ColorType | string; size: number } = {
+    color: "red",
+    size: 2
+  };
+  //工具函数：把 ColorType 或 hex/rgb 转成真正的 CSS 颜色
+  function resolveColor(c: ColorType | string): string {
+    return (COLOR_MAP as any)[c] || c;
+  }
   // ---- pen 状态（封装） ----
 
   let penConfig: PenConfig = {
@@ -134,8 +143,8 @@ export function createUseCanvasTool(
 
   // 绘图实现函数（注意：传入的坐标均为屏幕像素级）
   function drawRect(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = resolveColor(styleConfig.color);
+    ctx.lineWidth = styleConfig.size;
     ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
   }
 
@@ -157,16 +166,16 @@ export function createUseCanvasTool(
     const radius = Math.min(Math.sqrt(deltaX * deltaX + deltaY * deltaY), maxRadius);
 
     // 绘制圆形
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = resolveColor(styleConfig.color);
+    ctx.lineWidth = styleConfig.size;
     ctx.beginPath();
     ctx.arc(x1, y1, radius, 0, Math.PI * 2);
     ctx.stroke();
   };
 
   function drawLine(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = resolveColor(styleConfig.color);
+    ctx.lineWidth = styleConfig.size;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -211,7 +220,9 @@ export function createUseCanvasTool(
     ctx.lineTo(x1 + (tailWidth / 2) * Math.sin(angle), y1 - (tailWidth / 2) * Math.cos(angle));
 
     ctx.closePath();
-    ctx.fillStyle = "red";
+    ctx.fillStyle = resolveColor(styleConfig.color);
+    ctx.strokeStyle = resolveColor(styleConfig.color);
+    ctx.lineWidth = styleConfig.size;
     ctx.fill();
   };
 
@@ -286,8 +297,8 @@ export function createUseCanvasTool(
     ctx.beginPath();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = penConfig.color;
-    ctx.lineWidth = penConfig.size;
+    ctx.strokeStyle = resolveColor(styleConfig.color);
+    ctx.lineWidth = styleConfig.size;
     ctx.moveTo(x, y);
     penConfig.lastX = x;
     penConfig.lastY = y;
@@ -317,8 +328,7 @@ export function createUseCanvasTool(
   function endPen(ctx: CanvasRenderingContext2D) {
     try {
       ctx.closePath();
-    } catch {
-    }
+    } catch {}
     penConfig.lastX = null;
     penConfig.lastY = null;
   }
@@ -382,22 +392,23 @@ export function createUseCanvasTool(
     ctx.putImageData(img, 0, 0);
   }
 
-  function setPenOptions({ color, size }: { color?: ColorType; size?: number }) {
+  function setPenOptions({ color, size }: { color?: ColorType | string; size?: number }) {
     if (color !== undefined) {
-      if (!Object.prototype.hasOwnProperty.call(COLOR_MAP, color)) {
-        console.warn(`[setPenOptions] unknown color "${color}", ignore.`);
-      } else {
-        penConfig.color = color;
-      }
+        styleConfig.color = color;
     }
     if (size !== undefined) {
       // 限定大小范围（比如 1 ~ 50）
       const newSize = Math.max(1, Math.min(50, Math.floor(size)));
-      penConfig.size = newSize;
+      styleConfig.size = newSize;
+    }
+    if (tool.value === "pen") {
+      if (color !== undefined) penConfig.color = color as any;
+      if (size !== undefined) penConfig.size = styleConfig.size;
     }
   }
 
   return {
+    resolveColor,
     startListen,
     stopListen,
     setTool,

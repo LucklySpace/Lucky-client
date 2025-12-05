@@ -153,7 +153,7 @@
 
   const init = () => {
     profileForm.value = Object.assign({}, userStore.userInfo);
-    userAvatar.value = userStore.userInfo.avatar;
+    userAvatar.value = userStore.userInfo.avatar as string;
   };
 
   // 初始化表单数据
