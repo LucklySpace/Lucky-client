@@ -40,7 +40,13 @@
 
 <style lang="scss" scoped>
   .notification-container {
-    padding: 0 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    padding: 8px 20px;
+    max-width: 400px;
+    margin: 20px auto;
+    border: 1px solid #ebeef5;
 
     .notification-label {
       color: #888;
@@ -51,6 +57,7 @@
 
     .label-item {
       margin-left: 0 !important;
+      border-bottom: 1px solid #f2f2f2;
 
       :deep(.el-form-item__content) {
         margin-left: 0 !important;
@@ -62,6 +69,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 0;
+      border-bottom: 1px solid #f2f2f2;
 
       .switch-label {
         flex: 1;

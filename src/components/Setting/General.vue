@@ -12,7 +12,7 @@
 
     <!-- 清空聊天记录行 -->
     <div class="form-row">
-      <div :title="$t('settings.general.label')" class="row-label">{{ $t("settings.general.label") }}</div>
+      <div :title="$t('settings.general.ChatLog')" class="row-label">{{ $t("settings.general.ChatLog") }}</div>
       <div class="row-control">
         <el-button type="danger" @click="handleClearChat">
           <el-icon>
@@ -26,7 +26,7 @@
     <!-- 存储管理行 -->
     <div class="form-row">
       <!-- 如果这一行 label 需要留空，也可直接用 &nbsp; 占位 -->
-      <div class="row-label">&nbsp;</div>
+      <div class="row-label">{{ $t("settings.general.storage.details") }}</div>
       <div class="row-control">
         <el-button type="primary" @click="handleStorageManage">
           <el-icon>
@@ -84,4 +84,36 @@
   });
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+  .setting-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    padding: 8px 20px;
+    max-width: 400px;
+    margin: 20px auto;
+    border: 1px solid #ebeef5;
+  }
+
+  .form-row {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #f2f2f2;
+
+    &.footer-row {
+      border-bottom: none;
+      padding-bottom: 8px;
+    }
+  }
+  .row-label {
+    font-size: 14px;
+    color: #333333;
+    font-weight: 500;
+  }
+
+  .row-control {
+    display: flex;
+    justify-content: space-between;
+  }
+</style>

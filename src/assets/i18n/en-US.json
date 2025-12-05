@@ -309,6 +309,7 @@
         "label": "General",
         "language": "Language",
         "select": "Select Language",
+        "ChatLog": "Chat History",
         "clearChat": "Clear Chat History",
         "storage": {
           "cache": "Cache",

@@ -308,6 +308,7 @@
         "label": "通用",
         "language": "语言",
         "select": "选择语言",
+        "ChatLog": "聊天记录",
         "clearChat": "清空聊天记录",
         "storage": {
           "cache": "缓存",

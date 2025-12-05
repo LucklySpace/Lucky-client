@@ -26,14 +26,14 @@
 
 <style lang="scss" scoped>
   .theme-card {
-    max-width: 500px;
-    padding: 24px;
-    /* border-radius: 12px;
-  margin: 40px auto;
-  background-color: var(--content-bg-color);
-  color: var(--content-font-color);
-  box-shadow: var(--main-box-shadow); */
     transition: all 0.3s ease;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    padding: 8px 20px;
+    max-width: 400px;
+    margin: 20px auto;
+    border: 1px solid #ebeef5;
   }
 
   .theme-header {

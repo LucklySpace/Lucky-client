@@ -5,7 +5,7 @@
       <div class="form-row">
         <div :title="$t('settings.shortcut.send')" class="row-label">{{ $t("settings.shortcut.send") }}</div>
         <div class="row-control">
-          <el-select v-model="shortcutForm.sendMessage" @change="handleKeyChange('sendMessage')">
+          <el-select class="custom-select" v-model="shortcutForm.sendMessage" @change="handleKeyChange('sendMessage')">
             <el-option label="Alt + S" value="Alt + S" />
             <el-option label="Ctrl + Enter" value="Ctrl + Enter" />
           </el-select>
@@ -17,6 +17,7 @@
         <div :title="$t('settings.shortcut.screen')" class="row-label">{{ $t("settings.shortcut.screen") }}</div>
         <div class="row-control">
           <el-input
+            class="custom-input"
             v-model="shortcutForm.screenshot"
             :placeholder="$t('settings.shortcut.click')"
             readonly
@@ -27,12 +28,11 @@
       </div>
 
       <!-- 恢复默认 -->
-      <div class="form-row">
+      <div class="form-bottom">
         <!-- 如果这一行 label 需要留空，也可直接用 &nbsp; 占位 -->
-        <div class="row-label">&nbsp;</div>
-        <div class="row-control">
+        <span>
           <el-button type="primary" @click="resetDefaults">{{ $t("settings.shortcut.default") }}</el-button>
-        </div>
+        </span>
       </div>
     </el-form>
   </div>
@@ -134,126 +134,130 @@
 </script>
 
 <style lang="scss" scoped>
+  /* 容器与行布局 (保持不变) */
   .setting-container {
     background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05); /* 淡淡的阴影 */
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
     padding: 8px 20px;
-    max-width: 400px; /* 限制宽度以匹配图片效果 */
+    max-width: 400px;
     margin: 20px auto;
     border: 1px solid #ebeef5;
   }
 
-  /* 每一行的样式 */
   .form-row {
     display: flex;
-    justify-content: space-between; /* 左右对齐 */
-    align-items: center; /* 垂直居中 */
+    justify-content: space-between;
+    align-items: center;
     padding: 16px 0;
-    border-bottom: 1px solid #f2f2f2; /* 灰色分割线 */
+    border-bottom: 1px solid #f2f2f2;
 
-    /* 最后一行的特殊处理（按钮行） */
     &.footer-row {
       border-bottom: none;
-      justify-content: flex-end; /* 按钮靠右 */
+      justify-content: space-between;
       padding-bottom: 8px;
     }
   }
 
   .row-label {
     font-size: 14px;
-    color: #333333; /* 深灰黑色字体 */
+    color: #333333;
     font-weight: 500;
   }
 
   .row-control {
-    /* 这里的宽度决定了输入框的宽度 */
-    width: 140px;
     display: flex;
     justify-content: flex-end;
   }
 
-  /* =========================================
-   Element Plus 深度样式覆盖
-   使用 :deep() 穿透组件 scoped 限制
-   ========================================= */
-
-  /* 1. 输入框样式 (Input) */
+  /* 1. Input 样式 */
   :deep(.custom-input) {
+    width: 190px;
+    box-sizing: border-box;
+    margin: 0;
     .el-input__wrapper {
-      box-shadow: 0 0 0 1px #dcdfe6 inset; /* 默认边框 */
+      box-shadow: 0 0 0 1px #dcdfe6 inset; /* 灰色边框 */
       border-radius: 6px;
       padding: 0 8px;
-      height: 32px; /* 稍微矮一点 */
+      height: 32px;
+      width: 100%;
+      box-sizing: border-box;
       background-color: #fff;
       transition: all 0.3s;
 
       &:hover {
         box-shadow: 0 0 0 1px #c0c4cc inset;
       }
-
       &.is-focus {
         box-shadow: 0 0 0 1px #409eff inset;
       }
     }
 
     .el-input__inner {
-      text-align: center; /* 文字居中 */
+      text-align: center;
       font-size: 13px;
-      color: #333;
-      height: 32px;
+      color: #606266;
     }
 
-    /* 图标颜色 */
     .input-icon {
-      color: #909399;
+      color: #909399; /* 灰色图标 */
       cursor: pointer;
-      font-size: 14px;
       &:hover {
         color: #606266;
       }
     }
   }
 
-  /* 2. 下拉框样式 (Select) */
+  /* 2. Select 样式 */
   :deep(.custom-select) {
+    width: 190px;
+    box-sizing: border-box;
+    margin: 0;
+    vertical-align: middle;
+    /* wrapper 对应 input 的 wrapper */
     .el-select__wrapper {
+      box-shadow: 0 0 0 1px #dcdfe6 inset; /* 灰色边框 */
+      border-radius: 6px;
       min-height: 32px;
       height: 32px;
-      border-radius: 6px;
+      width: 100%;
+      box-sizing: border-box;
       padding: 0 8px;
-      box-shadow: 0 0 0 1px #dcdfe6 inset;
+      background-color: #fff;
+      transition: all 0.3s;
+
+      &:hover {
+        box-shadow: 0 0 0 1px #c0c4cc inset;
+      }
+      &.is-focused {
+        box-shadow: 0 0 0 1px #409eff inset;
+      }
     }
 
+    /* 选中的文字 */
     .el-select__selected-item {
       font-size: 13px;
-      color: #333;
-      text-align: center;
+      color: #606266;
+      text-align: center; /* 让文字居中 */
+      /* 这里的 padding 可能需要根据是否显示 placeholder 调整，一般不用动 */
     }
 
-    /* 模仿图片中 Select 的绿色箭头背景效果 */
-    .el-select__suffix {
-      background-color: #00cca3; /* 绿色背景 */
-      border-radius: 4px;
-      margin-right: -4px; /* 调整位置 */
-      padding: 2px;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* 下拉箭头图标 */
+    .el-select__caret {
+      color: #909399; /* 变成普通的灰色箭头 */
+      font-size: 14px;
+    }
 
-      .el-icon {
-        color: white; /* 箭头变白 */
-        font-size: 12px;
-        margin: 0;
-      }
+    /* 去掉之前那个特殊的 suffix 背景颜色设置 */
+    .el-select__suffix {
+      background-color: transparent;
+      padding: 0;
     }
   }
 
-  /* 3. 底部按钮样式 (Button) */
+  /* 底部按钮 */
   :deep(.reset-btn) {
-    background-color: #f0f0f0; /* 浅灰色背景 */
+    background-color: #f0f0f0;
     border-color: #f0f0f0;
     color: #333;
     font-size: 13px;
@@ -265,5 +269,9 @@
       background-color: #e6e6e6;
       border-color: #e6e6e6;
     }
+  }
+  .form-bottom {
+    display: flex;
+    justify-content: center;
   }
 </style>
