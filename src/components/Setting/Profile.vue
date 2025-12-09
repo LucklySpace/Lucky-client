@@ -19,7 +19,7 @@
                   <Avatar
                     :avatar="userAvatar"
                     :name="profileForm.name || userStore.userInfo?.name"
-                    :width="80"
+                    :width="100"
                     :borderRadius="8"
                   />
                   <!-- 覆盖层图标：在 avatar 上方显示 -->
@@ -182,10 +182,10 @@
 
     .avatar-wrap {
       position: relative;
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       display: inline-block;
-      padding-left: 40px;
+      padding-left: 25px;
     }
     .avatar-img {
       position: absolute;
@@ -196,8 +196,8 @@
 
     .avatar-wrap {
       position: relative;
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       border-radius: 8px; /* 保持和 Avatar 组件一致的圆角 */
       overflow: hidden; /* 确保蒙层不溢出 */
 
@@ -228,7 +228,7 @@
       .camera-icon {
         font-size: 20px;
         margin-bottom: 2px;
-        margin-right: 38px;
+        margin-right: 26px;
       }
     }
   }

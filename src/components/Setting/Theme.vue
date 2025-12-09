@@ -27,13 +27,10 @@
 <style lang="scss" scoped>
   .theme-card {
     transition: all 0.3s ease;
-    background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
     padding: 8px 20px;
     max-width: 400px;
     margin: 20px auto;
-    border: 1px solid #ebeef5;
   }
 
   .theme-header {

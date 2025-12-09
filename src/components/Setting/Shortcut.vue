@@ -136,13 +136,10 @@
 <style lang="scss" scoped>
   /* 容器与行布局 (保持不变) */
   .setting-container {
-    background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
     padding: 8px 20px;
     max-width: 400px;
     margin: 20px auto;
-    border: 1px solid #ebeef5;
   }
 
   .form-row {
@@ -150,7 +147,6 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 0;
-    border-bottom: 1px solid #f2f2f2;
 
     &.footer-row {
       border-bottom: none;
@@ -182,7 +178,6 @@
       height: 32px;
       width: 100%;
       box-sizing: border-box;
-      background-color: #fff;
       transition: all 0.3s;
 
       &:hover {
@@ -223,7 +218,7 @@
       width: 100%;
       box-sizing: border-box;
       padding: 0 8px;
-      background-color: #fff;
+      // background-color: #fff;
       transition: all 0.3s;
 
       &:hover {

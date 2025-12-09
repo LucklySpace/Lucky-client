@@ -106,20 +106,16 @@
 
 <style lang="scss" scoped>
   .file-container {
-    background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
     padding: 8px 20px;
     max-width: 400px;
     margin: 20px auto;
-    border: 1px solid #ebeef5;
   }
   .form-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 16px 0;
-    border-bottom: 1px solid #f2f2f2;
 
     &.footer-row {
       border-bottom: none;

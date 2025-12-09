@@ -92,11 +92,11 @@
       <button :title="$t('screen.redo')" @click="redo">
         <i class="iconfont icon-chexiao" style="transform: scaleX(-1)"></i>
       </button>
-      <button :title="$t('actions.complete')" @click="confirmSelection">
-        <i class="iconfont icon-wanchengqueding"></i>
-      </button>
       <button :title="$t('actions.cancel')" @click="cancelSelection">
         <i class="iconfont icon-quxiao"></i>
+      </button>
+      <button :title="$t('actions.complete')" @click="confirmSelection">
+        <i class="iconfont icon-wanchengqueding"></i>
       </button>
     </div>
   </div>
@@ -105,11 +105,8 @@
 <script lang="ts" setup>
   import { onMounted } from "vue";
   import { useScreenshot } from "./hooks/useScreenshot";
-  import { ColorType } from "./hooks/types";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { createUseCanvasTool } from "./hooks/useCanvasTool";
-
   const { addShortcut } = useGlobalShortcut();
 
   const { refs, state, start, confirmSelection, cancelSelection, setTool, undo, redo, setPenOptions } = useScreenshot();
