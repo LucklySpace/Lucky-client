@@ -100,9 +100,15 @@
    * submitShortcut：KeyUp 时统一提交到全局 Hook
    * @param field 字段名
    */
-  function submitShortcut(field: keyof ShortcutForm) {
+  async function submitShortcut(field: keyof ShortcutForm) {
     if (pendingField.value === field) {
-      updateShortcut(field, shortcutForm[field] as string);
+      const ok = await updateShortcut(field, shortcutForm[field] as string);
+      const storeValue = settingStore.getShortcut(field) || defaultSettings[field];
+      if (field === "detectConflict") {
+        shortcutForm[field] = storeValue as boolean;
+      } else {
+        shortcutForm[field] = storeValue as string;
+      }
       // 如果开启冲突检测，可在这里做提示逻辑
       if (shortcutForm.detectConflict) {
         // TODO: 调用 isRegistered 检测并提示
@@ -115,20 +121,29 @@
    * 发送消息
    * @param field
    */
-  function handleKeyChange(field: keyof ShortcutForm) {
+  async function handleKeyChange(field: keyof ShortcutForm) {
     if (shortcutForm.sendMessage != defaultSettings.sendMessage) {
-      updateShortcut(field, shortcutForm[field] as string);
+      const ok = await updateShortcut(field, shortcutForm[field] as string);
+      const storeValue = settingStore.getShortcut(field) || defaultSettings[field];
+      if (field === "detectConflict") {
+        shortcutForm[field] = storeValue as boolean;
+      } else {
+        shortcutForm[field] = storeValue as string;
+      }
     }
   }
 
   /**
    * resetDefaults：恢复默认并更新 Store 与 Tauri 注册
    */
-  function resetDefaults() {
+  async function resetDefaults() {
     Object.assign(shortcutForm, defaultSettings);
     // 恢复默认时也同步到全局 Hook
-    updateShortcut("sendMessage", defaultSettings.sendMessage);
-    updateShortcut("screenshot", defaultSettings.screenshot);
+    await updateShortcut("sendMessage", defaultSettings.sendMessage);
+    await updateShortcut("screenshot", defaultSettings.screenshot);
+    //将Store 与 Tauri 注册同步
+    shortcutForm.sendMessage = (settingStore.getShortcut("sendMessage") || defaultSettings.sendMessage) as string;
+    shortcutForm.screenshot = (settingStore.getShortcut("screenshot") || defaultSettings.screenshot) as string;
     ElMessage.success("已恢复默认设置");
   }
 </script>

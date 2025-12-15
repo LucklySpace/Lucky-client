@@ -8,6 +8,7 @@ import {
 } from "@tauri-apps/plugin-global-shortcut";
 import { useLogger } from "./useLogger";
 import { normalizeCombo, isSpecialCombination } from "@/utils/KeyUtilities"
+import { useI18n } from "@/i18n";
 /**
  * 单个快捷键配置接口
  */
@@ -38,6 +39,11 @@ const inFlightMap = new Map<string, boolean>();
 export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
   // 日志
   const log = useLogger();
+  // i18n 实例与便捷 t 方法
+  const { i18n } = useI18n();
+  const t = (key: string, params?: Record<string, any>) =>
+    // 兼容 vue-i18n 9 的 global.t 写法
+    (i18n.global as any).t?.(key, params) ?? key;
 
   const settingStore = useSettingStore();
 
@@ -50,15 +56,16 @@ export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
   async function internalRegister(cfg: ShortcutConfig): Promise<boolean> {
     const { name, combination, handler } = cfg;
     const special = isSpecialCombination(combination);
-    //冲突检查: 系统常用快捷键 -> 特殊组合 -> 冲突
+    // 冲突检查: 系统常用快捷键 -> 特殊组合 -> 冲突（弹窗改为 i18n 文案）
     if (special.blocked) {
       try {
         await ElMessageBox.alert(
-          `${special.reason}，无法注册。请更换组合（建议使用 Ctrl/Shift/Alt + 字母/数字，例如 Ctrl+Shift+M）。`,
-          "快捷键被占用",
+          t("shortcut.systemReserved.message", { combo: normalizeCombo(combination) }),
+          t("shortcut.systemReserved.title"),
           { type: "warning" }
         );
       } catch {}
+      return false;
     }
     if (!isValidCombination(combination)) {
       log.warn(`[Shortcut] 无效的快捷键组合：${name}(${combination})`);
@@ -145,7 +152,14 @@ export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
           const idx = settingStore.shortcuts.findIndex(s => s.name === name);
           if (idx >= 0) settingStore.shortcuts[idx].combination = prevCombo;
         }
-        try { ElMessage?.warning?.(`快捷键 ${nextCombo} 不可用，已恢复至 ${prevCombo || '（无）'}`); } catch {}
+        try {
+          ElMessage?.warning?.(
+            t("shortcut.restore.message", {
+              combo: nextCombo,
+              prev: prevCombo || "（无）"
+            })
+          );
+        } catch {}
         return false;
       }
       return true;
@@ -197,6 +211,7 @@ export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
       const prev = registry.get(shortcut.name)?.combination || saved;
       await registerThenSwap(shortcut.name, prev, saved, shortcut.handler);
     }
+    return true;
   }
 
   /**
@@ -210,11 +225,11 @@ export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
     const handler = handlerMap.get(name) || old?.handler;
     if (!handler) {
       log.error(`[Shortcut] 更新失败，未找到处理函数：${name}`);
-      return;
+      return false;
     }
     // await internalRegister({ name, combination: newCombination, handler });
     const prev = old?.combination || settingStore.getShortcut(name);
-    await registerThenSwap(name, prev, newCombination, handler);
+    return await registerThenSwap(name, prev, newCombination, handler);
   }
 
   /**

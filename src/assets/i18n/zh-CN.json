@@ -434,6 +434,15 @@
       "message": {
         "sentRequest": "已发送添加请求给 {name}"
       }
+    },
+    "shortcut": {
+      "systemReserved": {
+        "title": "快捷键被占用",
+        "message": "{combo} 为系统保留快捷键，无法注册。请更换组合（建议使用 Ctrl/Shift/Alt + 字母/数字，例如 Ctrl+Shift+M）。"
+      },
+      "restore": {
+        "message": "快捷键 {combo} 不可用，已恢复至 {prev}"
+      }
     }
   }
 }
