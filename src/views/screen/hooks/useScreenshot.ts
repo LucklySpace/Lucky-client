@@ -4,6 +4,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ClipboardManager from "@/utils/Clipboard"; // 你已有的剪贴板管理器
 import type { ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
 import { createUseCanvasTool } from "./useCanvasTool"; // 我会在下一节给出文件
+import { ca } from "element-plus/es/locale/index.mjs";
 
 /**
  * useScreenshot - 主 Hook：负责截屏流程、画布初始化、选区、放大镜、按钮组、插件管理
@@ -125,7 +126,12 @@ export function useScreenshot() {
 
   // --- 发起本地截屏（依赖 Tauri 的 screenshot 命令） ---
   async function captureFullScreen() {
-    const pos: any = await invoke("get_mouse_position"); // 你现有的 native 调用
+    let pos: any;
+    try {
+      pos = await invoke("get_mouse_position"); // 你现有的 native 调用
+    } catch (e) {
+      console.log(e);
+    }
     const factor = state.scaleX || (await getCurrentWebviewWindow().scaleFactor());
     const canvasW = Math.round(screen.width * factor);
     const canvasH = Math.round(screen.height * factor);
@@ -136,27 +142,28 @@ export function useScreenshot() {
       width: `${canvasW}`,
       height: `${canvasH}`
     };
-    const base64 = await invoke<string>("screenshot", config);
-
-    // 将 base64 转成 Image
-    screenshotImage = new Image();
-    screenshotImage.src = `data:image/png;base64,${base64}`;
-    screenshotImage.onload = () => {
-      imgCtx.value?.drawImage(screenshotImage as any, 0, 0, canvasW, canvasH);
-
-      // 默认绘制全屏蒙版
-      drawMask();
-
-      // 绘制全屏绿色边框
-      drawRectangle(0, 0, canvasW, canvasH, 1);
-
-      emitPluginEvent("onCapture", { width: canvasW, height: canvasH, image: screenshotImage });
-    };
-    // 可把二进制 buffer 缓存起来（用于导出）
+    let base64: string;
     try {
-      const binary: Uint8Array = Uint8Array.from(atob(base64), c => c.charCodeAt(0)); // 浏览器端转换
-      screenshotBlobBuffer = binary;
+      base64 = await invoke<string>("screenshot", config);
+      // 将 base64 转成 Image
+      screenshotImage = new Image();
+      screenshotImage.src = `data:image/png;base64,${base64}`;
+      screenshotImage.onload = () => {
+        imgCtx.value?.drawImage(screenshotImage as any, 0, 0, canvasW, canvasH);
+
+        // 默认绘制全屏蒙版
+        drawMask();
+
+        // 绘制全屏绿色边框
+        drawRectangle(0, 0, canvasW, canvasH, 1);
+
+        emitPluginEvent("onCapture", { width: canvasW, height: canvasH, image: screenshotImage });
+        // 可把二进制 buffer 缓存起来（用于导出）
+        const binary: Uint8Array = Uint8Array.from(atob(base64), c => c.charCodeAt(0)); // 浏览器端转换
+        screenshotBlobBuffer = binary;
+      };
     } catch (e) {
+      console.log(e);
       screenshotBlobBuffer = null;
     }
   }

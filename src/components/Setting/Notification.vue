@@ -40,7 +40,10 @@
 
 <style lang="scss" scoped>
   .notification-container {
-    padding: 0 20px;
+    border-radius: 8px;
+    padding: 8px 20px;
+    max-width: 400px;
+    margin: 20px auto;
 
     .notification-label {
       color: #888;

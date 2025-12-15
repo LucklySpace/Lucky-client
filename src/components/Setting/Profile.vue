@@ -15,14 +15,21 @@
             >
               <div class="avatar-wrap">
                 <!-- 统一使用封装的头像组件 -->
-                <Avatar :avatar="userAvatar" :name="profileForm.name || userStore.userInfo?.name" :width="80" :borderRadius="8" />
-                <!-- 覆盖层图标：在 avatar 上方显示 -->
-                <div class="avatar-overlay" title="更换头像">
-                  <!-- 如果你使用 Element Plus 图标组件（推荐），请在 script 中 import 并用 <el-icon> 包裹 -->
-                  <el-icon class="camera-icon">
-                    <Camera />
-                  </el-icon>
-                  <!-- 或者用字体图标：<i class="iconfont icon-camera" /> -->
+                <div class="avatar-img">
+                  <Avatar
+                    :avatar="userAvatar"
+                    :name="profileForm.name || userStore.userInfo?.name"
+                    :width="100"
+                    :borderRadius="8"
+                  />
+                  <!-- 覆盖层图标：在 avatar 上方显示 -->
+                  <div class="avatar-mask" title="更换头像">
+                    <!-- 如果你使用 Element Plus 图标组件（推荐），请在 script 中 import 并用 <el-icon> 包裹 -->
+                    <el-icon class="camera-icon">
+                      <Camera />
+                    </el-icon>
+                    <!-- 或者用字体图标：<i class="iconfont icon-camera" /> -->
+                  </div>
                 </div>
               </div>
             </el-upload>
@@ -146,7 +153,7 @@
 
   const init = () => {
     profileForm.value = Object.assign({}, userStore.userInfo);
-    userAvatar.value = userStore.userInfo.avatar;
+    userAvatar.value = userStore.userInfo.avatar as string;
   };
 
   // 初始化表单数据
@@ -157,7 +164,7 @@
 
 <style lang="scss" scoped>
   .profile-container {
-    padding: 5px;
+    padding: 15px 5px;
 
     .avatar-section {
       text-align: center;
@@ -175,44 +182,54 @@
 
     .avatar-wrap {
       position: relative;
-      width: 80px;
-      height: 80px;
+      width: 100px;
+      height: 100px;
       display: inline-block;
+      padding-left: 25px;
     }
-
-    /* 覆盖图标 —— 右下角小圆按钮，默认隐藏，hover 时显示 */
-    .avatar-overlay {
+    .avatar-img {
       position: absolute;
-      right: 6px;
-      bottom: 6px;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border-radius: 8px; /* 保持和 Avatar 组件一致的圆角 */
+      overflow: hidden; /* 确保蒙层不溢出 */
+
+      /* 鼠标悬停时触发蒙层显示 */
+      &:hover .avatar-mask {
+        opacity: 1;
+      }
+    }
+
+    /* 蒙层样式设计 */
+    .avatar-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); /* 黑色半透明背景 */
+      backdrop-filter: blur(1px); /* 可选：轻微的高斯模糊效果 */
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.55);
       color: #fff;
-      transition: opacity 0.15s ease, transform 0.15s ease;
-      opacity: 0;
-      transform: translateY(4px);
-      cursor: pointer;
-      pointer-events: none; /* 让 el-upload 的点击仍然生效（容器处理点击） */
-    }
+      opacity: 0; /* 默认隐藏 */
+      transition: all 0.3s ease; /* 丝滑过渡动画 */
+      z-index: 10;
 
-    /* hover 时显示（把 pointer-events 放开以允许点击） */
-    .avatar-wrap:hover .avatar-overlay {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-
-    /* 图标大小调整 */
-    .camera-icon {
-      font-size: 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      .camera-icon {
+        font-size: 20px;
+        margin-bottom: 2px;
+        margin-right: 26px;
+      }
     }
   }
 </style>

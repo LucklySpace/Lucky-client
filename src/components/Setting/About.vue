@@ -110,6 +110,24 @@
 </script>
 
 <style lang="scss" scoped>
+  .setting-container {
+    border-radius: 8px;
+    padding: 8px 20px;
+    max-width: 400px;
+    margin: 20px auto;
+  }
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+
+    &.footer-row {
+      border-bottom: none;
+      justify-content: space-between;
+      padding-bottom: 8px;
+    }
+  }
   .update-notes {
     white-space: pre-wrap;
     line-height: 1.6;
