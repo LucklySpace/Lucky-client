@@ -428,9 +428,10 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    background: #ffffff;
+    background: var(--header-bg-color);
     -webkit-backdrop-filter: blur(0px);
     backdrop-filter: blur(0px);
+    color: var(--header-font-color);
 
     .stuck {
       box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);

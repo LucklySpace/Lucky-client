@@ -57,7 +57,7 @@
     width: 36,
     borderRadius: 3,
     color: 'white',
-    backgroundColor: '#409eff'
+    backgroundColor: 'var(--side-bg-color)'
   });
   const safeAvatar = computed(() => (props.avatar || '').trim());
 
@@ -73,18 +73,10 @@
 </script>
 
 <style lang="scss" scoped>
-  $gap: 8px;
-  $item-margin: 8px;
-  $time-color: var(--content-message-font-color);
-  $message-color: var(--content-message-font-color);
-  $name-color: var(--side-font-color);
 
   .chat-item__avatar-img {
     object-fit: cover;
-    background-color: #e6e6e6;
     display: block;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.02);
   }
   .default {
     display: flex;
