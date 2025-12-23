@@ -43,6 +43,12 @@
 </script>
 
 <style lang="scss">
+@use "@/assets/style/scss/index.scss" as *;
+@use "@/assets/style/scss/theme.scss" as *;
+@use "@/assets/style/scss/setting.scss" as *;
+@use "element-plus/theme-chalk/dark/css-vars.css" as *;
+@use "element-plus/dist/index.css" as *;
+
   // #app {
   //   background-repeat: no-repeat;
   //   background-size: 100% 100%;
