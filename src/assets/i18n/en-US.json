@@ -309,6 +309,7 @@
         "label": "General",
         "language": "Language",
         "select": "Select Language",
+        "ChatLog": "Chat History",
         "clearChat": "Clear Chat History",
         "storage": {
           "cache": "Cache",
@@ -434,6 +435,15 @@
       },
       "message": {
         "sentRequest": "Friend request sent to {name}"
+      }
+    },
+    "shortcut": {
+      "systemReserved": {
+        "title": "Reserved Shortcut",
+        "message": "{combo} is a system-reserved shortcut and cannot be registered. Please choose another combination (e.g., Ctrl/Shift/Alt + letter/number, such as Ctrl+Shift+M)."
+      },
+      "restore": {
+        "message": "Shortcut {combo} is unavailable; restored to {prev}."
       }
     }
   }

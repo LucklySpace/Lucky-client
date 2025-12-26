@@ -14,8 +14,7 @@
         :teleported="true"
         placement="bottom-start"
         popper-class="pen-popover"
-        trigger="click"
-        width="330"
+        width="365"
       >
         <!-- popover 内容：直接放 PenToolbar 组件 -->
         <template #default>
@@ -41,6 +40,13 @@
               >
                 <span :style="{ backgroundColor: c }" class="color-dot"></span>
               </button>
+              <!-- 全局颜色选择器 -->
+              <el-color-picker
+                class="color-picker"
+                v-model="currentColor"
+                @change="(v:any)=> onSelectColor(v)"
+                :predefine="palette"
+              />
             </div>
           </div>
         </template>
@@ -86,11 +92,11 @@
       <button :title="$t('screen.redo')" @click="redo">
         <i class="iconfont icon-chexiao" style="transform: scaleX(-1)"></i>
       </button>
-      <button :title="$t('actions.complete')" @click="confirmSelection">
-        <i class="iconfont icon-wanchengqueding"></i>
-      </button>
       <button :title="$t('actions.cancel')" @click="cancelSelection">
         <i class="iconfont icon-quxiao"></i>
+      </button>
+      <button :title="$t('actions.complete')" @click="confirmSelection">
+        <i class="iconfont icon-wanchengqueding"></i>
       </button>
     </div>
   </div>
@@ -99,10 +105,8 @@
 <script lang="ts" setup>
   import { onMounted } from "vue";
   import { useScreenshot } from "./hooks/useScreenshot";
-  import { ColorType } from "./hooks/types";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-
   const { addShortcut } = useGlobalShortcut();
 
   const { refs, state, start, confirmSelection, cancelSelection, setTool, undo, redo, setPenOptions } = useScreenshot();
@@ -115,14 +119,13 @@
   const sizes = ref<number[]>([4, 8, 12]); // 三档圆点
 
   // 当前显示状态（从 hook 或局部 state 获取均可）
-  const currentColor = ref<ColorType>("red");
+  const currentColor = ref<string>("red");
   const currentSize = ref(8);
 
-  function onSelectColor(c: any) {
-    setPenOptions?.({ color: c } as any);
-    if (currentColor) currentColor.value = c;
-    // 自动切换到 pen 工具（可选）
-    setTool?.("pen");
+  function onSelectColor(c: string) {
+    showPenSettings.value = true;
+    setPenOptions({ color: c });
+    currentColor.value = c;
   }
 
   function onSelectSize(s: number) {
@@ -318,6 +321,9 @@
     .color-swatch.active {
       box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
       background-color: #69bdfe;
+    }
+
+    .color-picker {
     }
   }
 </style>

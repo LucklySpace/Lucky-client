@@ -151,10 +151,9 @@
         <ul v-if="searchedFriends.length" class="friend-search__list" role="list">
           <li v-for="friend in searchedFriends" :key="friend.userId" class="friend-search__item" role="listitem"
             tabindex="0">
-            <!-- 左：头像 -->
+            <!-- 左：头像（统一使用封装的 Avatar 组件） -->
             <div aria-hidden="true" class="friend-search__avatar-wrap">
-              <img v-if="friend.avatar" :src="friend.avatar" alt="" class="friend-search__avatar" />
-              <div v-else class="friend-search__avatar-fallback">{{ initials(friend.name) }}</div>
+              <Avatar :avatar="friend.avatar || ''" :name="friend.name" :width="44" :borderRadius="8" />
             </div>
 
             <!-- 中：name + friendId （竖排）-->

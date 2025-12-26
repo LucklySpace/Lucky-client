@@ -122,6 +122,10 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch {}
         // 异步重载联系人以与服务端对齐（非阻塞）
         loadContacts();
+        // 广播会话变更以便标题等订阅方清空展示
+        try {
+          globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
+        } catch {}
       });
     } else {
       api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId }).then(async () => {
@@ -137,6 +141,10 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch {}
         // 可选：异步刷新群列表
         loadGroups();
+        // 广播会话变更以便标题等订阅方清空展示
+        try {
+          globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
+        } catch {}
       });
     }
   };

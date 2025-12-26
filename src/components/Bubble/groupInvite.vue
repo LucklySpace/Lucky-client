@@ -5,7 +5,7 @@
     <div class="invite-bubble__inner" role="button" tabindex="0">
       <!-- 左侧：群头像（可选） -->
       <div v-if="parsedBody?.groupAvatar" class="invite-bubble__left">
-        <img :alt="parsedBody.groupName" :src="parsedBody.groupAvatar" class="invite-bubble__avatar" />
+        <Avatar :avatar="parsedBody.groupAvatar" :name="parsedBody.groupName" :width="56" :borderRadius="8" class="invite-bubble__avatar" />
       </div>
 
       <!-- 主体信息 -->
@@ -50,6 +50,7 @@ import { ElMessage } from "element-plus";
 import { computed } from "vue";
 import { escapeHtml } from "@/utils/Strings";
 import { useI18n } from "vue-i18n";
+import Avatar from "@/components/Avatar/index.vue";
 
 const props = defineProps({
   message: {

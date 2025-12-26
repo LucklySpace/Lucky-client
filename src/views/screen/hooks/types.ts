@@ -13,11 +13,26 @@ export const COLOR_MAP: Record<ColorType, string> = {
   blue: "#2d9cdb",
   white: "#ffffff",
   black: "#1f2937",
-  green: "#27ae60"
+  green: "#27ae60",
+  grayLight: "#f0f0f0", // 浅灰色
+  grayMedium: "#9e9e9e", // 中灰色
+  grayDark: "#606266", // 深灰色
+  purple: "#8a2be2", // 紫色
+  orange: "#ff8c00" // 橙色
 };
 
-export type ColorType = "red" | "yellow" | "blue" | "white" | "black" | "green";
-
+export type ColorType =
+  | "red"
+  | "yellow"
+  | "blue"
+  | "white"
+  | "black"
+  | "green"
+  | "grayLight"
+  | "grayMedium"
+  | "grayDark"
+  | "purple"
+  | "orange";
 /**
  * 笔设置信息
  */

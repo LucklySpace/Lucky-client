@@ -10,7 +10,7 @@
 
     /* 左侧 label 区域 */
     .row-label {
-      width: 80px; // 固定宽度（确保对齐）
+      width: 100px; // 固定宽度（确保对齐）
       font-size: clamp(12px, 14px, 14px); // 优先用最大字体，超出则缩小
       font-weight: 500; // 更清晰的字体
       white-space: nowrap;
@@ -53,7 +53,7 @@
   .el-button,
   .el-input,
   .el-select__wrapper {
-    width: 200px !important;
+    width: 200px;
   }
 }
 
