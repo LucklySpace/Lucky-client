@@ -411,6 +411,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   const handleDeleteChat = async (chat: Chats) => {
     if (!chat) return;
     const idx = findChatIndex(chatList.value, chat.chatId);
+    debugger
     if (idx !== -1) {
       addTask(async () => {
         await chatsMapper.deleteById(chat.chatId);

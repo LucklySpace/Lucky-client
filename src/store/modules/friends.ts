@@ -99,9 +99,9 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
    * @param chat 会话
    */
   const handleDeleteContact = async (chat: Chats) => {
-    console.log("okok delete");
     // 当前会话为单聊
     if (chat.chatType == IMessageType.SINGLE_MESSAGE.code) {
+      
       api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId }).then(async () => {
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
@@ -109,6 +109,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         await chatMessageStore.handleDeleteChat(chat);
         // 删除联系人
         try {
+          debugger
           await friendsMapper.deleteById(chat.toId, "friendId");
           await friendsMapper.deleteFTSById?.(chat.toId as any);
         } catch {
@@ -119,7 +120,9 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
           const idx = contacts.value.findIndex((c: any) => String(c.friendId) === String(chat.toId));
           if (idx !== -1) contacts.value.splice(idx, 1);
           if (shipInfo.value && String(shipInfo.value.friendId) === String(chat.toId)) shipInfo.value = {};
-        } catch {}
+        } catch {
+          console.error("列表更新失败");
+        }
         // 异步重载联系人以与服务端对齐（非阻塞）
         loadContacts();
         // 广播会话变更以便标题等订阅方清空展示
@@ -128,6 +131,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch {}
       });
     } else {
+      debugger
       api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId }).then(async () => {
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);

@@ -11,8 +11,8 @@
           :name="userStore.name"
           :width="44"
           :borderRadius="5"
-          backgroundColor="var(--side-bg-color)"
-          color="var(--side-hover-color)"
+          backgroundColor="var(--side-hover-color)"
+          color="var(--side-bg-color)"
         ></Avatar>
       </span>
       <el-popover
