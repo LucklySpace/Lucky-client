@@ -95,10 +95,13 @@
 </template>
 
 <script lang="ts" setup>
-  import { onMounted } from "vue";
+  import { onMounted, onBeforeUnmount } from "vue";
   import { useScreenshot } from "./hooks/useScreenshot";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
   const { addShortcut } = useGlobalShortcut();
 
   const { refs, state, start, confirmSelection, cancelSelection, setTool, undo, redo, setPenOptions } = useScreenshot();
@@ -114,24 +117,28 @@
   const currentColor = ref<string>("red");
   const currentSize = ref(8);
 
+  let unlistenDispose: (() => void) | null = null;
+
   // 切换面板逻辑
   function togglePenPanel() {
-    if (state.currentTool !== 'pen') {
-        // 如果当前不是画笔，先切到画笔，并打开面板
-        setTool('pen');
-        showPenSettings.value = true;
+    if (state.currentTool !== "pen") {
+      // 如果当前不是画笔，先切到画笔，并打开面板
+      setTool("pen");
+      showPenSettings.value = true;
     } else {
-        // 如果已经是画笔，则切换面板显隐
-        showPenSettings.value = !showPenSettings.value;
+      // 如果已经是画笔，则切换面板显隐
+      showPenSettings.value = !showPenSettings.value;
     }
   }
   // 监听工具变化，如果用户点击了矩形、圆形等其他工具，自动关闭画笔面板
-  watch(() => state.currentTool, (newTool) => {
-    if (newTool !== 'pen') {
+  watch(
+    () => state.currentTool,
+    newTool => {
+      if (newTool !== "pen") {
         showPenSettings.value = false;
+      }
     }
-  });
-
+  );
 
   function onSelectColor(c: string) {
     showPenSettings.value = true;
@@ -167,6 +174,18 @@
       }
     });
   });
+  onMounted(async () => {
+    unlistenDispose = await listen("screen:dispose", async () => {
+      try {
+        await getCurrentWebviewWindow().close();
+      } catch {}
+    });
+  });
+  onBeforeUnmount(() => {
+    try {
+      unlistenDispose?.();
+    } catch {}
+  });
 </script>
 
 <style lang="scss" scoped>
@@ -177,15 +196,38 @@
     position: relative;
     background-color: transparent !important;
   }
-  canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-  .img-canvas { z-index: 0; }
-  .mask-canvas { z-index: 1; }
-  .draw-canvas { z-index: 1; pointer-events: none; }
-  .magnifier {
-    position: absolute; pointer-events: none; width: 150px; height: 150px;
-    border: 2px solid #ccc; border-radius: 50%; overflow: hidden; display: none; z-index: 999;
+  canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
-  .magnifier canvas { display: block; z-index: 2; }
+  .img-canvas {
+    z-index: 0;
+  }
+  .mask-canvas {
+    z-index: 1;
+  }
+  .draw-canvas {
+    z-index: 1;
+    pointer-events: none;
+  }
+  .magnifier {
+    position: absolute;
+    pointer-events: none;
+    width: 150px;
+    height: 150px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    overflow: hidden;
+    display: none;
+    z-index: 999;
+  }
+  .magnifier canvas {
+    display: block;
+    z-index: 2;
+  }
 
   /* 工具栏样式优化 */
   .button-group {
@@ -222,7 +264,9 @@
         color: #0078d4;
       }
 
-      .iconfont { font-size: 20px; }
+      .iconfont {
+        font-size: 20px;
+      }
     }
   }
 
@@ -240,87 +284,118 @@
     align-items: center;
     gap: 12px;
     white-space: nowrap;
-    
+
     // 如果你想让它显示在下方，把 bottom: 100% 改为 top: 100%，margin-bottom 改为 margin-top
-    
+
     // 添加一个小箭头指向工具栏（可选）
     &::after {
-        content: '';
-        position: absolute;
-        top: -6px;
-        left: 20px; // 对齐画笔图标的位置
-        width: 10px;
-        height: 10px;
-        background: white;
-        transform: rotate(-45deg);
+      content: "";
+      position: absolute;
+      top: -6px;
+      left: 20px; // 对齐画笔图标的位置
+      width: 10px;
+      height: 10px;
+      background: white;
+      transform: rotate(-45deg);
     }
 
     .divider {
-        width: 1px;
-        height: 20px;
-        background: #eee;
+      width: 1px;
+      height: 20px;
+      background: #eee;
     }
 
-    .sizes, .colors {
-        display: flex;
-        align-items: center;
-        gap: 6px;
+    .sizes,
+    .colors {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     /* 尺寸按钮 */
     .size-btn {
-        width: 24px; height: 24px; padding: 0;
-        background: transparent; border: 1px solid transparent;
-        &:hover { background: #f0f0f0; }
-        &.active { background: #e1f0fa; border-color: #b3d7f3; }
-        
-        .dot { background: #333; border-radius: 50%; display: block; }
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      &:hover {
+        background: #f0f0f0;
+      }
+      &.active {
+        background: #e1f0fa;
+        border-color: #b3d7f3;
+      }
+
+      .dot {
+        background: #333;
+        border-radius: 50%;
+        display: block;
+      }
     }
 
     /* 颜色块 */
     .color-swatch {
-        width: 24px; height: 24px; padding: 2px;
-        border: 1px solid transparent;
-        background: transparent;
-        border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      padding: 2px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 4px;
 
-        .color-dot {
-            width: 100%; height: 100%; border-radius: 2px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
+      .color-dot {
+        width: 100%;
+        height: 100%;
+        border-radius: 2px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
 
-        &:hover { transform: scale(1.1); }
-        &.active { border-color: #0078d4; background: #fff; transform: scale(1.1); }
+      &:hover {
+        transform: scale(1.1);
+      }
+      &.active {
+        border-color: #0078d4;
+        background: #fff;
+        transform: scale(1.1);
+      }
     }
 
     /* --- 自定义原生颜色选择器 --- */
     .custom-color-picker {
-        position: relative;
-        width: 24px;
-        height: 24px;
-        overflow: hidden;
-        border-radius: 4px;
+      position: relative;
+      width: 24px;
+      height: 24px;
+      overflow: hidden;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        transform: scale(1.1);
+      }
+
+      /* 彩虹背景作为图标 */
+      .rainbow {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
+      }
+
+      /* 真正的 input，完全透明并覆盖在上方 */
+      input[type="color"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 200%;
+        height: 200%; /* 放大以确保点击区域覆盖 */
+        padding: 0;
+        margin: 0;
+        opacity: 0; /* 隐身 */
         cursor: pointer;
-        transition: transform 0.2s;
-        border: 1px solid rgba(0,0,0,0.1);
-
-        &:hover { transform: scale(1.1); }
-
-        /* 彩虹背景作为图标 */
-        .rainbow {
-            width: 100%; height: 100%; display: block;
-            background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
-        }
-
-        /* 真正的 input，完全透明并覆盖在上方 */
-        input[type="color"] {
-            position: absolute;
-            top: 0; left: 0; width: 200%; height: 200%; /* 放大以确保点击区域覆盖 */
-            padding: 0; margin: 0;
-            opacity: 0; /* 隐身 */
-            cursor: pointer;
-            transform: translate(-25%, -25%); /* 修正位置 */
-        }
+        transform: translate(-25%, -25%); /* 修正位置 */
+      }
     }
   }
 </style>

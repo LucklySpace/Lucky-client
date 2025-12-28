@@ -5,6 +5,7 @@ import ClipboardManager from "@/utils/Clipboard"; // 你已有的剪贴板管理
 import type { ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
 import { createUseCanvasTool } from "./useCanvasTool"; // 我会在下一节给出文件
 import { ca } from "element-plus/es/locale/index.mjs";
+import { Image as TauriImage } from "@tauri-apps/api/image";
 
 /**
  * useScreenshot - 主 Hook：负责截屏流程、画布初始化、选区、放大镜、按钮组、插件管理
@@ -77,6 +78,8 @@ export function useScreenshot() {
     () => imgCtx.value,
     state
   );
+// 防并发提交：完成按钮节流，避免剪贴板写入与窗口关闭的竞态
+  let confirmInFlight = false;
 
   // --- 辅助方法：触发插件钩子 ---
   function emitPluginEvent<K extends keyof ScreenshotPlugin>(hook: K, ...args: any[]) {
@@ -446,48 +449,89 @@ export function useScreenshot() {
     }
   }
 
+  // --- 工具函数：sleep ---
+  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  // --- 工具函数：将 canvas 转为 PNG 字节，含 toBlob 兜底（dataURL） ---
+  async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    if (blob && blob.size > 0) {
+      const ab = await blob.arrayBuffer();
+      return new Uint8Array(ab);
+    }
+    const url = canvas.toDataURL("image/png");
+    const b64 = url.split(",")[1] || "";
+    return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  }
+
+  // --- 工具函数：写剪贴板（聚焦 + 重试 + 使用 Tauri Image 更稳） ---
+  async function writeImageWithRetry(bytes: Uint8Array, w: number, h: number, tries = 3): Promise<void> {
+    let lastErr: any = null;
+    for (let i = 0, delay = 50; i < tries; i++, delay += 50) {
+      try {
+        try {
+          await getCurrentWebviewWindow().setFocus();
+          await sleep(30);
+        } catch {}
+        const img = await (TauriImage as any).fromBytes(bytes, { width: w, height: h });
+        await ClipboardManager.writeImage(img as any);
+        return;
+      } catch (e: any) {
+        lastErr = e;
+        const msg = String(e?.message || e || "");
+        if (msg.includes("剪贴板") || msg.toLowerCase().includes("clipboard") || msg.includes("1418")) {
+          await sleep(delay);
+          continue;
+        }
+        break;
+      }
+    }
+    throw lastErr;
+  }
+
   // --- 确认选区：裁剪并复制到剪贴板（或触发插件保存） ---
   async function confirmSelection() {
-    // 计算裁剪区域
-    const rectX = Math.min(state.startX, state.endX);
-    const rectY = Math.min(state.startY, state.endY);
-    const w = Math.abs(state.endX - state.startX);
-    const h = Math.abs(state.endY - state.startY);
-    if (!imgCtx.value) return;
+    if (confirmInFlight) return;
+    confirmInFlight = true;
+    try {
+      // 计算裁剪区域
+      const rectX = Math.min(state.startX, state.endX);
+      const rectY = Math.min(state.startY, state.endY);
+      const w = Math.abs(state.endX - state.startX);
+      const h = Math.abs(state.endY - state.startY);
+      if (!imgCtx.value || !w || !h) return;
 
-    // 先把 drawCanvas 绘制到 imgCanvas（包含标注）
-    imgCtx.value.save();
-    imgCtx.value.scale(1, 1); // 已经在像素级别
-    imgCtx.value.drawImage(drawCanvas.value as HTMLCanvasElement, 0, 0);
-    imgCtx.value.restore();
+      // 合并标注层到底图
+      imgCtx.value.save();
+      imgCtx.value.scale(1, 1);
+      imgCtx.value.drawImage(drawCanvas.value as HTMLCanvasElement, 0, 0);
+      imgCtx.value.restore();
 
-    // 临时 canvas 裁剪输出
-    const offCanvas = document.createElement("canvas");
-    offCanvas.width = w;
-    offCanvas.height = h;
-    const offCtx = offCanvas.getContext("2d");
-    if (!offCtx) return;
+      // 临时 canvas 裁剪输出（像素级）
+      const offCanvas = document.createElement("canvas");
+      offCanvas.width = w;
+      offCanvas.height = h;
+      const offCtx = offCanvas.getContext("2d");
+      if (!offCtx) return;
+      offCtx.drawImage(imgCanvas.value as HTMLCanvasElement, rectX, rectY, w, h, 0, 0, w, h);
 
-    // 注意：state 内部是“像素级”，所以直接用 rectX/rectY/w/h
-    offCtx.drawImage(imgCanvas.value as HTMLCanvasElement, rectX, rectY, w, h, 0, 0, w, h);
+      // 准备 PNG 字节与 Blob（供插件使用）
+      const bytes = await canvasToPngBytes(offCanvas);
+      const blob = new Blob([bytes], { type: "image/png" });
 
-    offCanvas.toBlob(async blob => {
-      if (!blob) return;
-      const array = await blob.arrayBuffer();
-      const uint8 = new Uint8Array(array);
-
-      // 可通过插件拦截保存行为
-      const pluginHandled = await Promise.all(
-        plugins.map(p => (p.onExport ? p.onExport({ blob, uint8, width: w, height: h }) : Promise.resolve(false)))
+      // 插件拦截（若有）
+      const pluginHandledResults = await Promise.all(
+        plugins.map(p => (p.onExport ? p.onExport({ blob, uint8: bytes, width: w, height: h }) : Promise.resolve(false)))
       );
-      const handled = pluginHandled.some(Boolean);
+      const handled = pluginHandledResults.some(Boolean);
 
-      // 如果插件没有处理，则默认复制到剪贴板并关闭截图
       if (!handled) {
-        await ClipboardManager.writeImage(uint8);
+        await writeImageWithRetry(bytes, w, h, 3);
         cancelSelection();
       }
-    }, "image/png");
+    } finally {
+      confirmInFlight = false;
+    }
   }
 
   // --- 取消选区：清理并关闭窗口 ---
