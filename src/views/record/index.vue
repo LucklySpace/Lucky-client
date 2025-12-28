@@ -22,7 +22,7 @@
       </button>
       <button class="btn cancel" @click="handleCancel">{{ $t("chat.toolbar.recorder.cancel") }}</button>
 
-      <button :v-show="!downloadUrl" class="btn download" @click="handleDownload">
+      <button v-show="recordedPath" class="btn download" @click="handleSave">
         {{ $t("chat.toolbar.recorder.save") }}
       </button>
     </div>
@@ -35,13 +35,13 @@
 
 <script lang="ts" setup>
   import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-  import { useFFmpeg } from "@/hooks/useFFmpeg"; // 假设你的 hook 保持原接口
+  import { useFFmpeg } from "@/hooks/useFFmpeg";
   import { CloseRecordWindow } from "@/windows/record";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-  import { invoke } from "@tauri-apps/api/core";
-  import { listen, UnlistenFn } from "@tauri-apps/api/event";
   import { useI18n } from "vue-i18n";
+  import { save } from "@tauri-apps/plugin-dialog";
+  import { copyFile, remove } from "@tauri-apps/plugin-fs";
+  import { useDraggable } from "@/hooks/useDraggable";
+  import { useMousePoller } from "@/hooks/useMousePoller";
 
   const { startScreenRecord, stopScreenRecord, cancelScreenRecord, isRecording } = useFFmpeg({ log: false });
 
@@ -50,10 +50,11 @@
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const controlsRef = ref<HTMLElement | null>(null);
 
-  const { t } = useI18n();
+  // Hooks
+  const { startDrag, isDragging } = useDraggable(controlsRef);
+  const { startMousePoller, stopMousePoller, isPointButton } = useMousePoller(controlsRef);
 
-  // 鼠标监听
-  let unlistenMouse: UnlistenFn | null;
+  const { t } = useI18n();
 
   // UI 状态
   const loading = ref(false);
@@ -61,11 +62,10 @@
   const statusMessage = ref("");
   const showError = ref(false);
   const showStatus = ref(false);
-  const isPointButton = ref(false);
 
-  // 下载
-  const downloadUrl = ref<string | null>(null);
+  // 下载/保存
   const downloadName = ref("record.mp4");
+  const recordedPath = ref<string | null>(null);
 
   // 计时器（ms）
   const elapsed = ref(0);
@@ -75,13 +75,6 @@
   // canvas 绘制 RAF id
   let rafId: number | null = null;
   let lastDraw = 0;
-
-  // 拖动状态
-  const isDragging = ref(false);
-  let initialMouseX = 0;
-  let initialMouseY = 0;
-  let initialLeft = 0;
-  let initialTop = 0;
 
   // 格式化时间 hh:mm:ss
   const formattedTime = computed(() => {
@@ -206,11 +199,8 @@
     showStatusMsg(t("chat.toolbar.recorder.status.stopping"));
     try {
       const res = await stopScreenRecord();
-      // res 里应包含 webmBlob 或 mp4Blob（由 hook 提供）
-      const blob = (res && res.blob) ?? null;
-      if (blob) {
-        if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value);
-        downloadUrl.value = URL.createObjectURL(blob);
+      if (res && res.path) {
+        recordedPath.value = res.path;
         downloadName.value = `screen_${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "")}.mp4`;
         showStatusMsg(t("chat.toolbar.recorder.status.completed"));
       } else {
@@ -223,12 +213,12 @@
   }
 
   // 取消录制
-  function handleCancel() {
+  async function handleCancel() {
     try {
-      cancelScreenRecord();
-      if (downloadUrl.value) {
-        URL.revokeObjectURL(downloadUrl.value);
-        downloadUrl.value = null;
+      await cancelScreenRecord();
+      if (recordedPath.value) {
+        await remove(recordedPath.value).catch(() => {});
+        recordedPath.value = null;
       }
       showStatusMsg(t("chat.toolbar.recorder.status.canceled"));
       stopTimer();
@@ -239,15 +229,34 @@
     }
   }
 
-  //#TODO  目前 tauri剪切板还不能复制文件  等后续 点击下载后清理 URL（避免泄漏）
-  function handleDownload() {
-    setTimeout(() => {
-      if (downloadUrl.value) {
-        URL.revokeObjectURL(downloadUrl.value);
-        downloadUrl.value = null;
+  // 保存录制文件
+  async function handleSave() {
+    if (!recordedPath.value) return;
+    try {
+      const path = await save({
+        defaultPath: downloadName.value,
+        filters: [{
+          name: 'Video',
+          extensions: ['mp4']
+        }]
+      });
+
+      if (path) {
+        await copyFile(recordedPath.value, path);
+        showStatusMsg(t("chat.toolbar.recorder.status.download_done"));
+
+        // 清理并关闭
+        await remove(recordedPath.value).catch(() => {});
+        recordedPath.value = null;
+        
+        // 延迟关闭窗口，让用户看到成功消息
+        setTimeout(() => {
+            CloseRecordWindow();
+        }, 1000);
       }
-      showStatusMsg(t("chat.toolbar.recorder.status.download_done"));
-    }, 500);
+    } catch (e: any) {
+      showErrorMessage(e?.message || "Save failed");
+    }
   }
 
   // 键盘快捷（Escape / Space / Ctrl+R）
@@ -263,113 +272,6 @@
       e.preventDefault();
       if (!isRecording.value) handleStart();
     }
-  }
-
-  /**
-   * isPointInElement
-   * - 判断（clientX, clientY）是否落在元素的 bounding rect 内（包含 margin）
-   */
-  function isPointInElement(x: number, y: number, el: HTMLElement | null) {
-    if (!el) return false;
-    const r = el.getBoundingClientRect();
-    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-  }
-
-  /**
-   * 监听鼠标位置 判断是否在按钮范围内
-   * - 只在位置变化跨越边界（进入/离开按钮区域）时调用 setIgnoreCursorEventsHelper 切换
-   */
-  function startMousePoller() {
-    requestAnimationFrame(async () => {
-      // 发送启动鼠标监听事件
-      await invoke("control_mouse_poller", {
-        start: true,
-        interval_ms: 80,
-        windowLabel: null,
-        minMove: 2,
-        throttleMs: 100
-      });
-      // 开始监听
-      const unlisten = await listen("mouse:position", (e: any) => {
-        const { x, y } = e.payload;
-        console.log("screen pos", x, y);
-        if (x && y) {
-          console.log(`mouse move  x:${x} y:${y}`);
-          // 判断鼠标是否在 control-panel 内
-          const inside = isPointInElement(x, y, controlsRef.value);
-          if (inside !== isPointButton.value) {
-            isPointButton.value = inside;
-            // 如果在按钮内 -> 禁止窗口忽略鼠标（允许事件），否则开启忽略（穿透）
-            setIgnoreCursorEventsHelper(!inside)
-              .then(async () => await getCurrentWindow().setDecorations(false))
-              .catch(() => {
-              });
-          }
-        }
-        // optionally convert to client using outerPosition
-      });
-      unlistenMouse = unlisten;
-      // await appWindow.setDecorations(false);
-    });
-  }
-
-  /**
-   * 停止监听鼠标位置
-   */
-  async function stopMousePoller() {
-    if (unlistenMouse) {
-      unlistenMouse();
-      unlistenMouse = null;
-    }
-    await invoke("control_mouse_poller", { start: false });
-    setIgnoreCursorEventsHelper(false);
-  }
-
-  /**
-   * #TODO  tauri 窗口 setIgnoreCursorEvents 设置透明窗口鼠标穿透有副作用  会显示标题栏
-   * tauri issue：https://github.com/tauri-apps/tauri/issues/11052
-   * setIgnoreCursorEventsHelper
-   * - 安全调用 Tauri 的 setIgnoreCursorEvents
-   * - 避免重复调用（只有状态变化才调用）
-   */
-  async function setIgnoreCursorEventsHelper(ignore: boolean) {
-    return getCurrentWebviewWindow().setIgnoreCursorEvents(ignore);
-  }
-
-  // 拖动功能
-  function startDrag(e: MouseEvent) {
-    // 如果点击在按钮上，不触发拖动
-    if (e.target && (e.target as HTMLElement).tagName === "BUTTON") {
-      return;
-    }
-    isDragging.value = true;
-    initialMouseX = e.clientX;
-    initialMouseY = e.clientY;
-    const rect = controlsRef.value!.getBoundingClientRect();
-    initialLeft = rect.left;
-    initialTop = rect.top;
-    document.addEventListener("mousemove", onDrag);
-    document.addEventListener("mouseup", stopDrag);
-    e.preventDefault();
-  }
-
-  function onDrag(e: MouseEvent) {
-    if (!isDragging.value || !controlsRef.value) return;
-    const deltaX = e.clientX - initialMouseX;
-    const deltaY = e.clientY - initialMouseY;
-    // 边界限制：不超出屏幕
-    const newLeft = Math.max(0, Math.min(window.innerWidth - controlsRef.value.offsetWidth, initialLeft + deltaX));
-    const newTop = Math.max(0, Math.min(window.innerHeight - controlsRef.value.offsetHeight, initialTop + deltaY));
-    controlsRef.value.style.left = `${newLeft}px`;
-    controlsRef.value.style.top = `${newTop}px`;
-    controlsRef.value.style.right = "auto";
-    controlsRef.value.style.bottom = "auto";
-  }
-
-  function stopDrag() {
-    isDragging.value = false;
-    document.removeEventListener("mousemove", onDrag);
-    document.removeEventListener("mouseup", stopDrag);
   }
 
   // 监听录制状态，启动/停止定时与绘制
@@ -407,24 +309,22 @@
     tick();
   });
 
-  onBeforeUnmount(() => {
+  onBeforeUnmount(async () => {
     // 清理：停止录制（若需要）、清理定时器、移除监听、释放 url 与 RAF
     try {
-      cancelScreenRecord();
+      await cancelScreenRecord();
     } catch {
     }
     stopTimer();
     if (rafId) cancelAnimationFrame(rafId);
     window.removeEventListener("resize", scheduleDraw);
     window.removeEventListener("keydown", onKeydown);
-    if (downloadUrl.value) {
-      URL.revokeObjectURL(downloadUrl.value);
-      downloadUrl.value = null;
+    
+    if (recordedPath.value) {
+      await remove(recordedPath.value).catch(() => {});
+      recordedPath.value = null;
     }
     stopMousePoller();
-    // 清理拖动监听（如果存在）
-    document.removeEventListener("mousemove", onDrag);
-    document.removeEventListener("mouseup", stopDrag);
   });
 </script>
 

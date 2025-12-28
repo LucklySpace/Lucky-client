@@ -31,6 +31,7 @@ export function useUpdate() {
       // 发起检查请求
       const result: any = await check({ headers: { Platform: "windows-x86_64" } });
       updateInfo.value = result;
+      log.info("检查更新结果:", result);
       // 检查版本号是否大于当前版本
       const current = await getVersion();
       return shouldUpdate(current, { version: result.version });

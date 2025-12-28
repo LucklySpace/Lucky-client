@@ -413,6 +413,7 @@ pub fn screenshot(x: &str, y: &str, width: &str, height: &str) -> String {
     base64_str
 }
 
+
 #[derive(Serialize)]
 pub struct DisplayInfo {
     id: u32,
