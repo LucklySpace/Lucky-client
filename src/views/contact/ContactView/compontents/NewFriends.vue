@@ -169,7 +169,6 @@
     else loadingMap[id].reject = true;
 
     try {
-      debugger
       // friendStore.handleApproveContact(req, status) 假定会调用后端并更新 store
       if (typeof friendStore.handleApproveContact === "function") {
         await friendStore.handleApproveContact(req, status);

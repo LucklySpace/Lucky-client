@@ -26,6 +26,7 @@ src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe
 package-lock.json
 pnpm-lock.yaml
 .env
+.env.development
 .env.production
 .prettierrc
 package.json
