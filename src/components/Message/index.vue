@@ -39,12 +39,9 @@
         @click="handleSelectAvatar"
         class="msg__avatar msg__avatar--left lazy-img no-select"
       >
-          <Avatar
-            :avatar="message.avatar"
-            :name="message.remark ?? message.name"
-            :width="35"
-          ></Avatar>
-          <!-- {{ message.avatar }}, {{ message.name }} -->
+        <Avatar :avatar="message.avatar" :name="message.remark ?? message.name" :width="35"></Avatar>
+
+        <!-- {{ message.avatar }}, {{ message.name }} -->
       </span>
       <!-- <el-image
         v-show="!message.isOwner"
@@ -64,14 +61,7 @@
         <div class="msg__bubble">
           <Suspense>
             <template #default>
-
-              <component
-                :is="currentComponent"
-                v-if="currentComponent"
-                :key="message.messageId"
-                :message="message"
-              />
-
+              <component :is="currentComponent" v-if="currentComponent" :key="message.messageId" :message="message" />
             </template>
           </Suspense>
         </div>
@@ -79,17 +69,18 @@
 
       <!-- 右侧头像（仅本人） -->
       <span
-         v-show="message.isOwner"
-         @click="handleSelectAvatar"
-         class="msg__avatar msg__avatar--right lazy-img no-select">
-          <Avatar
+        v-show="message.isOwner"
+        @click="handleSelectAvatar"
+        class="msg__avatar msg__avatar--right lazy-img no-select"
+      >
+        <Avatar
           ref="rightAvatarRef"
           :avatar="message.avatar"
           :name="message.name"
           :width="35"
           :borderRadius="3"
         ></Avatar>
-       </span>
+      </span>
       <!-- <el-image
         v-show="message.isOwner"
         ref="rightAvatarRef"
@@ -265,12 +256,14 @@
       & > .msg__avatar {
         order: 1;
         flex: 0 0 $avatar-size;
-        margin-top: 16px;
+        margin-top: 20px;
         border-radius: 6px;
         cursor: pointer;
         transition: transform $transition-fast ease, box-shadow $transition-fast ease;
+        display: flex;
+        justify-content: center;
         // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-        border: 2px solid transparent;
+        // border: 2px solid transparent;
 
         // &:hover {
         //   transform: scale(1.05);

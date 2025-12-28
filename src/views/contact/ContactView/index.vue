@@ -16,7 +16,7 @@
         <span v-if="meta.counts[key]" :class="{ new: key == 'newFriends' && !store.ignore }" class="count">{{
             meta.counts[key]
           }}</span>
-      </div>
+      </div>    
 
       <!--
         使用自定义虚拟列表 (VirtualList) 优化渲染：

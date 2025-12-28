@@ -22,6 +22,7 @@
       </ul>
     </div>
   </div>
+  
 </template>
 
 <script lang="ts" setup>
@@ -91,7 +92,7 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: #ffffff;
+    background: var(--content-bg-color);
   }
 
   /* 每个分区 */
@@ -114,7 +115,7 @@
     padding: 4px;
     margin: 0;
     border-radius: 4px;
-    background: #f9f9f9;
+    background: var(--content-bg-color);
   }
 
   /* 最近使用区，一行自动换行，无滚动 */
