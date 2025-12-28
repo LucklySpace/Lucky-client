@@ -184,27 +184,21 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
   }
 
   /**
-   * stopScreenRecord - 停止录制并读取临时文件返回 Blob
-   * 实现要点：
-   * 1) 优先使用优雅方式：向 ffmpeg stdin 写入 'q'（或发送 SIGINT）让 ffmpeg 写入 trailer
-   * 2) 若优雅方式不可用或超时，则回退到 kill()
-   * 3) 停止后等待短暂时间以确保输出文件 flush，然后读取并返回 Blob
+   * stopScreenRecord - 停止录制并返回临时文件路径
+   * 优化：不再读取文件到内存，避免大文件 OOM
    */
   async function stopScreenRecord() {
     const outName = tempOutName.value;
     if (!outName) {
-      // 没有临时文件：重置状态并返回空结果
       childRef.value = null;
       isRecording.value = false;
-      return { blob: null, path: null, name: null };
+      return { path: null, name: null };
     }
 
     // 主体：先尝试q结束，失败则 kill（并容错）
     if (childRef.value && isRecording.value) {
       try {
-        // 优先尝试标准 stdin 写入
         if (typeof childRef.value.write === "function") {
-          // 某些实现直接暴露 write
           log("sending 'q' to ffmpeg via child.write...");
           await childRef.value.write("q");
         } else if (typeof childRef.value.kill === "function") {
@@ -216,25 +210,23 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
       }
     }
 
-    // 给 ffmpeg 一点时间把文件 flush 完（保证 moov atom 等写入完成）
+    // 给 ffmpeg 一点时间把文件 flush 完
     await new Promise(res => setTimeout(res, 600));
 
-    // 读取临时文件并返回 Blob
     try {
-      const u8 = await readFile(outName, { baseDir: BaseDirectory.Temp });
-      const uint8 = Uint8Array.from(u8);
-      const blob = new Blob([uint8], { type: "video/mp4" });
+      // 获取绝对路径
+      const tmp = await tempDir();
+      const fullPath = await join(tmp, outName);
 
-      // 重置状态（不自动删除临时文件，保留给上层决定）
+      // 重置状态
       childRef.value = null;
       tempOutName.value = null;
       isRecording.value = false;
       progress.value = {};
-      // Cleanup
-      await remove(outName, { baseDir: BaseDirectory.Temp }).catch(log);
-      return { blob, path: null, name: outName };
+
+      return { path: fullPath, name: outName };
     } catch (e: any) {
-      log("read output file error:", e);
+      log("stop error:", e);
       childRef.value = null;
       tempOutName.value = null;
       isRecording.value = false;
