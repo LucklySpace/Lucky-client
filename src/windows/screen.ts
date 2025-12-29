@@ -1,37 +1,18 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Window } from "@tauri-apps/api/window";
 import { StoresEnum } from "@/constants/index";
-import { emit } from "@tauri-apps/api/event";
-
-let creating = false;
-
-function wait(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function closeSafely(win: Window, timeout = 300) {
-  try {
-    const waitClosed = new Promise<void>(resolve => {
-      // webview 关闭事件
-      (win as any).once?.("tauri://webview-close", () => resolve());
-      // 某些平台也可兼听 tauri://destroyed
-      (win as any).once?.("tauri://destroyed", () => resolve());
-    });
-    await Promise.race([win.close(), waitClosed, wait(timeout)]);
-  } catch {}
-}
 
 export async function CreateScreenWindow(width: number, height: number) {
-  if (creating) return;
-  creating = true;
   try {
-    const existing = await Window.getByLabel(StoresEnum.SCREEN);
-    if (existing) {
-      await closeSafely(existing, 300);
-      // 超时兜底：广播“自杀”事件再等一小会
-      await emit("screen:dispose");
-      await wait(150);
+    const mainWindow = await Window.getByLabel(StoresEnum.MAIN);
+    const existingWindow = await Window.getByLabel(StoresEnum.SCREEN);
+
+    // 关闭已有窗口，防止重复创建
+    if (existingWindow) {
+      await existingWindow.close();
     }
+
+    await mainWindow?.minimize();
 
     const webview = new WebviewWindow(StoresEnum.SCREEN, {
       url: "/screen",
@@ -58,15 +39,12 @@ export async function CreateScreenWindow(width: number, height: number) {
     });
 
     webview.once("tauri://webview-close", async () => {
-      const mainWindow = await Window.getByLabel(StoresEnum.MAIN);
       await mainWindow?.maximize();
       await mainWindow?.show();
       await mainWindow?.setFocus();
     });
   } catch (error) {
     console.error("Error creating screen window:", error);
-  } finally {
-    creating = false;
   }
 }
 
