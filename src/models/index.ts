@@ -1,6 +1,54 @@
 // src/models/message.ts
 import { IMessageType, MessageContentType } from "@/constants";
 
+
+/** 表情条目请求/响应对象  */
+export class Emoji {
+  /** 所属表情包ID（不能为空，最长 64） */
+  packId!: string;
+
+  /** 表情名称（不能为空，最长 128） */
+  name!: string;
+
+  /** 标签（逗号分隔，最长 256） */
+  tags?: string;
+
+  /** 表情ID */
+  emojiId?: string;
+
+  /** 封面图 下载URL（预签名） */
+  url?: string;
+
+  constructor(data?: Partial<Emoji>) {
+    Object.assign(this, data);
+  }
+}
+
+/** 表情包请求/响应对象 */
+export class EmojiPack {
+  /** 包编码（唯一） */
+  code?: string;
+
+  /** 包名称（不能为空，最长 128） */
+  name!: string;
+
+  /** 包说明（最长 5000） */
+  description?: string;
+
+  /** 包ID */
+  packId?: string;
+
+  /** 封面图URL */
+  url?: string;
+
+  /** 是否启用 */
+  enabled?: boolean;
+
+  constructor(data?: Partial<EmojiPack>) {
+    Object.assign(this, data);
+  }
+}
+
 /* -------------------------
    基础类型与 MessageBody
    ------------------------- */

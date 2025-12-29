@@ -534,8 +534,8 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
    * 根据ID获取会话
    * @param id 会话ID
    */
-  const handleGetChat = (id: any): Chats | undefined => {
-    return chatList.value.find(c => c.id === id);
+  const handleGetChat = (chatId: any): Chats | undefined => {
+    return chatList.value.find(c => c.chatId === chatId);
   };
 
   /**
@@ -970,7 +970,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
     await api
       .InviteGroupMember({
-        groupId: currentChatValue?.id ?? "",
+        groupId: currentChatValue?.toId ?? "",
         userId: storage.get("userId") || "",
         memberIds: membersList,
         type: isInvite ? IMessageType.GROUP_INVITE.code : IMessageType.CREATE_GROUP.code
@@ -1127,10 +1127,10 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   ): Promise<{ list: any[]; total: number }> => {
     try {
       const currentChatValue = currentChat.value;
-      if (!currentChatValue?.id) return { list: [], total: 0 };
+      if (!currentChatValue?.toId) return { list: [], total: 0 };
 
       const ownId = getOwnerId.value;
-      const toId = currentChatValue.id;
+      const toId = currentChatValue.toId;
       if (!ownId || !toId) return { list: [], total: 0 };
 
       const isSingle = currentChatValue.chatType === IMessageType.SINGLE_MESSAGE.code;
@@ -1257,7 +1257,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       messageTime: Date.now(),
       messageContentType,
       messageType: chatType,
-      [toKey]: chat?.id || ""
+      [toKey]: chat?.toId || ""
     };
 
     if (Array.isArray(meta.mentionedUserIds) && meta.mentionedUserIds.length) {

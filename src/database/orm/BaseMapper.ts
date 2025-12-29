@@ -21,15 +21,19 @@ export class BaseMapper<T extends Record<string, any>> {
   protected tableName: string; // 表名
   protected pkCol: ColumnMeta; // 主键
   protected cols: ColumnMeta[]; // 列
-  protected database: DatabaseManager; // 数据源
   protected sqlMap: Map<string, string> = new Map(); // sql语句映射
+
+  // 动态获取当前数据库实例
+  protected get database(): DatabaseManager {
+    // 优先从 window 取，解决多实例/分包导致的静态属性不共享问题
+    const GlobalDB = (window as any).DatabaseManager as typeof DatabaseManager;
+    return GlobalDB ? GlobalDB.getInstance() : DatabaseManager.getInstance();
+  }
 
   /**
    * @param ctor 目标实体的 class  引用，用于读取装饰器元数据
    */
   constructor(protected ctor: new () => T) {
-    // 获取数据源
-    this.database = DatabaseManager.getInstance();
     // 读取 @Entity 对应的表名
     this.tableName = Reflect.getMetadata(Metadata.TABLE, ctor);
 
@@ -41,7 +45,7 @@ export class BaseMapper<T extends Record<string, any>> {
 
     this.pkCol = this.cols.find(c => c.property === pkMeta.property)!;
 
-    this.ensureTable();
+    // this.ensureTable(); // 移除构造函数中的自动初始化，改为在 initDatabase 中显式调用
   }
 
   /**
@@ -342,7 +346,7 @@ export class BaseMapper<T extends Record<string, any>> {
   /**
    * 确保表结构已创建
    */
-  protected async ensureTable() {
+  public async ensureTable() {
     await SchemaGenerator.createTableFor(this.ctor);
   }
 

@@ -12,12 +12,10 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
   protected fts5Fields: string[];
   protected fts5MatchField: string;
   protected fts5NestedMatchField?: string;
-  protected fts5database: DatabaseManager;
   protected entity: any;
 
   constructor(protected ctor: new () => T) {
     super(ctor);
-    this.fts5database = DatabaseManager.getInstance({ database: "index" });
     const fts5Meta: FTS5Config = Reflect.getMetadata(Metadata.FTS5, ctor);
     if (!fts5Meta) throw new Error("未定义 @Fts5 元注解");
     this.fts5TableName = fts5Meta.virtual_name;
@@ -26,6 +24,14 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     this.fts5NestedMatchField = fts5Meta.nested_match_field;
     this.entity = new ctor();
   }
+
+  // 动态获取当前数据库实例
+  protected get fts5database(): DatabaseManager {
+    // 优先从 window 取
+    const GlobalDB = (window as any).DatabaseManager as typeof DatabaseManager;
+    return GlobalDB ? GlobalDB.getInstance({ database: "index" }) : DatabaseManager.getInstance({ database: "index" });
+  }
+
 
   /***
    * 查询 xml 中 sql
@@ -484,8 +490,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
         // fallback: per-row insert inside short transaction, with execWithRetry per row
         log?.colorLog?.(
           "fts5",
-          `multi-row insert failed at ${batchStart}, falling back to per-row insert: ${
-            (multiErr as any)?.message ?? multiErr
+          `multi-row insert failed at ${batchStart}, falling back to per-row insert: ${(multiErr as any)?.message ?? multiErr
           }`,
           "warn"
         );

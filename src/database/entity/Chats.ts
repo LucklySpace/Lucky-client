@@ -17,10 +17,6 @@ import BaseEntity from "../orm/BaseEntity";
 })
 @Entity("chats")
 export default class Chats extends BaseEntity {
-  /** 主键，自动自增 */
-
-  @Column("id", "TEXT")
-  id!: string;
 
   /** 聊天 ID */
   @PrimaryKey(false)
