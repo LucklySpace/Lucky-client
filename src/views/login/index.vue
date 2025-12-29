@@ -99,7 +99,6 @@
   import { useUserStore } from "@/store/modules/user";
   import api from "@/api";
   import RSA from "@/utils/Auth";
-  import { useMainManager } from "@/core";
   import defaultImg from '@/assets/img/icon1.png';
 
   const { t } = useI18n();
@@ -120,9 +119,6 @@
 
   // 登录窗口初始化
   const init = async () => {
-    // 初始化数据库
-    useMainManager().initDatabase();
-
     // 登录时 移除 token 和  userId
     // storage.remove("token");
     // storage.remove("userId");

@@ -548,13 +548,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       }
     };
 
-    /**
-     * 根据ID获取会话
-     * @param id 会话ID
-     */
-    const handleGetChat = (id: any): Chats | undefined => {
-      return chatList.value.find(c => c.id === id);
-    };
+  /**
+   * 根据ID获取会话
+   * @param id 会话ID
+   */
+  const handleGetChat = (chatId: any): Chats | undefined => {
+    return chatList.value.find(c => c.chatId === chatId);
+  };
 
     /**
      * 保存草稿为预览
@@ -982,15 +982,15 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       if (!membersList?.length) return logger.warn("Members list is empty.");
       const currentChatValue = currentChat.value;
 
-      await api
-        .InviteGroupMember({
-          groupId: currentChatValue?.id ?? "",
-          userId: storage.get("userId") || "",
-          memberIds: membersList,
-          type: isInvite ? IMessageType.GROUP_INVITE.code : IMessageType.CREATE_GROUP.code
-        })
-        .catch(e => setError(e?.message || "Error adding group members"));
-    };
+    await api
+      .InviteGroupMember({
+        groupId: currentChatValue?.toId ?? "",
+        userId: storage.get("userId") || "",
+        memberIds: membersList,
+        type: isInvite ? IMessageType.GROUP_INVITE.code : IMessageType.CREATE_GROUP.code
+      })
+      .catch(e => setError(e?.message || "Error adding group members"));
+  };
 
     /**
      * 批准群邀请
@@ -1130,22 +1130,22 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       CreateRecordWindow(screen.availWidth, screen.availHeight);
     };
 
-    /**
-     * 获取历史消息
-     * @param pageInfo 分页信息
-     * @param searchStr 搜索字符串
-     */
-    const handleHistoryMessage = async (
-      pageInfo: PageResult<any>,
-      searchStr?: string | string[]
-    ): Promise<{ list: any[]; total: number }> => {
-      try {
-        const currentChatValue = currentChat.value;
-        if (!currentChatValue?.id) return { list: [], total: 0 };
+  /**
+   * 获取历史消息
+   * @param pageInfo 分页信息
+   * @param searchStr 搜索字符串
+   */
+  const handleHistoryMessage = async (
+    pageInfo: PageResult<any>,
+    searchStr?: string | string[]
+  ): Promise<{ list: any[]; total: number }> => {
+    try {
+      const currentChatValue = currentChat.value;
+      if (!currentChatValue?.toId) return { list: [], total: 0 };
 
-        const ownId = getOwnerId.value;
-        const toId = currentChatValue.id;
-        if (!ownId || !toId) return { list: [], total: 0 };
+      const ownId = getOwnerId.value;
+      const toId = currentChatValue.toId;
+      if (!ownId || !toId) return { list: [], total: 0 };
 
         const isSingle = currentChatValue.chatType === IMessageType.SINGLE_MESSAGE.code;
         const searchMapper = isSingle ? singleMessageMapper : groupMessageMapper;
@@ -1254,25 +1254,25 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       return chat.chatType === IMessageType.SINGLE_MESSAGE.code ? api.SendSingleMessage : api.SendGroupMessage;
     };
 
-    /**
-     * 构建表单载荷
-     * @param content 内容
-     * @param chat 会话
-     * @param messageContentType 消息内容类型
-     * @param meta 元数据
-     */
-    const buildFormPayload = (content: any, chat: any, messageContentType: number, meta: any = {}) => {
-      const chatType = chat?.chatType;
-      const toKey = chatType === IMessageType.SINGLE_MESSAGE.code ? "toId" : "groupId";
-      const payload: any = {
-        fromId: getOwnerId.value,
-        messageBody: content,
-        messageTempId: `${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-        messageTime: Date.now(),
-        messageContentType,
-        messageType: chatType,
-        [toKey]: chat?.id || ""
-      };
+  /**
+   * 构建表单载荷
+   * @param content 内容
+   * @param chat 会话
+   * @param messageContentType 消息内容类型
+   * @param meta 元数据
+   */
+  const buildFormPayload = (content: any, chat: any, messageContentType: number, meta: any = {}) => {
+    const chatType = chat?.chatType;
+    const toKey = chatType === IMessageType.SINGLE_MESSAGE.code ? "toId" : "groupId";
+    const payload: any = {
+      fromId: getOwnerId.value,
+      messageBody: content,
+      messageTempId: `${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+      messageTime: Date.now(),
+      messageContentType,
+      messageType: chatType,
+      [toKey]: chat?.toId || ""
+    };
 
       if (Array.isArray(meta.mentionedUserIds) && meta.mentionedUserIds.length) {
         payload.mentionedUserIds = [...new Set(meta.mentionedUserIds)];

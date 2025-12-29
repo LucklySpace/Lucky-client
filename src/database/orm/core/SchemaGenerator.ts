@@ -2,10 +2,17 @@ import { DatabaseManager } from "./DatabaseManager";
 import { ColumnMeta, Metadata } from "../annotation/Decorators";
 
 export class SchemaGenerator {
+
+  // 动态获取当前数据库实例
+  protected static get database(): DatabaseManager {
+    // 优先从 window 取
+    const GlobalDB = (window as any).DatabaseManager as typeof DatabaseManager;
+    return GlobalDB ? GlobalDB.getInstance() : DatabaseManager.getInstance();
+  }
+
   /** 根据实体装饰器元数据创建表 */
   public static async createTableFor(ctor: Function) {
-    // 获取数据源
-    const database: DatabaseManager = DatabaseManager.getInstance();
+
     // 表名
     const table: string = Reflect.getMetadata(Metadata.TABLE, ctor);
     // 主键
@@ -35,11 +42,11 @@ export class SchemaGenerator {
 
     const sql = `CREATE TABLE IF NOT EXISTS ${table} (${parts.join(", ")})`;
 
-    await database.execute(sql, []);
+    await this.database.execute(sql, []);
 
     // 创建完成后，尝试为已存在表补齐缺失列（向后兼容）
     try {
-      await this.addMissingColumnsFor(database, table, cols);
+      await this.addMissingColumnsFor(this.database, table, cols);
     } catch (e) {
       // 仅记录，不阻塞启动
       // eslint-disable-next-line no-console

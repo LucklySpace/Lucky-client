@@ -790,6 +790,11 @@ onBeforeUnmount(() => {
   }
 }
 
+
+:deep(.emoji-popper .el-popover) {
+  padding: 0 !important;
+}
+
 /* @ 标签样式 */
 .active-text {
   background: rgba(25, 166, 221, 0.08);

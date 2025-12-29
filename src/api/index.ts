@@ -248,6 +248,12 @@ export default {
   /** 删除好友 */
   DeleteContact: (data: any) => Http.post("/service/api/v1/relationship/deleteFriendById", data),
 
+  /** 获取用户表情包 */
+  GetUserEmojis: (params: any) => Http.get("/service/api/v1/emoji/list", { params }),
+
+  /** 获取表情包详情 */
+  GetEmojiPackInfo: (id: string) => Http.get(`/plat/api/v1/emoji/pack/${id}`),
+
   /** 文件上传 */
   UploadFile: (data: any) => Http.upload("/service/api/v1/file/formUpload", data),
 

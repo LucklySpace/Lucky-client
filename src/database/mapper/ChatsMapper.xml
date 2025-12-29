@@ -12,7 +12,6 @@
         avatar TEXT,
         notification TEXT,
         unread INTEGER,
-        id TEXT,
         message TEXT,
         messageTime INTEGER)
     </SQL>

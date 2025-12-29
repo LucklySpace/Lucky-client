@@ -4,7 +4,6 @@ import { CreateMainWindow } from "@/windows/main";
 import { HideLoginWindow } from "@/windows/login";
 import { storage } from "@/utils/Storage";
 import defaultImg from "@/assets/avatar/default.jpg";
-import { ref, computed } from "vue";
 
 // 用户信息接口
 interface UserInfo {
@@ -29,6 +28,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   const token = ref<string>("");
   const userId = ref<string>("");
   const userInfo = ref<UserInfo>({});
+  const userEmojiPackIds = ref<String[]>([]);
 
   // 计算属性
   /**
@@ -36,7 +36,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
    * 如果没有设置头像，则返回默认头像
    */
   const avatar = computed(() => userInfo.value?.avatar ?? defaultImg);
-  
+
   /**
    * 获取用户名称
    */
@@ -107,14 +107,23 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   // 获取用户信息
   const handleGetUserInfo = async () => {
     try {
-      const res: any = await api.GetUserInfo({ userId: userId.value });
-      if (res) {
-        userInfo.value = res;
+      const userRes: any = await api.GetUserInfo({ userId: userId.value });
+      if (userRes) {
+        userInfo.value = userRes;
       } else {
-        console.error("获取用户信息失败", res?.message);
+        console.error("获取用户信息失败", userRes?.message);
       }
     } catch (error) {
       console.error("获取用户信息请求出错", error);
+    }
+    try {
+      // 处理表情包
+      const emojiRes: any = await api.GetUserEmojis({ userId: userId.value });
+      if (emojiRes) {
+        userEmojiPackIds.value = emojiRes;
+      }
+    } catch (error) { 
+       console.error("获取表情信息请求出错", error);
     }
   };
 
@@ -149,11 +158,12 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     token,
     userId,
     userInfo,
-    
+    userEmojiPackIds,
+
     // 计算属性
     avatar,
     name,
-    
+
     // 方法
     login,
     refreshToken,
