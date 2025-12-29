@@ -1,9 +1,3 @@
-import "element-plus/theme-chalk/dark/css-vars.css";
-import "@/assets/style/scss/index.scss";
-import "@/assets/style/scss/theme.scss";
-import "@/assets/style/scss/setting.scss";
-import "element-plus/dist/index.css";
-
 // 创建 vue web 容器
 import { createApp } from "vue";
 import App from "./App.vue";
