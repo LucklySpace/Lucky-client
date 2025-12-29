@@ -127,6 +127,9 @@
     "os:allow-version",
     "os:allow-exe-extension",
     "os:allow-locale",
+    "positioner:default",
+    "positioner:allow-move-window",
+    "positioner:allow-set-tray-icon-state",
     {
       "identifier": "fs:default",
       "allow": [

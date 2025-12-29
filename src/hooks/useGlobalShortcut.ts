@@ -2,312 +2,242 @@ import { useSettingStore } from "@/store/modules/setting";
 import {
   isRegistered,
   register as tauriRegister,
-  type ShortcutHandler,
   unregister as tauriUnregister,
-  unregisterAll as tauriUnregisterAll
+  unregisterAll as tauriUnregisterAll,
+  type ShortcutHandler
 } from "@tauri-apps/plugin-global-shortcut";
 import { useLogger } from "./useLogger";
-import { normalizeCombo, isSpecialCombination } from "@/utils/KeyUtilities"
+import { normalizeCombo, isSpecialCombination } from "@/utils/KeyUtilities";
 import { useI18n } from "@/i18n";
-/**
- * 单个快捷键配置接口
- */
+import { ElMessage, ElMessageBox } from "element-plus";
+
+// --- Types ---
+
 export interface ShortcutConfig {
-  /** 唯一标识名称 */
+  /** Unique identifier for the shortcut (e.g., "toggle_window") */
   name: string;
-  /** 快捷键组合 */
+  /** Key combination (e.g., "Ctrl+Shift+X") */
   combination: string;
-  /** 触发回调 */
+  /** Callback function when triggered */
   handler: ShortcutHandler;
 }
 
-// 全局单例状态
-const registry = new Map<string, ShortcutConfig>();
-let initialized = false;
-// 同名执行中标志（避免并发覆盖）
-const inFlightMap = new Map<string, boolean>();
+// --- Singleton State ---
 
+const registry = new Map<string, ShortcutConfig>();
+const handlerMap = new Map<string, ShortcutHandler>();
+const processing = new Set<string>(); // Prevents concurrent operations for the same shortcut
+let isInitialized = false;
+
+// --- Main Hook ---
 
 /**
- * useGlobalShortcut - 全局快捷键管理单例 Hook
- *
- * 仅首次调用时根据 initialList 注册快捷键。
- * 设置页可通过 updateShortcut(name, combination) 动态修改。
- *
- * @param initialList 初始快捷键列表
+ * useGlobalShortcut
+ * Global shortcut manager hook. Handles registration, validation, conflicts, and persistence.
  */
 export function useGlobalShortcut(initialList: ShortcutConfig[] = []) {
-  // 日志
   const log = useLogger();
-  // i18n 实例与便捷 t 方法
+  const settingStore = useSettingStore();
   const { i18n } = useI18n();
+
+  // Helper for i18n
   const t = (key: string, params?: Record<string, any>) =>
-    // 兼容 vue-i18n 9 的 global.t 写法
     (i18n.global as any).t?.(key, params) ?? key;
 
-  const settingStore = useSettingStore();
+  /**
+   * Initialize shortcuts from store and initial list.
+   * Should be called once on app startup.
+   */
+  async function init() {
+    if (isInitialized) return;
+    isInitialized = true;
 
-  // Handler 映射，仅用于首次 init 时为 store 中项找到 handler
-  const handlerMap = new Map<string, ShortcutHandler>();
+    // 1. Register handlers from initial list
+    initialList.forEach(cfg => handlerMap.set(cfg.name, cfg.handler));
 
-  initialList.forEach(cfg => handlerMap.set(cfg.name, cfg.handler));
-
-  // 内部注册，注册到 Tauri & 更新 registry & 同步 store
-  async function internalRegister(cfg: ShortcutConfig): Promise<boolean> {
-    const { name, combination, handler } = cfg;
-    const special = isSpecialCombination(combination);
-    // 冲突检查: 系统常用快捷键 -> 特殊组合 -> 冲突（弹窗改为 i18n 文案）
-    if (special.blocked) {
-      try {
-        await ElMessageBox.alert(
-          t("shortcut.systemReserved.message", { combo: normalizeCombo(combination) }),
-          t("shortcut.systemReserved.title"),
-          { type: "warning" }
-        );
-      } catch {}
-      return false;
-    }
-    if (!isValidCombination(combination)) {
-      log.warn(`[Shortcut] 无效的快捷键组合：${name}(${combination})`);
-      return false;
-    }
-    if (!combination) return false;
-    // debugger
-    const conflict = await isRegistered(combination);
-    if (conflict) {
-      const holder = [...registry.values()].find(c => normalizeCombo(c.combination) === normalizeCombo(combination));
-      if (holder && holder.name !== name) {
-        // 2) 注销占用者
-        try {
-          await tauriUnregister(holder.combination);
-        } catch {}
-        registry.delete(holder.name);
-        const i = settingStore.shortcuts.findIndex(s => s.name === holder.name);
-        if (i >= 0) settingStore.shortcuts.splice(i, 1); // 或置空由你决定
-      } else {
-        // 3) 若未在 registry 中找到但插件返回已注册（幽灵注册），尝试直接注销
-        try {
-          await tauriUnregister(combination);
-        } catch {}
+    // 2. Restore from store (user preferences)
+    for (const stored of settingStore.shortcuts) {
+      const handler = handlerMap.get(stored.name);
+      if (handler) {
+        await registerSafe(stored.name, stored.combination, handler);
       }
     }
-    try {
-      await tauriRegister(combination, handler);
-    } catch (e) {
-      log.warn(`[Shortcut] 注册失败：${name}(${combination})`, e);
+
+    // 3. Register remaining defaults from initial list
+    for (const cfg of initialList) {
+      if (!registry.has(cfg.name)) {
+        // Use stored combination if exists (redundant check but safe), else default
+        const combo = settingStore.getShortcut(cfg.name) || cfg.combination;
+        await registerSafe(cfg.name, combo, cfg.handler);
+      }
+    }
+  }
+
+  /**
+   * Register or update a shortcut safely.
+   * Handles unregistering old keys, conflict checks, and persistence.
+   */
+  async function registerSafe(name: string, newCombo: string, handler: ShortcutHandler): Promise<boolean> {
+    if (!newCombo) return false;
+    
+    // Throttling / Locking
+    if (processing.has(name)) {
+      log.warn(`[Shortcut] Skip concurrent operation: ${name}`);
       return false;
     }
-    registry.set(name, cfg);
-    // 同步 store
+    processing.add(name);
+
+    const oldConfig = registry.get(name);
+    const oldCombo = oldConfig?.combination;
+
+    // If no change, return success
+    if (oldCombo === newCombo) {
+      processing.delete(name);
+      return true;
+    }
+
+    try {
+      // 1. Validation
+      if (!isValidCombination(newCombo)) {
+        log.warn(`[Shortcut] Invalid combination: ${newCombo}`);
+        return false;
+      }
+
+      const special = isSpecialCombination(newCombo);
+      if (special.blocked) {
+        ElMessageBox.alert(
+          t("shortcut.systemReserved.message", { combo: normalizeCombo(newCombo) }),
+          t("shortcut.systemReserved.title"),
+          { type: "warning" }
+        ).catch(() => {});
+        return false;
+      }
+
+      // 2. Conflict Check
+      if (await isRegistered(newCombo)) {
+        // Find who owns it locally
+        const owner = [...registry.values()].find(c => normalizeCombo(c.combination) === normalizeCombo(newCombo));
+        if (owner && owner.name !== name) {
+          // Conflict with another internal shortcut -> Unregister the other one
+          await tauriUnregister(owner.combination).catch(() => {});
+          registry.delete(owner.name);
+          // Optional: Clear from store or notify user
+          const idx = settingStore.shortcuts.findIndex(s => s.name === owner.name);
+          if (idx >= 0) settingStore.shortcuts.splice(idx, 1);
+        } else {
+          // Conflict with external app or "ghost" registration -> Try to force unregister
+          await tauriUnregister(newCombo).catch(() => {});
+        }
+      }
+
+      // 3. Unregister Old (if exists)
+      if (oldCombo) {
+        await tauriUnregister(oldCombo).catch(() => {});
+      }
+
+      // 4. Register New
+      await tauriRegister(newCombo, handler);
+      
+      // 5. Update State
+      registry.set(name, { name, combination: newCombo, handler });
+      updateStore(name, newCombo);
+      
+      log.info(`[Shortcut] Registered: ${name} => ${newCombo}`);
+      return true;
+
+    } catch (e) {
+      log.error(`[Shortcut] Failed to register ${name}:`, e);
+      
+      // Rollback attempt
+      if (oldCombo) {
+        try {
+          await tauriRegister(oldCombo, handler);
+          registry.set(name, oldConfig!);
+          updateStore(name, oldCombo);
+        } catch { /* Rollback failed */ }
+      }
+      
+      ElMessage.warning(t("shortcut.registerFail", { combo: newCombo }));
+      return false;
+    } finally {
+      processing.delete(name);
+    }
+  }
+
+  /**
+   * Public: Add a new shortcut (dynamic)
+   */
+  async function addShortcut(config: ShortcutConfig) {
+    handlerMap.set(config.name, config.handler);
+    return registerSafe(config.name, config.combination, config.handler);
+  }
+
+  /**
+   * Public: Update existing shortcut
+   */
+  async function updateShortcut(name: string, newCombination: string) {
+    const handler = handlerMap.get(name);
+    if (!handler) {
+      log.error(`[Shortcut] No handler found for: ${name}`);
+      return false;
+    }
+    return registerSafe(name, newCombination, handler);
+  }
+
+  /**
+   * Public: Clear all shortcuts
+   */
+  async function clearAll() {
+    await tauriUnregisterAll();
+    registry.clear();
+    settingStore.shortcuts = [];
+    log.info("[Shortcut] All cleared");
+  }
+
+  // --- Internals ---
+
+  function updateStore(name: string, combination: string) {
     const idx = settingStore.shortcuts.findIndex(s => s.name === name);
     if (idx >= 0) {
       settingStore.shortcuts[idx].combination = combination;
     } else {
       settingStore.shortcuts.push({ name, combination });
     }
-    log.info(`[Shortcut] 注册：${name} => ${combination}`);
-    return true;
-  }
-  /**
-   * *先删旧再更新, 失败自动回退到上一级注册信息
-   */
-  //最近一次调用事件
-  const lastCallAt = new Map<string, number>();
-  // 节流窗口
-  const THROTTLE = 250;
-  async function registerThenSwap(
-    name: string,
-    prevCombo: string | undefined,
-    nextCombo: string,
-    handler: ShortcutHandler
-  ): Promise<boolean> {
-    // 节流处理（同名），防止快速切换造成的问题
-    const now = Date.now();
-    const last = lastCallAt.get(name) || 0;
-    if (now - last < THROTTLE) {
-      try { log.warn?.(`[Shortcut] throttle skip: ${name}`); } catch {}
-      return false;
-    }
-    lastCallAt.set(name, now);
-
-    // in-flight：同名执行中直接跳过
-    if (inFlightMap.get(name)) {
-      try { log.info?.(`[Shortcut] in-flight skip: ${name}`); } catch {}
-      return false;
-    }
-    inFlightMap.set(name, true);
-
-    try {
-      // 先删旧再注新，避免遗留（失败再回退）
-      if (prevCombo && prevCombo !== nextCombo) {
-        try { await tauriUnregister(prevCombo); } catch {}
-      }
-
-      const ok = await internalRegister({ name, combination: nextCombo, handler });
-      if (!ok) {
-        // 回退：尽量恢复旧组合
-        if (prevCombo) {
-          try { await tauriRegister(prevCombo, handler); } catch {}
-          registry.set(name, { name, combination: prevCombo, handler });
-          const idx = settingStore.shortcuts.findIndex(s => s.name === name);
-          if (idx >= 0) settingStore.shortcuts[idx].combination = prevCombo;
-        }
-        try {
-          ElMessage?.warning?.(
-            t("shortcut.restore.message", {
-              combo: nextCombo,
-              prev: prevCombo || "（无）"
-            })
-          );
-        } catch {}
-        return false;
-      }
-      return true;
-    } finally {
-      inFlightMap.set(name, false);
-    }
   }
 
-  /**
-   * 初始化注册：从 store + initialList
-   */
-  async function init() {
-    if (initialized) return;
-    initialized = true;
-    // clearAll();
-    // 先按 store 列表恢复
-    for (const { name, combination } of settingStore.shortcuts) {
-      const handler = handlerMap.get(name);
-      if (handler) {
-        //避免先销毁后注册带来的冲突问题
-        // const saved = settingStore.getShortcut(name) || combination;
-        // await unregister(saved);
-        // await internalRegister({ name, combination: saved, handler });
-        const saved = settingStore.getShortcut(name) || combination;
-        const pre = registry.get(name)?.combination;
-        await registerThenSwap(name, pre, saved, handler);
-      } else {
-        log.warn(`[Shortcut] 未找到处理函数：${name}`);
-      }
-    }
-    // 再注册 initialList 中的（跳过已注册）
-    for (const cfg of initialList) {
-      if (!registry.has(cfg.name)) {
-        // await internalRegister(cfg);
-        const prev = registry.get(cfg.name)?.combination || settingStore.getShortcut(cfg.name);
-        await registerThenSwap(cfg.name, prev, cfg.combination, cfg.handler);
-      }
-    }
-  }
+  function isValidCombination(combo: string): boolean {
+    if (!combo?.trim()) return false;
+    const raw = combo.trim().toLowerCase();
+    
+    // Allow single Esc
+    if (raw === "esc" || raw === "escape") return true;
 
-  /**
-   * 新增快捷键组合
-   */
-  async function addShortcut(shortcut: ShortcutConfig) {
-    if (!registry.get(shortcut.name)) {
-      const saved = settingStore.getShortcut(shortcut.name) || shortcut.combination;
-      // await unregister(saved);
-      // await internalRegister({ name: shortcut.name, combination: saved, handler: shortcut.handler });
-      const prev = registry.get(shortcut.name)?.combination || saved;
-      await registerThenSwap(shortcut.name, prev, saved, shortcut.handler);
-    }
-    return true;
-  }
+    const parts = raw.split("+").map(p => p.trim()).filter(Boolean);
+    if (parts.length < 2) return false; // Must have modifier + key
 
-  /**
-   * 更新快捷键组合：注销旧的并注册新的
-   */
-  async function updateShortcut(name: string, newCombination: string) {
-    const old = registry.get(name);
-    // if (old) {
-    //   await unregister(old.combination);
-    // }
-    const handler = handlerMap.get(name) || old?.handler;
-    if (!handler) {
-      log.error(`[Shortcut] 更新失败，未找到处理函数：${name}`);
-      return false;
-    }
-    // await internalRegister({ name, combination: newCombination, handler });
-    const prev = old?.combination || settingStore.getShortcut(name);
-    return await registerThenSwap(name, prev, newCombination, handler);
-  }
-
-  /**
-   * 校验快捷键组合格式是否合法
-   * 支持格式如：Ctrl+Shift+A、Alt+F4、Super+Q 等
-   * 特例：如果是 esc 或 escape（任意大小写），直接返回 true
-   */
-  function isValidCombination(combination: string): boolean {
-    if (!combination) return false;
-
-    const raw = combination.trim();
-    if (!raw) return false;
-
-    // 特例：单独按 Esc / Escape
-    const lowRaw = raw.toLowerCase();
-    if (lowRaw === "esc" || lowRaw === "escape") return true;
-
-    // 拆分并去掉空段
-    const parts = raw
-      .split("+")
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
-    if (parts.length < 2) return false; // 至少要有修饰键 + 主键
-
-    const modifiersSet = new Set(["ctrl", "alt", "shift", "super", "command", "cmd", "meta"]);
-
-    // 主键不能是修饰键
+    const modifiers = new Set(["ctrl", "alt", "shift", "super", "command", "cmd", "meta"]);
     const mainKey = parts[parts.length - 1];
-    if (!mainKey) return false;
-    if (modifiersSet.has(mainKey.toLowerCase())) return false;
+    
+    // Main key cannot be a modifier
+    if (modifiers.has(mainKey)) return false;
 
-    // 修饰键必须都在允许集合内，且不能重复
-    const seen = new Set<string>();
+    // All other keys must be unique modifiers
+    const seenMods = new Set<string>();
     for (let i = 0; i < parts.length - 1; i++) {
-      const m = parts[i].toLowerCase();
-      if (!modifiersSet.has(m)) return false;
-      if (seen.has(m)) return false;
-      seen.add(m);
+      const m = parts[i];
+      if (!modifiers.has(m) || seenMods.has(m)) return false;
+      seenMods.add(m);
     }
 
     return true;
   }
-
-  /**
-   * 注销所有快捷键
-   */
-  async function clearAll() {
-    await tauriUnregisterAll();
-    registry.clear();
-    settingStore.shortcuts = [];
-    log.info("[Shortcut] 清空所有");
-  }
-
-  /**
-   * 卸载快捷键
-   * @param combination
-   */
-  async function unregister(combination: string) {
-    try {
-      await tauriUnregister(combination);
-    } catch (err) {}
-  }
-
-  /**
-   * 列出当前已注册的所有
-   */
-  function listShortcuts() {
-    return Array.from(registry.values());
-  }
-
-  // 首次组件挂载时运行 init
-  // onMounted(() => init());
 
   return {
     init,
     addShortcut,
     updateShortcut,
     clearAll,
-    listShortcuts
+    listShortcuts: () => Array.from(registry.values())
   };
 }
+
