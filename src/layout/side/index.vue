@@ -195,9 +195,6 @@
 
     .system-wrap {
       margin: 2px;
-      // display: flex; // 水平排列
-      // //justify-content: center; // 主轴居中
-      // align-items: center; // 交叉轴居中
       // width: 100%; // 占满父级宽度，确保居中生效
     }
 
@@ -214,7 +211,7 @@
         cursor: pointer;
         border: 1px solid var(--side-active-bg-color);
         border-radius: 5px;
-        background-color: var(--side-bg-color);;
+        background-color: var(--side-bg-color);
         transition: transform 0.12s ease, box-shadow 0.12s ease;
 
         // &.avatar-connecting {
