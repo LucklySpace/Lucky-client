@@ -66,9 +66,7 @@ interface ChatMessageState {
  * 聊天和消息整合Store
  * 合并了聊天和消息功能，避免重复逻辑，提高性能和可维护性
  */
-export const useChatStore = defineStore(
-  StoresEnum.CHAT,
-  () => {
+export const useChatStore = defineStore( StoresEnum.CHAT, () => {
     // 初始化其他store和工具
     const userStore = useUserStore();
     const settingStore = useSettingStore();
