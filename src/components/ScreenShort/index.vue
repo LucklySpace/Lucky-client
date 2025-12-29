@@ -20,10 +20,6 @@
   import { invoke } from "@tauri-apps/api/core";
   import { ref, watch } from "vue";
   import { writeImage } from "@tauri-apps/plugin-clipboard-manager";
-  // import { useCanvasTool } from '@/hooks/useCanvasTool';
-
-
-  //let canvasTool: any;
 
   const props = defineProps({
     isCapturing: {
@@ -96,8 +92,6 @@
           drawMask();
         }
       };
-
-      //canvasTool = useCanvasTool(canvas.value, context.value as any, screenshotImage)
 
       // 事件监听器移入 initCanvas
       canvas.value.addEventListener("mousedown", handleMouseDown);

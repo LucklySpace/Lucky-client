@@ -113,23 +113,4 @@ const router = createRouter({
   routes
 });
 
-// router.beforeEach(async (to, from, next) => {
-//   const mainWindow = Window.getByLabel('main')
-//   const loginWindow = Window.getByLabel('login')
-
-//   if (!storage.get('token')) {
-//     mainWindow?.close();
-//     loginWindow?.show();
-//   } else {
-//     if (!mainWindow) {
-//       //createMain();
-//     }
-//   }
-//   if (to.path == '/') {
-//     next({ path: '/message' })
-//   } else {
-//     next()
-//   }
-// })
-
 export default router;
