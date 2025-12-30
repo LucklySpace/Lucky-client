@@ -36,7 +36,7 @@
   defineProps({
     data: {
       type: Object,
-      default: function() {
+      default: function () {
         return {};
       }
     }
@@ -59,8 +59,15 @@
     &:hover {
       background-color: #ddd;
     }
-
-    .avatar { margin: 8px; display: inline-block; }
+    .el-col-3 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar {
+      margin: 8px;
+      display: inline-block;
+    }
 
     .content {
       width: 100%;

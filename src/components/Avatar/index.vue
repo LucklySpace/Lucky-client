@@ -73,23 +73,44 @@
 </script>
 
 <style lang="scss" scoped>
-  $gap: 8px;
-  $item-margin: 8px;
-  $time-color: var(--content-message-font-color);
-  $message-color: var(--content-message-font-color);
-  $name-color: var(--side-font-color);
-
+  /* 不需要在这里定义未使用的变量，保持整洁 */
+  
   .chat-item__avatar-img {
+    /* 1. 关键修复：防止边框撑大尺寸 */
+    box-sizing: border-box; 
+    
+    /* 2. 布局修复 */
+    display: block; /* 消除 inline 元素的间隙 */
+    width: 100%;
+    height: 100%;
+    
+    /* 3. 视觉样式 */
     object-fit: cover;
     background-color: #e6e6e6;
-    display: block;
+    border: 1px solid rgba(0, 0, 0, 0.05); /* 稍微加深一点边框可见度 */
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(0, 0, 0, 0.02);
+    
+    /* 4. 防止被挤压 */
+    flex-shrink: 0;
   }
+
   .default {
+    /* 确保占位符填满容器 */
+    width: 100%;
+    height: 100%;
+    
     display: flex;
     align-items: center;
     justify-content: center;
+    
+    /* 5. 字体对齐修复 */
+    line-height: 1; /* 防止文字受行高影响偏移 */
+    font-weight: 500;
+    cursor: default;
+    user-select: none;
+    
+    /* 确保占位符也有盒模型保护 */
+    box-sizing: border-box; 
   }
-
 </style>
+
