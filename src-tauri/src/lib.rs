@@ -4,7 +4,6 @@ mod upload;
 use jieba_rs::Jieba;
 use std::sync::RwLock;
 
-
 use std::{
     sync::atomic::{AtomicBool},
     sync::{Arc,Mutex},
@@ -13,7 +12,7 @@ use std::{
 
 struct AppState {
     jieba: RwLock<Jieba>,
-    mouse_poller: Mutex<Option<(Arc<AtomicBool>, JoinHandle<()>)>>
+    mouse_poller: Mutex<Option<(Arc<AtomicBool>, JoinHandle<()>)>>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -29,6 +28,7 @@ pub fn run() {
         mouse_poller: Mutex::new(None),
     };
     tauri::Builder::default()
+        .plugin(tauri_plugin_positioner::init())
         .manage(state)
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
