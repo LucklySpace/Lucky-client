@@ -112,6 +112,7 @@
     location?: string | null;
     online?: boolean | null;
     flag?: number; // 1 好友 2 非好友
+    remark?: string | null;
   };
 
   // props：contact 可选（可能为 null/undefined）
@@ -241,16 +242,22 @@
 </script>
 
 <style lang="scss" scoped>
-  /* 组件变量：便于快速调整主题 */
-  $card-radius: 8px;
+  /* 变量：建议使用 Element Plus 的变量，或者根据你的深色主题调整 */
   $avatar-size: 64px;
-  $muted-color: #7e7878;
-  $primary-color: #409eff;
+  $text-main: #ffffff;      /* 主文字改为白色 */
+  $text-sub: #a6a6a6;       /* 次要文字改为浅灰 */
+  $bg-hover: rgba(255, 255, 255, 0.05); /* 鼠标悬停背景 */
+
+  .contact-card-wrap {
+    box-sizing: border-box;
+    width: 100%;
+    /* 如果卡片本身需要背景色，可以在这里加，不需要则透明 */
+    /* background-color: #1e1e1e; */ 
+  }
 
   .contact-card {
     width: 100%;
-    border-radius: $card-radius;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: all 0.2s ease;
 
     &__top {
       display: flex;
@@ -258,146 +265,142 @@
       gap: 12px;
     }
 
-    /* 信息列表 */
-    &__info {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
+    /* === 修复重点：头像容器 === */
     &__avatar {
+      /* 固定尺寸 */
       flex: 0 0 $avatar-size;
-      height: $avatar-size;
       width: $avatar-size;
-      border-radius: 8px;
+      height: $avatar-size;
+      
+      /* 关键修改：移除背景色和阴影，消除“白边” */
+      background: transparent; 
+      box-shadow: none; 
+      
+      /* 保持居中 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      /* 如果 Avatar 组件自带圆角，这里可以去掉，或者保持一致 */
+      border-radius: 6px; 
       overflow: hidden;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-      background: linear-gradient(180deg, #f5f7fb, #eef3fb);
 
-      .avatar-fallback {
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 22px;
-        color: #ffffff;
-        background: linear-gradient(135deg, #9bd8ff, #5aa9ff);
+      /* 强制内部图片/组件填满 */
+      :deep(.el-avatar), :deep(img), :deep(.avatar-container) {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 6px; /* 确保内部也有圆角 */
       }
     }
 
     &__meta {
-      flex: 1 1 auto;
+      flex: 1;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 垂直居中文字块 */
     }
 
     &__title {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #141414;
+      line-height: 1.4;
 
       .name {
+        font-size: 16px;
+        font-weight: 600;
+        color: $text-main; /* 修复：白色文字 */
+        
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 220px; // 防止过长推开布局
+        max-width: 200px;
       }
 
       .gender-icon {
         width: 16px;
         height: 16px;
-        opacity: 0.85;
-      }
-
-      .status-badge {
-        margin-left: 6px;
-      }
-
-      .status-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #bdbdbd;
-
-        &.online {
-          background: #39ba72; // 绿色
-        }
+        fill: $text-sub; /* 修复：图标颜色 */
+        display: block;
       }
     }
 
     &__sub {
-      margin-top: 6px;
+      margin-top: 4px;
       font-size: 12px;
-      color: $muted-color;
+      color: $text-sub; /* 修复：浅灰文字 */
     }
 
+    /* === 信息列表部分 === */
     &__info {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding: 8px 4px;
+      gap: 10px; /*稍微拉大间距*/
+      padding: 8px 0;
 
       .info-row {
         display: flex;
         gap: 12px;
         align-items: center;
+        line-height: 1.5;
 
         .info-label {
-          min-width: 64px;
-          font-size: 12px;
-          color: $muted-color;
+          width: 60px; /* 固定宽度，对齐更整齐 */
+          flex-shrink: 0;
+          font-size: 13px;
+          color: $text-sub; /* 修复：标签颜色 */
         }
 
         .info-value {
           font-size: 13px;
-          color: #333;
-          word-break: break-word;
-          align-items: baseline;
+          color: $text-main; /* 修复：内容颜色 */
+          flex: 1;
+          word-break: break-all;
+          display: flex;
+          align-items: center;
+
           .edit-icon {
-            margin-left: 4px;
-            color: #7e7878;
+            margin-left: 6px;
+            color: $text-sub;
+            cursor: pointer;
+            font-size: 14px;
+            
+            &:hover {
+              color: #409eff;
+            }
           }
         }
       }
     }
 
     &__actions {
-      margin-top: 8px;
+      margin-top: 12px;
       display: flex;
       justify-content: flex-end;
-
-      .el-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-
-        .btn-text {
-          margin-left: 4px;
-        }
+    }
+    
+    /* === 空状态修复 === */
+    &__empty {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      .empty-text {
+         .empty-title { color: $text-main; font-size: 14px; }
+         .empty-sub { color: $text-sub; font-size: 12px; }
       }
     }
   }
 
-  /* 响应式：窄屏时按钮换行 */
-  @media (max-width: 440px) {
-    .contact-card {
-      &__top {
-        gap: 10px;
-      }
-
-      &__actions {
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .contact-card__title .name {
-        max-width: 140px;
-      }
-    }
+  /* 输入框深色适配 (如果是 Element Plus) */
+  :deep(.el-input__wrapper) {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px #4c4d4f; /* 深色边框 */
+  }
+  :deep(.el-input__inner) {
+    color: white;
   }
 </style>
+
+

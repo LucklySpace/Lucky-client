@@ -140,7 +140,7 @@
     font-size: 13px;
     background: #dddddd1c;
     color: #1f2d3d;
-    border: 1px solid #e3e8ff;
+    border: 1px solid var(--header-border-bottom-color);
     cursor: pointer;
   }
   /* 仅在消息内容容器内渲染，不使用 fixed，避免影响其它区域 */
