@@ -5,7 +5,8 @@
     <div class="invite-bubble__inner" role="button" tabindex="0">
       <!-- 左侧：群头像（可选） -->
       <div v-if="parsedBody?.groupAvatar" class="invite-bubble__left">
-        <Avatar :avatar="parsedBody.groupAvatar" :name="parsedBody.groupName" :width="56" :borderRadius="8" class="invite-bubble__avatar" />
+        <Avatar :avatar="parsedBody.groupAvatar" :name="parsedBody.groupName" :width="56" :borderRadius="8"
+          class="invite-bubble__avatar" />
       </div>
 
       <!-- 主体信息 -->

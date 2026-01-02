@@ -26,7 +26,7 @@ interface Watermark {
 /**
  * 应用更新
  */
-interface Upadate {
+interface Update {
   /** 是否开启自动更新 */
   enable: boolean;
 }
@@ -34,7 +34,7 @@ interface Upadate {
 /**
  * 文件下载
  */
-interface Flie {
+interface File {
   /** 是否开启200m自动下载 */
   enable: boolean;
   readonly: boolean;
@@ -44,38 +44,38 @@ interface Flie {
 
 // 使用 setup 语法重构 Pinia store
 export const useSettingStore = defineStore(StoresEnum.SETTING, () => {
-  // 语言
+  /** 语言 */
   const language = ref<string>("en-US");
-  // 主题
+  /** 主题模式 */
   const theme = ref<"light" | "dark" | "auto">("auto");
-  // 快捷键
+  /** 快捷键列表 */
   const shortcuts = ref<Shortcut[]>([]);
 
-  // 通知
+  /** 通知开关 */
   const notification = ref({
     message: true,
     media: true
   });
 
-  // 水印
+  /** 水印设置 */
   const watermark = ref<Watermark>({
     enable: false,
     text: ""
   });
 
-  // 文件下载
-  const file = ref<Flie>({
+  /** 文件下载设置 */
+  const file = ref<File>({
     enable: false,
     readonly: false,
     path: ""
   });
 
-  // 应用更新
-  const update = ref<Upadate>({
+  /** 应用更新设置 */
+  const update = ref<Update>({
     enable: false
   });
 
-  // 关闭方式
+  /** 主窗口关闭偏好：询问 / 最小化 / 退出 */
   const close = ref<"ask" | "minimize" | "exit">("ask");
 
   // Getters
