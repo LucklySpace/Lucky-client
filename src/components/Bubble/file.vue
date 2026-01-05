@@ -7,7 +7,7 @@
       </svg>
       <div class="file-details">
         <div class="file-name">{{ parsedBody?.name }}</div>
-        <div class="file-size">{{ FileUtils.formatSize(parsedBody?.size) }}</div>
+        <div class="file-size">{{ formatFileSize(parsedBody?.size) }}</div>
       </div>
       <button v-show="!parsedBody?.local" class="download-btn" @click.stop="handleDownloadFile(message)">
         <i class="iconfont icon-xiazai"></i>
@@ -17,9 +17,8 @@
 </template>
 
 <script lang="ts" setup>
-import { fileIcon } from "@/utils/FileUpload";
+import { fileIcon, formatFileSize } from "@/hooks/useFile";
 import { useChatStore } from "@/store/modules/chat";
-import FileUtils from "@/utils/File";
 import { useFile } from "@/hooks/useFile";
 import ObjectUtils from "@/utils/ObjectUtils";
 import { shallowReactive, watchEffect } from "vue";

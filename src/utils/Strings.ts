@@ -6,28 +6,28 @@
  * 将字符串中的 URL 转为 <a> 标签，但不触发默认跳转，而是交给 JS 处理
  * @param {String} str
  */
-export function urlToLink(str: string): string {
-  // const re: RegExp = /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
-  const re: RegExp = new RegExp("(ftp|http|https?://)?([a-zA-Z0-9-]+.)+[a-zA-Z]{2,}(/[^s]*)?", "g");
-  return str.replace(re, match => {
-    const safeUrl = match.replace(/"/g, "&quot;");
-    return `<a  style="text-decoration: none; cursor: pointer; color:#0000EE" data-url="${safeUrl}">${match}</a>`;
-  });
-}
-
-// export function urlToLink(str: string) {
-//   const re: RegExp =
-//     /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
-//   return str.replace(re, function (website) {
-//     return (
-//       "<a href='" +
-//       website +
-//       "' style='text-decoration: none; cursor: pointer;' target='_blank'>" +
-//       website +
-//       "</a>"
-//     );
+// export function urlToLink(str: string): string {
+//   // const re: RegExp = /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
+//   const re: RegExp = new RegExp("(ftp|http|https?://)?([a-zA-Z0-9-]+.)+[a-zA-Z]{2,}(/[^s]*)?", "g");
+//   return str.replace(re, match => {
+//     const safeUrl = match.replace(/"/g, "&quot;");
+//     return `<a  style="text-decoration: none; cursor: pointer; color:#0000EE" data-url="${safeUrl}">${match}</a>`;
 //   });
 // }
+
+export function urlToLink(str: string) {
+  const re: RegExp =
+    /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
+  return str.replace(re, function (website) {
+    return (
+      "<a href='" +
+      website +
+      "' style='text-decoration: none; cursor: pointer;' target='_blank'>" +
+      website +
+      "</a>"
+    );
+  });
+}
 
 /**
  * 去除字符串控制

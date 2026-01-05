@@ -8,53 +8,53 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
  * tauri.conf.json "csp":  "default-src 'self'; img-src 'self'; asset: https://asset.localhost"
  */
 export async function cacheMedia(url: string, cacheDir: string): Promise<string> {
-  // 获取应用缓存目录
-  let path = await getPath(url, cacheDir);
-  // 转为可访问的本地url地址
-  //return `${convertFileSrc(path)}?t=${Date.now()}`
-  return `${convertFileSrc(path)}`;
+    // 获取应用缓存目录
+    let path = await getPath(url, cacheDir);
+    // 转为可访问的本地url地址
+    //return `${convertFileSrc(path)}?t=${Date.now()}`
+    return `${convertFileSrc(path)}`;
 }
 
 
 export async function getImageSize(url: string) {
-  try {
-    const [width, height]: [number, number] = await invoke("get_image_size", {
-      path: url
-    });
-    return { width, height };
-  } catch (err) {
-    console.log(err);
-  }
+    try {
+        const [width, height]: [number, number] = await invoke("get_image_size", {
+            path: url
+        });
+        return { width, height };
+    } catch (err) {
+        console.log(err);
+    }
 
-  return { width: 0, height: 0 };
+    return { width: 0, height: 0 };
 }
 
 
 export async function getPath(url: string, cacheDir: string) {
-  // 获取应用缓存目录
-  const baseDir = await appCacheDir();
+    // 获取应用缓存目录
+    const baseDir = await appCacheDir();
 
-  const imgCacheDir = await join(baseDir, cacheDir);
+    const imgCacheDir = await join(baseDir, cacheDir);
 
-  // 获取文件地址
-  const path: string = await invoke("cache_image_to_path", {
-    url,
-    cacheBase: imgCacheDir
-  });
-  return path;
+    // 获取文件地址
+    const path: string = await invoke("cache_image_to_path", {
+        url,
+        cacheBase: imgCacheDir
+    });
+    return path;
 }
 
 
 export async function url2rgba(url: string) {
-  const [width, height, rgbaArr] = await invoke<[number, number, number[]]>(
-    "local_image_to_rgba",
-    { url }
-  );
-  return {
-    width,
-    height,
-    rgba: new Uint8Array(rgbaArr)
-  };
+    const [width, height, rgbaArr] = await invoke<[number, number, number[]]>(
+        "local_image_to_rgba",
+        { url }
+    );
+    return {
+        width,
+        height,
+        rgba: new Uint8Array(rgbaArr)
+    };
 }
 
 
@@ -144,9 +144,9 @@ export async function url2rgba(url: string) {
  * 清空整表缓存（删除缓存目录下所有文件）
  */
 export async function clearImageCache(): Promise<void> {
-  //  const cacheDir = await ensureCacheDir();
-  //const entries: DirEntry[] = await readTextFile(cacheDir as any) // read dir not text; placeholder
-  // TODO: 调用 fs.removeDir 或 removeFile 遍历删除
+    //  const cacheDir = await ensureCacheDir();
+    //const entries: DirEntry[] = await readTextFile(cacheDir as any) // read dir not text; placeholder
+    // TODO: 调用 fs.removeDir 或 removeFile 遍历删除
 }
 
 
@@ -157,27 +157,27 @@ export async function clearImageCache(): Promise<void> {
  * @returns
  */
 export function url2Base64(url: string, type = "image/jpeg") {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const canvas = document.createElement("canvas");
-    img.crossOrigin = "*";
-    img.onload = function() {
-      const width = img.width, height = img.height;
-      canvas.width = width;
-      canvas.height = height;
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const canvas = document.createElement("canvas");
+        img.crossOrigin = "*";
+        img.onload = function () {
+            const width = img.width, height = img.height;
+            canvas.width = width;
+            canvas.height = height;
 
-      const ctx: any = canvas.getContext("2d");
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, width, height);
-      const base64 = canvas.toDataURL(type);
-      resolve(base64);
-    };
-    img.onerror = function() {
-      reject(new Error("message"));
-    };
-    img.src = url;
-  });
+            const ctx: any = canvas.getContext("2d");
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const base64 = canvas.toDataURL(type);
+            resolve(base64);
+        };
+        img.onerror = function () {
+            reject(new Error("message"));
+        };
+        img.src = url;
+    });
 }
 
 
@@ -187,19 +187,19 @@ export function url2Base64(url: string, type = "image/jpeg") {
  * @returns Promise<number[]>，每 4 个数字代表一个像素的 [R, G, B, A]
  */
 export async function url2Array(url: string): Promise<{ width: number; height: number; rgba: number[] }> {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.src = url;
-  await img.decode();
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = url;
+    await img.decode();
 
-  const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
 
-  const { data } = ctx.getImageData(0, 0, img.width, img.height);
-  return { width: img.width, height: img.height, rgba: Array.from(data) };
+    const { data } = ctx.getImageData(0, 0, img.width, img.height);
+    return { width: img.width, height: img.height, rgba: Array.from(data) };
 }
 
 
@@ -209,17 +209,17 @@ export async function url2Array(url: string): Promise<{ width: number; height: n
  * @returns
  */
 export function blob2Base64(blob: any) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      const base64 = reader.result?.toString() || "";
-      resolve(base64);
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            const base64 = reader.result?.toString() || "";
+            resolve(base64);
+        });
+        reader.addEventListener("error", () => {
+            reject(new Error("message"));
+        });
+        reader.readAsDataURL(blob);
     });
-    reader.addEventListener("error", () => {
-      reject(new Error("message"));
-    });
-    reader.readAsDataURL(blob);
-  });
 }
 
 
@@ -229,14 +229,14 @@ export function blob2Base64(blob: any) {
  * @returns
  */
 function base642Url(data: string) {
-  var parts = data.split(";base64,"),
-    contentType = parts[0].split(":")[1],
-    raw = window.atob(parts[1]),
-    length = raw.length,
-    arr = new Uint8Array(length);
-  for (var i = 0; i < length; i++) {
-    arr[i] = raw.charCodeAt(i);
-  }
-  var blob = new Blob([arr], { type: contentType });
-  return URL.createObjectURL(blob);
+    var parts = data.split(";base64,"),
+        contentType = parts[0].split(":")[1],
+        raw = window.atob(parts[1]),
+        length = raw.length,
+        arr = new Uint8Array(length);
+    for (var i = 0; i < length; i++) {
+        arr[i] = raw.charCodeAt(i);
+    }
+    var blob = new Blob([arr], { type: contentType });
+    return URL.createObjectURL(blob);
 };
