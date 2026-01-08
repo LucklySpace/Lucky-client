@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 src-tauri/bin/ffmpeg-x86_64-pc-windows-msvc.exe
+src-tauri/bin/ffmpeg-x86_64-unknown-linux-gnu
 package-lock.json
 pnpm-lock.yaml
 .env
