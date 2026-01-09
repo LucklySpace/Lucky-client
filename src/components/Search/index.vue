@@ -1,200 +1,147 @@
 <template>
   <div class="search-container no-select">
-    <el-row style="height: 60px">
-      <el-col :span="20">
-        <div class="search-container__input">
-          <el-input ref="headerInputRef" v-model="searchStr" :placeholder="$t('search.placeholder')"
-            class="header-input" clearable @clear="handleClear" @click="toggleSearchPopover" @input="handleInput"
-            @keydown.enter.prevent="handleEnter">
-            <template #prefix>
-              <i slot="suffix" class="iconfont icon-sousuo"></i>
-            </template>
-          </el-input>
-        </div>
-      </el-col>
-
-      <el-col :span="4">
-        <div class="search-container__btn">
-          <el-button style="width: 30px" @click="openInvite">
-            <i class="iconfont icon-jia" style="font-size: 18px"></i>
-          </el-button>
-        </div>
-      </el-col>
-    </el-row>
+    <div class="search-bar">
+      <div class="search-input-wrapper">
+        <el-input ref="headerInputRef" v-model="searchStr" :placeholder="$t('search.placeholder')"
+          class="custom-search-input" clearable @clear="handleClear" @click="toggleSearchPopover" @input="handleInput"
+          @keydown.enter.prevent="handleEnter">
+          <template #prefix>
+            <el-icon class="search-icon">
+              <Search />
+            </el-icon>
+          </template>
+        </el-input>
+      </div>
+      <div class="action-btn-wrapper">
+        <el-button class="add-btn" @click="openInvite">
+          <el-icon>
+            <Plus />
+          </el-icon>
+        </el-button>
+      </div>
+    </div>
 
     <el-popover ref="popoverRef" :teleported="true" :virtual-ref="headerInputRef" placement="bottom-start"
-      popper-class="search-popover" trigger="focus" virtual-triggering width="360" @hide="handleClear">
-      <!-- Popover 内容：完整搜索结果面板 -->
-  <div :aria-label="$t('search.resultsLabel')" class="search-popover__content" role="dialog">
-        <!-- tabs -->
-        <div class="search-popover__tabs">
-          <button :class="['search-popover__tab', activeTab === 'all' ? 'search-popover__tab--active' : '']"
-            @click="activeTab = 'all'">
-            {{ t("search.tabs.all") }}
-          </button>
-          <button :class="['search-popover__tab', activeTab === 'friends' ? 'search-popover__tab--active' : '']"
-            @click="activeTab = 'friends'">
-            {{ t("search.tabs.friends") }}
-          </button>
-          <button :class="['search-popover__tab', activeTab === 'messages' ? 'search-popover__tab--active' : '']"
-            @click="activeTab = 'messages'">
-            {{ t("search.tabs.messages") }}
-          </button>
+      popper-class="modern-search-popover" trigger="focus" virtual-triggering :width="340" @hide="handleClear">
+      <div class="search-results-panel" role="dialog">
+        <!-- 分类页签 -->
+        <div class="search-tabs">
+          <div v-for="tab in tabs" :key="tab.value" :class="['tab-item', { active: activeTab === tab.value }]"
+            @click="activeTab = tab.value">
+            {{ tab.label }}
+          </div>
         </div>
 
-        <!-- 结果区域：固定高度，内部滚动 -->
-        <div ref="resultsScrollRef" class="search-popover__results-scroll" tabindex="0">
-          <!-- 好友搜索特殊项（放在联系人后，仅在 all 或 friends tab 显示） -->
+        <!-- 结果列表 -->
+        <div ref="resultsScrollRef" class="results-viewport" tabindex="0">
+          <!-- 搜索更多好友入口 -->
+          <div v-if="activeTab === 'all' || activeTab === 'friends'" class="search-more-entry"
+            @click="openFriendSearchDialog">
+            <div class="entry-icon">
+              <el-icon>
+                <Search />
+              </el-icon>
+            </div>
+            <div class="entry-text">
+              <div class="title">{{ t("search.moreFriends.title") }}</div>
+              <div class="subtitle">{{ t("search.moreFriends.subtitle") }}</div>
+            </div>
+          </div>
 
-          <section v-if="activeTab === 'all' || activeTab === 'friends'" class="search-popover__section new-friend">
-            <ul class="search-popover__list">
-              <li class="search-popover__list-item search-popover__list-item--search-more"
-                @click="openFriendSearchDialog">
-                <i class="iconfont icon-sousuo search-popover__search-icon" style="font-size: 20px"></i>
-                <div class="search-popover__meta">
-                  <div class="search-popover__row">
-                    <div class="search-popover__name">{{ t("search.moreFriends.title") }}</div>
-                  </div>
-                  <div class="search-popover__row search-popover__row--sub">
-                    <div class="search-popover__preview">{{ t("search.moreFriends.subtitle") }}</div>
-                  </div>
+          <!-- 联系人结果 -->
+          <div v-if="(activeTab === 'all' || activeTab === 'friends') && friends.length" class="result-section">
+            <div class="section-title">{{ t("search.section.contacts") }}</div>
+            <div v-for="(f, idx) in friends" :key="`friend-${f.userId}`"
+              :class="['result-item', { focused: isFocused(flatIndex('friend', idx)) }]"
+              @click="selectResult('friend', f)" @mousemove="setHover(flatIndex('friend', idx))">
+              <Avatar :avatar="f.avatar || ''" :name="f.remark ?? f.name" :width="40" :borderRadius="6" />
+              <div class="item-info">
+                <div class="item-row">
+                  <span class="name" v-html="highlight(f.remark || f.name)"></span>
+                  <span v-if="f.location" class="tag" v-html="highlight(f.location)"></span>
                 </div>
-              </li>
-            </ul>
-          </section>
-          <!-- 联系人 -->
-          <section v-if="(activeTab === 'all' || activeTab === 'friends') && friends.length"
-            class="search-popover__section">
-            <h4 class="search-popover__section-title">{{ t("search.section.contacts") }}</h4>
-            <ul class="search-popover__list">
-              <li v-for="(f, idx) in friends" :key="`friend-${f.userId}-${f.friendId}`"
-                :class="{ 'search-popover__list-item--focused': isFocused(flatIndex('friend', idx)) }"
-                class="search-popover__list-item" @click="selectResult('friend', f)"
-                @mousemove="setHover(flatIndex('friend', idx))">
-                <span class="search-popover__avatar">
-                  <Avatar :avatar="f.avatar || ''" :name="f.remark ?? f.name" :width="44" :borderRadius="4" />
-                </span>
-                <div class="search-popover__meta">
-                  <div class="search-popover__row">
-                    <div class="search-popover__name" v-html="highlight(f.remark || f.name)"></div>
-                    <div v-if="f.location" class="search-popover__tag" v-html="highlight(f.location ?? '')"></div>
-                  </div>
-                  <div class="search-popover__row search-popover__row--sub">
-                    <div class="search-popover__preview">{{ f.selfSignature || "" }}</div>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </section>
+                <div class="item-sub">{{ f.selfSignature || "" }}</div>
+              </div>
+            </div>
+          </div>
 
-          <!-- 消息 -->
-          <section v-if="(activeTab === 'all' || activeTab === 'messages') && messages.length"
-            class="search-popover__section">
-            <h4 class="search-popover__section-title">{{ t("search.section.messages") }}</h4>
-            <ul class="search-popover__list">
-              <li v-for="(m, idx) in messages" :key="`msg-${m.chatId}`"
-                :class="{ 'search-popover__list-item--focused': isFocused(flatIndex('message', idx)) }"
-                class="search-popover__list-item" @click="selectResult('message', m)"
-                @mousemove="setHover(flatIndex('message', idx))">
-                <span class="search-popover__avatar">
-                  <Avatar
-                    :avatar="m.avatar || ''"
-                    :name="m.name"
-                    :width="44"
-                    :borderRadius="4"
-                    :backgroundColor="m.chatType === IMessageType.GROUP_MESSAGE.code ? '#ffb36b' : undefined"
-                  />
-                </span>
-                <div class="search-popover__meta">
-                  <div class="search-popover__row">
-                    <div class="search-popover__name">{{ m.name || "未知" }}</div>
-                    <div class="search-popover__time">{{ useFriendlyTime(m.messageTime as number) }}</div>
-                  </div>
-                  <div class="search-popover__row search-popover__row--sub">
-                    <div class="search-popover__preview" v-html="highlight(m.message)"></div>
-                    <div class="search-popover__count">
-                      {{ t("search.count", { count: m.count }) }}
-                    </div>
-                  </div>
+          <!-- 消息结果 -->
+          <div v-if="(activeTab === 'all' || activeTab === 'messages') && messages.length" class="result-section">
+            <div class="section-title">{{ t("search.section.messages") }}</div>
+            <div v-for="(m, idx) in messages" :key="`msg-${m.chatId}`"
+              :class="['result-item', { focused: isFocused(flatIndex('message', idx)) }]"
+              @click="selectResult('message', m)" @mousemove="setHover(flatIndex('message', idx))">
+              <Avatar :avatar="m.avatar || ''" :name="m.name" :width="40" :borderRadius="6"
+                :backgroundColor="m.chatType === IMessageType.GROUP_MESSAGE.code ? '#ffb36b' : undefined" />
+              <div class="item-info">
+                <div class="item-row">
+                  <span class="name">{{ m.name || "未知" }}</span>
+                  <span class="time">{{ useFriendlyTime(m.messageTime as number) }}</span>
                 </div>
-              </li>
-            </ul>
-          </section>
+                <div class="item-sub">
+                  <span class="preview" v-html="highlight(m.message)"></span>
+                  <span class="count">{{ t("search.count", { count: m.count }) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <!-- 无结果提示 -->
-          <div v-show="!hasAnyResult" class="search-popover__no-result">{{ t("search.noResult") }}</div>
+          <!-- 空状态 -->
+          <!-- <div v-show="!hasAnyResult" class="empty-state">
+            <el-empty :image-size="60" :description="t('search.noResult')" />
+          </div> -->
         </div>
       </div>
     </el-popover>
 
-    <!-- 邀请对话框（如需） -->
-    <el-dialog :destroy-on-close="true" :model-value="inviteDialogVisible" :title="$t('search.invite.title')"
-      style="height: 450px" width="550" @close="inviteDialogVisible = false">
-      <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="openInvite" />
+    <!-- 弹窗部分 -->
+    <el-dialog v-model="inviteDialogVisible" :title="$t('search.invite.title')" width="550px" destroy-on-close
+      class="modern-dialog">
+      <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="inviteDialogVisible = false" />
     </el-dialog>
 
-    <!-- 好友搜索弹窗 -->
-    <el-dialog :destroy-on-close="true" :model-value="friendSearchDialogVisible"
-      :title="$t('search.friendSearch.title')" width="300" @close="closeFriendSearchDialog">
-      <div class="friend-search__container">
+    <el-dialog v-model="friendSearchDialogVisible" :title="$t('search.friendSearch.title')" width="400px"
+      destroy-on-close class="modern-dialog">
+      <div class="friend-search-body">
         <el-input v-model="searchFriendStr" :placeholder="$t('search.friendSearch.title')" clearable
-          @keydown.enter.prevent="handleFriendSearch">
-          <template #prefix>
-            <i slot="suffix" class="iconfont icon-sousuo"></i>
-          </template>
+          class="search-input-large" @keydown.enter.prevent="handleFriendSearch">
           <template #append>
-            <el-button type="primary" @click="handleFriendSearch"> {{ t("search.friendSearch.searchBtn") }}</el-button>
+            <el-button type="primary" @click="handleFriendSearch">{{ t("search.friendSearch.searchBtn") }}</el-button>
           </template>
         </el-input>
 
-        <!-- 搜索结果列表（示例：显示搜索到的好友） -->
-        <ul v-if="searchedFriends.length" class="friend-search__list" role="list">
-          <li v-for="friend in searchedFriends" :key="friend.userId" class="friend-search__item" role="listitem"
-            tabindex="0">
-            <!-- 左：头像（统一使用封装的 Avatar 组件） -->
-            <div aria-hidden="true" class="friend-search__avatar-wrap">
-              <Avatar :avatar="friend.avatar || ''" :name="friend.name" :width="44" :borderRadius="8" />
+        <div class="search-results-list">
+          <div v-for="friend in searchedFriends" :key="friend.userId" class="friend-item">
+            <Avatar :avatar="friend.avatar || ''" :name="friend.name" :width="44" :borderRadius="8" />
+            <div class="info">
+              <div class="name">{{ friend.name }}</div>
+              <div class="id">ID: {{ friend.friendId }}</div>
             </div>
-
-            <!-- 中：name + friendId （竖排）-->
-            <div class="friend-search__content">
-              <div :title="friend.name" class="friend-search__name">{{ friend.name }}</div>
-              <div :title="friend.friendId" class="friend-search__id">{{ friend.friendId }}</div>
+            <div class="action">
+              <el-button v-if="friend.flag == 1" link disabled>{{ t("search.addFriend.addedLabel") }}</el-button>
+              <el-button v-else type="primary" size="small" @click="handleAddFriend(friend)">{{
+                t("search.addFriend.addButton") }}</el-button>
             </div>
-
-            <el-button v-if="friend.flag == 1" class="friend-search__add-btn" link size="small">
-              {{ t("search.addFriend.addedLabel") }}
-            </el-button>
-
-            <el-button v-else class="friend-search__add-btn" size="small" type="primary"
-              @click.stop="handleAddFriend(friend)">
-              {{ t("search.addFriend.addButton") }}
-            </el-button>
-          </li>
-        </ul>
-
-        <div v-else-if="searchFriendStr" class="friend-search__no-result">{{ t("search.friendSearch.noResult") }}</div>
+          </div>
+          <div v-if="!searchedFriends.length && searchFriendStr" class="no-data">{{ t("search.friendSearch.noResult") }}
+          </div>
+        </div>
       </div>
     </el-dialog>
 
-    <el-dialog :destroy-on-close="true" :model-value="addFriendDialogVisible" :show-close="false"
-      :title="$t('search.addFriend.title')" width="350" @close="closeAddFriendDialog">
-      <div class="add-friend-verify__container">
-        <el-form label-width="80px">
-          <el-form-item :label="$t('search.addFriend.verifyLabel')" required>
-            <el-input v-model="verifyMsg" :placeholder="$t('search.addFriend.verifyLabel')" :rows="3" maxlength="200"
-              show-word-limit type="textarea" />
-          </el-form-item>
-          <el-form-item :label="$t('search.addFriend.remarkLabel')">
-            <el-input v-model="remark" :placeholder="$t('search.addFriend.remarkLabel')" maxlength="50" />
-          </el-form-item>
-        </el-form>
-      </div>
+    <el-dialog v-model="addFriendDialogVisible" :title="$t('search.addFriend.title')" width="380px"
+      class="modern-dialog">
+      <el-form label-position="top">
+        <el-form-item :label="$t('search.addFriend.verifyLabel')">
+          <el-input v-model="verifyMsg" type="textarea" :rows="3" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item :label="$t('search.addFriend.remarkLabel')">
+          <el-input v-model="remark" maxlength="20" />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="closeAddFriendDialog">{{ t("search.addFriend.addButton") }}</el-button>
-          <el-button type="primary" @click="confirmAddFriend">{{ t("search.addFriend.addButton") }}</el-button>
-        </span>
+        <el-button @click="addFriendDialogVisible = false">{{ t("common.cancel") }}</el-button>
+        <el-button type="primary" @click="confirmAddFriend">{{ t("common.confirm") }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -205,24 +152,21 @@ import { computed, nextTick, ref, unref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import SelectContact from "../SelectContact/index.vue";
 import { useSearchStore } from "@/store/modules/search";
-  import { useFriendsStore } from "@/store/modules/friends";
-  import Avatar from "@/components/Avatar/index.vue";
-  import { IMessageType } from "@/constants";
+import { useFriendsStore } from "@/store/modules/friends";
+import Avatar from "@/components/Avatar/index.vue";
+import { IMessageType } from "@/constants";
 import { ElMessage } from "element-plus";
 import { escapeHtml } from "@/utils/Strings";
 import { useTimeFormat } from "@/hooks/useTimeFormat";
 import { useUserStore } from "@/store/modules/user";
 import { useChatStore } from "@/store/modules/chat";
 
-
-/* -------------------- 类型定义（简化） -------------------- */
+/* -------------------- 类型定义 -------------------- */
 interface Chat {
-  id: string;
   chatId: string;
   chatType: number;
   name: string;
   avatar?: string;
-  unread?: number;
   message?: string;
   messageTime?: number;
   count?: number;
@@ -245,41 +189,37 @@ const userStore = useUserStore();
 const messageStore = useChatStore();
 const searchStore = useSearchStore();
 const friendStore = useFriendsStore();
-const { useFriendlyTime } = useTimeFormat(); // hook 返回格式化函数
+const { useFriendlyTime } = useTimeFormat();
 
-// 输入与控制
 const searchStr = ref("");
-const activeTab = ref<"all" | "friends" | "groups" | "messages">("all");
+const activeTab = ref<"all" | "friends" | "messages">("all");
+const tabs = computed(() => [
+  { label: t("search.tabs.all"), value: "all" as const },
+  { label: t("search.tabs.friends"), value: "friends" as const },
+  { label: t("search.tabs.messages"), value: "messages" as const }
+]);
+
 const inviteDialogVisible = ref(false);
 const friendSearchDialogVisible = ref(false);
-const searchFriendStr = ref("");
-const searchedFriends = ref<Friend[]>([]); // 假设 Friend 类型已定义
-
 const addFriendDialogVisible = ref(false);
+
+const searchFriendStr = ref("");
+const searchedFriends = ref<Friend[]>([]);
 const currentAddingFriend = ref<Friend | null>(null);
 const verifyMsg = ref("");
 const remark = ref("");
 
-// 结果
 const friends = ref<Friend[]>([]);
 const messages = ref<Chat[]>([]);
 
-// DOM refs（template 中对应 ref）
 const popoverRef = ref<any>(null);
 const headerInputRef = ref<any>(null);
 const resultsScrollRef = ref<HTMLElement | null>(null);
-
-// 键盘导航焦点索引
 const focusedIndex = ref<number>(-1);
 
-/* 防抖间隔（ms） */
-const DEBOUNCE_MS = 280;
+const DEBOUNCE_MS = 300;
 
 /* -------------------- 计算属性 -------------------- */
-/**
- * 扁平化列表（用于键盘上下导航）
- * 返回格式：{ type: 'friend'|'message', index, item } 的数组
- */
 const flatList = computed(() => {
   const arr: { type: string; index: number; item: any }[] = [];
   if (activeTab.value === "all" || activeTab.value === "friends") {
@@ -291,20 +231,12 @@ const flatList = computed(() => {
   return arr;
 });
 
-/** 是否有任意结果（用于 all tab 的无结果提示） */
 const hasAnyResult = computed(() => friends.value.length + messages.value.length > 0);
 
-/* -------------------- 搜索主流程 -------------------- */
-/**
- * performSearch
- * - 负责调用 store 的 searchFriends/searchMessages（并行）
- * - 接受原始 query（不负责 trim 校验的太多逻辑外部已处理）
- * - 将结果写回 friends/messages，并重置聚焦/滚动
- */
+/* -------------------- 搜索逻辑 -------------------- */
 async function performSearch(query: string) {
   const trimmed = (query ?? "").trim();
   if (!trimmed) {
-    // 空查询：清空结果与焦点
     friends.value = [];
     messages.value = [];
     focusedIndex.value = -1;
@@ -312,115 +244,38 @@ async function performSearch(query: string) {
   }
 
   try {
-    // 并行执行联系人与消息搜索（store 层实现聚合与性能优化）
     const [friendRes, messageRes] = await Promise.all([
       searchStore.searchFriends(trimmed),
       searchStore.searchMessages(trimmed)
     ]);
 
-    // @ts-ignore
-    friends.value = friendRes ?? [];
-    messages.value = messageRes ?? [];
-
-    // 把焦点设置到第一个可选项（若存在）
+    friends.value = (friendRes as any) ?? [];
+    messages.value = (messageRes as any) ?? [];
     focusedIndex.value = flatList.value.length > 0 ? 0 : -1;
 
-    // 等待 DOM 更新后滚动焦点可见
     await nextTick();
     scrollFocusedIntoView();
   } catch (err) {
-    console.error("performSearch error:", err);
-    ElMessage.error(t("search.error.noResults"));
+    console.error("Search error:", err);
   }
 }
 
-/* 防抖版本，调用方（handleInput）会触发此防抖函数 */
 const debouncedPerformSearch = useDebounceWithCancel(() => performSearch(searchStr.value), DEBOUNCE_MS);
 
-// 新增：打开添加好友验证对话框
-function handleAddFriend(friend: Friend) {
-  currentAddingFriend.value = friend;
-  verifyMsg.value = `我是 ${userStore.name}`; // 默认验证信息
-  remark.value = friend.name; // 默认备注为好友名
-  addFriendDialogVisible.value = true;
-}
-
-// 新增：关闭添加好友验证对话框
-function closeAddFriendDialog() {
-  addFriendDialogVisible.value = false;
-  verifyMsg.value = "";
-  remark.value = "";
-  currentAddingFriend.value = null;
-}
-
-// 新增：确认添加好友
-async function confirmAddFriend() {
-  if (!currentAddingFriend.value) return;
-  try {
-    // 调用 store 添加逻辑，传入验证信息和备注
-    await friendStore.handleAddContact(currentAddingFriend.value, verifyMsg.value.trim(), remark.value.trim());
-    ElMessage.success(t("search.message.sentRequest", { name: currentAddingFriend.value.name }));
-    closeAddFriendDialog();
-    addFriendDialogVisible.value = false;
-    // 可选：刷新搜索结果或关闭搜索弹窗
-  } catch (err) {
-    console.error("Add friend error:", err);
-    //ElMessage.error("添加失败，请重试");
-  }
-}
-
-/* -------------------- 事件处理函数（暴露给模板） -------------------- */
-/**
- * handleInput
- * - 输入事件处理：重置焦点并触发防抖搜索
- */
 function handleInput() {
   focusedIndex.value = -1;
   debouncedPerformSearch();
 }
 
-/**
- * handleEnter
- * - 回车处理：取消防抖并立即搜索，若当前有焦点项则选中它
- */
 async function handleEnter() {
-  // 取消 pending 的防抖调用
   debouncedPerformSearch.cancel?.();
   await performSearch(searchStr.value);
-
   if (focusedIndex.value >= 0) {
     const sel = flatList.value[focusedIndex.value];
     if (sel) selectResult(sel.type, sel.item);
   }
 }
 
-/**
- * selectResult
- * - 用户选择搜索结果（点击或回车）
- * - TODO: 在这里替换为打开会话 / 路由 / emit 等业务逻辑
- */
-function selectResult(type: string, item: any) {
-  // 先关闭 popover（通过 popper 实例）
-  const pop = unref(popoverRef);
-  if (pop?.popperRef?.isShow) pop.hide?.();
-  // 占位行为：提示选择结果
-  ElMessage.info(t("search.selected", { type }));
-}
-
-/**
- * toggleSearchPopover
- * - 显示/隐藏搜索弹窗（用于 header 的点击触发）
- */
-function toggleSearchPopover() {
-  const pop = unref(popoverRef);
-  if (pop?.popperRef?.isShow) pop.hide?.();
-  else pop?.show?.();
-}
-
-/**
- * handleClear
- * - 清空输入与搜索结果，同时取消防抖任务
- */
 function handleClear() {
   debouncedPerformSearch.cancel?.();
   searchStr.value = "";
@@ -429,71 +284,77 @@ function handleClear() {
   focusedIndex.value = -1;
 }
 
-/**
- * openInvite / handleAddGroupMember
- * - 邀请弹窗控制与回调（示例）
- */
-function openInvite() {
-  inviteDialogVisible.value = !inviteDialogVisible.value;
+function toggleSearchPopover() {
+  const pop = unref(popoverRef);
+  if (pop?.popperRef?.isShow) pop.hide?.();
+  else pop?.show?.();
 }
 
-// 打开好友搜索弹窗
+function selectResult(type: string, item: any) {
+  const pop = unref(popoverRef);
+  if (pop?.popperRef?.isShow) pop.hide?.();
+
+  if (type === 'message' || type === 'friend') {
+    const chatId = item.chatId || item.userId;
+    if (chatId) {
+      // TODO: 实现跳转到会话逻辑
+      // messageStore.handleSelectChat(chatId);
+    }
+  }
+}
+
+/* -------------------- 好友搜索与添加 -------------------- */
 function openFriendSearchDialog() {
-  searchFriendStr.value = searchStr.value; // 可选：继承主搜索词
+  searchFriendStr.value = searchStr.value;
   unref(popoverRef).hide?.();
   friendSearchDialogVisible.value = true;
 }
 
-// 关闭好友搜索弹窗并清理
-function closeFriendSearchDialog() {
-  searchFriendStr.value = "";
-  searchedFriends.value = [];
-  friendSearchDialogVisible.value = false;
-}
-
-// 处理好友搜索输入（防抖，调用 store.searchMoreFriends 或类似）
-const debouncedFriendSearch = useDebounceWithCancel(async () => {
-  if (!searchFriendStr.value.trim()) {
-    searchedFriends.value = [];
-    return;
-  }
+async function handleFriendSearch() {
+  const query = searchFriendStr.value.trim();
+  if (!query) return;
   try {
-    const res: any = (await friendStore.handleSearchFriendInfo?.(searchFriendStr.value.trim())) ?? [];
-    searchedFriends.value = [...res];
+    const res = await friendStore.handleSearchFriendInfo?.(query);
+    searchedFriends.value = (res as any) || [];
   } catch (err) {
-    console.error("Friend search error:", err);
     ElMessage.error(t("search.friendSearch.noResult"));
   }
-}, 300);
-
-function handleFriendSearch() {
-  debouncedFriendSearch();
 }
 
-// function handleAddFriend(friend: Friend) {
-//   // TODO: 实现添加好友逻辑，如调用 store.handleAddFriend
-//   friendStore.handleAddContact(friend);
-//   ElMessage.success(`已发送添加请求给 ${friend.name}`);
-// }
+function handleAddFriend(friend: Friend) {
+  currentAddingFriend.value = friend;
+  verifyMsg.value = `我是 ${userStore.name}`;
+  remark.value = friend.name;
+  addFriendDialogVisible.value = true;
+}
+
+async function confirmAddFriend() {
+  if (!currentAddingFriend.value) return;
+  try {
+    await friendStore.handleAddContact(currentAddingFriend.value, verifyMsg.value.trim(), remark.value.trim());
+    ElMessage.success(t("search.message.sentRequest", { name: currentAddingFriend.value.name }));
+    addFriendDialogVisible.value = false;
+  } catch (err) {
+    console.error("Add friend error:", err);
+  }
+}
+
+function openInvite() {
+  inviteDialogVisible.value = true;
+}
 
 function handleAddGroupMember(arr: any[]) {
-  if (!arr || !arr.length) return;
-  // 实现添加成员的逻辑
-  messageStore.handleAddGroupMember(arr, false);
+  if (arr?.length) {
+    messageStore.handleAddGroupMember(arr, false);
+    inviteDialogVisible.value = false;
+  }
 }
 
 /* -------------------- 工具函数 -------------------- */
-/**
- * useDebounceWithCancel
- * - 返回一个带 cancel 方法的防抖函数
- * - wrapped(...args) 调用会在 wait 毫秒后执行 fn(...args)
- * - wrapped.cancel() 取消挂起的调用
- */
 function useDebounceWithCancel<T extends (...args: any[]) => any>(fn: T, wait = 300) {
   let tid: number | undefined;
   const wrapped = (...args: Parameters<T>) => {
     if (tid) clearTimeout(tid);
-    // @ts-ignore
     tid = window.setTimeout(() => fn(...args), wait);
   };
   (wrapped as any).cancel = () => {
@@ -505,493 +366,342 @@ function useDebounceWithCancel<T extends (...args: any[]) => any>(fn: T, wait = 
   return wrapped as T & { cancel: () => void };
 }
 
-/**
- * escape + highlight 简单实现（使用 escapeHtml 输入）
- * - 若没有查询词，返回 escape 的原文本
- * - 否则把匹配项用 <mark class="hl"> 包裹（注意：用于 v-html）
- */
 function highlight(text?: string) {
   if (!searchStr.value) return escapeHtml(text ?? "");
   const q = escapeHtml(searchStr.value.trim());
   if (!q) return escapeHtml(text ?? "");
   try {
     const re = new RegExp(`(${q})`, "ig");
-    return escapeHtml(text ?? "").replace(re, "<mark class=\"search-popover__hl\">$1</mark>");
+    return escapeHtml(text ?? "").replace(re, "<mark class=\"highlight-text\">$1</mark>");
   } catch {
     return escapeHtml(text ?? "");
   }
 }
 
-/**
- * initials - 头像占位首字母
- */
-function initials(name?: string) {
-  const n = (name ?? "").trim();
-  if (!n) return "#";
-  const first = n[0];
-  return /[A-Za-z0-9]/.test(first) ? first.toUpperCase() : first;
-}
-
-/* -------------------- 辅助：焦点滚动与索引映射 -------------------- */
-/**
- * scrollFocusedIntoView
- * - 确保当前 focusedIndex 对应的 DOM 元素在可滚动容器中可见
- */
 function scrollFocusedIntoView() {
   nextTick(() => {
-    const container = resultsScrollRef.value as HTMLElement | null;
+    const container = resultsScrollRef.value;
     if (!container || focusedIndex.value < 0) return;
-    const listItems = container.querySelectorAll(".search-popover__list-item");
-    const el = listItems[focusedIndex.value] as HTMLElement | undefined;
-    if (!el) return;
-    const cTop = container.scrollTop;
-    const cBottom = cTop + container.clientHeight;
-    const eTop = el.offsetTop;
-    const eBottom = eTop + el.clientHeight;
-    if (eTop < cTop) container.scrollTop = eTop - 6;
-    else if (eBottom > cBottom) container.scrollTop = eBottom - container.clientHeight + 6;
+    const items = container.querySelectorAll(".result-item");
+    const el = items[focusedIndex.value] as HTMLElement;
+    if (el) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   });
 }
 
-/**
- * flatIndex
- * - 把局部索引（type + localIndex）转换为 flatList 全局索引（用于高亮 / hover）
- */
 function flatIndex(type: string, localIndex: number) {
   let idx = 0;
   if (activeTab.value === "all") {
-    if (type === "friend") return idx + localIndex;
-    idx += friends.value.length;
-    if (type === "message") return idx + localIndex;
-  } else if (activeTab.value === "friends") {
     if (type === "friend") return localIndex;
-  } else if (activeTab.value === "messages") {
-    if (type === "message") return localIndex;
+    idx += friends.value.length;
+    return idx + localIndex;
   }
-  return -1;
+  return localIndex;
 }
 
-/**
- * setHover
- * - 鼠标移动到某项时设置 focusedIndex（用于键盘状态同步）
- */
 function setHover(globalIndex: number) {
   focusedIndex.value = globalIndex;
 }
 
-/**
- * isFocused
- * - 判断某个全局索引是否被当前焦点选中（用于模板 class）
- */
 function isFocused(globalIndex: number) {
   return globalIndex >= 0 && focusedIndex.value === globalIndex;
 }
 
-/* -------------------- 监听 & 清理 -------------------- */
-/**
- * 当 searchStr 变为空，取消防抖并清理结果（即时）
- */
 watch(searchStr, v => {
-  if (!v || !v.trim()) {
-    debouncedPerformSearch.cancel?.();
-    friends.value = [];
-    messages.value = [];
-    focusedIndex.value = -1;
-  }
+  if (!v?.trim()) handleClear();
 });
 </script>
 
 <style lang="scss" scoped>
-$fs-bg: #ffffff;
-$fs-border: #e6e6e6;
-$fs-muted: #888888;
-$fs-primary: #409eff;
-$fs-hover: #ebedf3;
-$fs-radius: 8px;
-
-/* 头像尺寸（可按需改为 40px） */
-$fs-avatar-size: 40px;
-$fs-avatar-size-small: 40px;
-
-@mixin scroll-bar($width: 5px) {
-
-  /* 背景色为透明 */
-  &::-webkit-scrollbar-track {
-    border-radius: 10px;
-    background-color: transparent;
-  }
-
-  &::-webkit-scrollbar {
-    width: $width;
-    height: 10px;
-    background-color: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
-  }
-}
-
 .search-container {
-  padding-left: 5px;
-  line-height: 60px;
+  padding: 12px 8px;
+  background-color: #fff;
 
-  &__input {
-    padding-right: 8px;
-  }
-}
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
 
-.add-friend-verify {
-  &__container {
-    padding: 15px;
-  }
-}
+    .search-input-wrapper {
+      flex: 1;
 
-::v-deep(.el-dialog__footer) {
-  padding-top: 0px !important;
-}
+      .custom-search-input {
+        :deep(.el-input__wrapper) {
+          background-color: #f2f3f5;
+          box-shadow: none;
+          border-radius: 6px;
+          padding: 0 5px;
+          transition: all 0.2s;
 
-/* Block */
-.friend-search {
-  color: #222;
-  box-sizing: border-box;
+          &.is-focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 1px #409eff inset;
+          }
+        }
 
-  /* 容器：弹窗内主要间距 */
-  &__container {
-    padding: 12px;
-    background: $fs-bg;
-    min-height: 120px;
-  }
+        .search-icon {
+          color: #8a919f;
+          font-size: 16px;
+        }
+      }
+    }
 
-  /* 输入区域包装器（如需自定义 el-input 风格） */
-  &__input {
-    margin-bottom: 12px;
-
-    /* element-plus 内部输入的样式可覆盖 */
-    .el-input__inner {
-      height: 38px;
+    .add-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
       border-radius: 6px;
-      padding-left: 12px;
-      font-size: 14px;
+      background-color: #f2f3f5;
+      border: none;
+      color: #4e5969;
+
+      &:hover {
+        background-color: #e5e6eb;
+        color: #1d2129;
+      }
+
+      .el-icon {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+.search-results-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 500px;
+  background-color: #fff;
+
+  .search-tabs {
+    display: flex;
+    padding: 8px 12px;
+    gap: 8px;
+    border-bottom: 1px solid #f2f3f5;
+
+    .tab-item {
+      padding: 4px 12px;
+      font-size: 13px;
+      color: #8a919f;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: #f2f3f5;
+        color: #4e5969;
+      }
+
+      &.active {
+        background-color: #e8f3ff;
+        color: #1e80ff;
+        font-weight: 500;
+      }
     }
   }
 
-  /* 列表容器：限制高度并可滚动 */
-  &__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 320px;
-    overflow: auto;
-    border-bottom: 1px solid $fs-border;
-    border-radius: 6px;
-    background: $fs-bg;
+  .results-viewport {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
 
-    /* 简洁滚动条样式（可选） */
     &::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 4px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.08);
+      background: #e5e6eb;
+      border-radius: 4px;
+    }
+
+    .search-more-entry {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      gap: 12px;
+      cursor: pointer;
       border-radius: 6px;
+      transition: background 0.2s;
+      background-color: #f2f3f5;
+
+      &:hover {
+        background-color: #e3e6eb;
+      }
+
+      .entry-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #e8f3ff;
+        color: #1e80ff;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      }
+
+      .entry-text {
+        .title {
+          font-size: 14px;
+          color: #1d2129;
+        }
+
+        .subtitle {
+          font-size: 12px;
+          color: #86909c;
+        }
+      }
     }
 
-    &:last-child {
-      border-bottom: none;
+    .result-section {
+      .section-title {
+        padding: 8px 16px 4px;
+        font-size: 12px;
+        color: #86909c;
+      }
+
+      .result-item {
+        display: flex;
+        padding: 10px 16px;
+        gap: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+
+        &:hover,
+        &.focused {
+          background-color: #f7f8fa;
+        }
+
+        .item-info {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+
+          .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+
+            .name {
+              font-size: 14px;
+              color: #1d2129;
+              font-weight: 500;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .time,
+            .tag {
+              font-size: 12px;
+              color: #86909c;
+              flex-shrink: 0;
+            }
+          }
+
+          .item-sub {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #86909c;
+
+            .preview {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .count {
+              flex-shrink: 0;
+              color: #1e80ff;
+            }
+          }
+        }
+      }
     }
-  }
-
-  /* 单项：三列布局（avatar / content / action） */
-  &__item {
-    display: flex;
-    align-items: center;
-    /* 垂直居中所有子项，避免被撑高 */
-    gap: 12px;
-    padding: 0px 10px;
-    height: 64px;
-    cursor: pointer;
-    transition: background 0.12s ease;
-    user-select: none;
-    min-height: $fs-avatar-size;
-    /* 确保最小高度与头像一致 */
-
-    &:hover {
-      background: $fs-hover;
-    }
-
-    /* 键盘可访问性：focus 可见 */
-    &:focus,
-    &:focus-visible {
-      outline: 2px solid rgba(64, 158, 255, 0.18);
-      outline-offset: 0;
-      background: $fs-hover;
-    }
-  }
-
-  /* 头像容器：固定尺寸 */
-  &__avatar-wrap {
-    width: $fs-avatar-size;
-    height: $fs-avatar-size;
-    flex: 0 0 $fs-avatar-size;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #fafafa;
-  }
-
-  &__avatar {
-    width: $fs-avatar-size;
-    height: $fs-avatar-size;
-    object-fit: cover;
-    display: block;
-  }
-
-  /* 头像占位（首字母） */
-  &__avatar-fallback {
-    width: $fs-avatar-size;
-    height: $fs-avatar-size;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    background: #e9eef8;
-    color: $fs-muted;
-    font-weight: 600;
-    font-size: 16px;
-  }
-
-  /* 中间文本区域：高度与头像一致，垂直居中显示（避免撑高） */
-  &__content {
-    flex: 1 1 auto;
-    // min-width: 0; /* 允许文本截断 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    /* 垂直居中，避免撑高 */
-    height: $fs-avatar-size;
-    /* 与头像高度一致 */
-    gap: 2px;
-    overflow: hidden;
-  }
-
-  /* 名称与 ID：单行截断（行高控制） */
-  &__name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #222;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 20px;
-    // max-height: 20px;
-  }
-
-  &__id {
-    font-size: 12px;
-    color: $fs-muted;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 18px;
-    // max-height: 18px;
-  }
-
-  /* 无结果提示 */
-  &__no-result {
-    padding: 16px;
-    text-align: center;
-    color: $fs-muted;
-    font-size: 13px;
   }
 }
 
-/* popover 自定义样式 */
-.search-popover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-  border-radius: 8px;
-  padding: 0;
-  overflow: hidden;
+.friend-search-body {
+  padding: 20px;
 
-  &__content {
-    width: 100%;
-    max-height: 60vh;
-    /* 限高，避免高度溢出屏幕 */
-    display: flex;
-    flex-direction: column;
-    background-color: var(--content-bg-color);
+  .search-input-large {
+    margin-bottom: 16px;
   }
 
-  /* tabs（同之前样式） */
-  &__tabs {
-    display: flex;
-    gap: 8px;
-    padding: 8px 12px;
-    border-bottom: 1px solid #f0f0f0;
-  }
+  .search-results-list {
+    max-height: 300px;
+    overflow-y: auto;
 
-  &__tab {
-    background: transparent;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 999px;
-    cursor: pointer;
-    color: #666;
-
-    &--active {
-      background: #f5f5f7;
-      color: #222;
-    }
-  }
-
-  /* 结果滚动区域 */
-  &__results-scroll {
-    padding: 8px 12px;
-    overflow: auto;
-    flex: 1;
-    @include scroll-bar();
-  }
-
-  /* section 标题 */
-  &__section-title {
-    font-size: 13px;
-    color: #888;
-    margin: 12px 0 8px 6px;
-  }
-
-  /* 列表项（同之前） */
-  &__list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  &__list-item {
-    display: flex;
-    gap: 10px;
-    padding: 8px;
-    align-items: center;
-    border-radius: 8px;
-    cursor: pointer;
-
-    &:hover {
-      background: #f7f7f7;
-    }
-
-    &--focused {
-      background: #eef6ff;
-    }
-
-    /* 键盘选中高亮 */
-  }
-
-  .new-friend {
-    background-color: #f5f5f7;
-    border-radius: 8px;
-  }
-
-  &__avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    object-fit: cover;
-
-    &-fallback {
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      background: #e6e6e6;
+    .friend-item {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: #666;
-      font-weight: 600;
+      padding: 12px 0;
+      gap: 12px;
+      border-bottom: 1px solid #f2f3f5;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .info {
+        flex: 1;
+
+        .name {
+          font-size: 14px;
+          color: #1d2129;
+          font-weight: 500;
+        }
+
+        .id {
+          font-size: 12px;
+          color: #86909c;
+        }
+      }
+    }
+
+    .no-data {
+      padding: 30px 0;
+      text-align: center;
+      color: #86909c;
+      font-size: 14px;
     }
   }
+}
 
-  &__meta {
-    flex: 1;
-    min-width: 0;
+:deep(.modern-search-popover) {
+  padding: 0 !important;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+:deep(.modern-dialog) {
+  border-radius: 6px;
+
+  .el-dialog__header {
+    padding: 20px 24px 12px;
+    margin-right: 0;
+    border-bottom: 1px solid #f2f3f5;
   }
 
-  &__row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  // .el-dialog__body {
+  //   padding: 24px;
+  // }
 
-    &--sub {
-      margin-top: 4px;
-      display: flex;
-      flex-direction: column;
-      /* 修改为列方向，使 preview 和 count 分成两行 */
-      align-items: flex-start;
-      /* 左对齐 */
-      gap: 4px;
-      /* 调整间距为垂直间距 */
-    }
+  .el-dialog__footer {
+    padding: 12px 24px 20px;
+    border-top: 1px solid #f2f3f5;
   }
+}
 
-  &__name {
-    font-weight: 500;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__time {
-    font-size: 12px;
-    color: #999;
-    margin-left: 8px;
-    flex-shrink: 0;
-  }
-
-  &__preview {
-    color: #777;
-    font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__count {
-    color: #999;
-    font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__unread {
-    background: var(--main-red-color, #ff4d4f);
-    color: #fff;
-    padding: 2px 6px;
-    border-radius: 999px;
-    font-size: 12px;
-  }
-
-  &__tag {
-    font-size: 12px;
-    color: #999;
-  }
-
-  /* 高亮 */
-  &__hl {
-    background: #fff176;
-    color: inherit;
-    padding: 0 2px;
-    border-radius: 2px;
-  }
-
-  /* 无结果 */
-  &__no-result {
-    text-align: center;
-    color: #999;
-    padding: 18px 0;
-  }
+:deep(.highlight-text) {
+  background-color: transparent;
+  color: #1e80ff;
+  font-weight: bold;
 }
 </style>

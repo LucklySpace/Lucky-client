@@ -138,7 +138,7 @@ const getMenuConfig = (item: any) => {
   .video-wrapper {
     position: relative;
     display: flex;
-    border-radius: 8px;
+    border-radius: 5px;
     overflow: hidden;
     background-color: #000;
     cursor: pointer;

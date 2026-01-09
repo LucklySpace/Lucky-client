@@ -115,7 +115,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
 
     &.footer-row {
       border-bottom: none;

@@ -1,428 +1,389 @@
 <template>
   <div class="single-container">
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>
-      <!-- 好友信息区域 -->
-      <div class="friend-info no-select">
-        <el-row :gutter="20" align="middle">
-          <el-col :span="6">
-            <span ref="popRef" class="friend-avatar" @click="toggleAvatarPopover">
-              <Avatar
-                :avatar="singleInfo.avatar"
-                :name="singleInfo.remark || singleInfo.name"
-                :width="50"
-                :borderRadius="6"
-              />
-            </span>
-          </el-col>
-        </el-row>
-      </div>
-
-      <el-divider />
-
-      <!-- 备注表单（仅回车保存、失焦取消） -->
-      <el-form-item :label="$t('search.addFriend.remarkLabel')" prop="remark" class="remark-form">
-        <div v-if="!isEditingRemark" class="remark-display" @click="startEditRemark">
-          {{ form.remark || singleInfo.name || $t('common.noData') }}
-          <el-icon class="edit-icon"><Edit /></el-icon>
+      <!-- 头部个人信息区 -->
+      <div class="header-section no-select">
+        <div class="avatar-wrapper" ref="popRef" @click="toggleAvatarPopover">
+          <Avatar :avatar="singleInfo.avatar" :name="singleInfo.remark || singleInfo.name" :width="64"
+            :borderRadius="8" />
         </div>
-        <el-input
-          v-else
-          ref="remarkInputRef"
-          v-model="form.remark"
-          size="small"
-          @blur="cancelEdit"
-          @keyup.enter="saveRemark"
-        />
-      </el-form-item>
-
-      <el-divider />
-
-      <!-- 底部操作按钮 -->
-      <div class="friend-actions">
-        <!-- 查找历史聊天记录 -->
-        <el-form-item>
-          <button type="button" class="full-width-btn" @click="switchHistoryMessage">
-            <span>{{ $t('chat.toolbar.history') }}</span>
-            <span>
-              <el-icon><ArrowRight /></el-icon>
-            </span>
-          </button>
-        </el-form-item>
-
-        <el-divider />
-
-        <!-- 消息免打扰 -->
-        <el-form-item class="switch-form-item">
-          <div class="switch-row">
-            <span class="switch-label">{{ $t('chat.toolbar.mute') }}</span>
-            <el-switch v-model="messageMute" class="switch-btn" @change="onMuteChange" />
-          </div>
-        </el-form-item>
-
-        <!-- 置顶 -->
-        <el-form-item class="switch-form-item">
-          <div class="switch-row">
-            <span class="switch-label">{{ $t('chat.toolbar.pin') }}</span>
-            <el-switch v-model="top" class="switch-btn" @change="onTopChange" />
-          </div>
-        </el-form-item>
+        <div class="info-details">
+          <div class="main-name">{{ singleInfo.remark || singleInfo.name }}</div>
+          <div v-if="singleInfo.remark" class="sub-name">昵称: {{ singleInfo.name }}</div>
+        </div>
       </div>
 
-      <el-divider />
+      <div class="section-divider"></div>
 
-      <div class="friend-actions">
-        <el-form-item class="danger">
-          <el-button class="full-width-btn danger-btn" link @click="handleClearFriendMessage">
-            {{ $t('dialog.clearChatLog') }}
-          </el-button>
-        </el-form-item>
+      <!-- 设置区域 -->
+      <div class="settings-section">
+        <!-- 备注设置 -->
+        <div class="setting-item clickable" @click="startEditRemark">
+          <span class="label">{{ $t('search.addFriend.remarkLabel') }}</span>
+          <div class="content">
+            <template v-if="!isEditingRemark">
+              <span class="value">{{ form.remark || singleInfo.name || $t('common.noData') }}</span>
+              <el-icon class="arrow-icon">
+                <ArrowRight />
+              </el-icon>
+            </template>
+            <el-input v-else ref="remarkInputRef" v-model="form.remark" size="small" class="remark-input"
+              @blur="cancelEdit" @keyup.enter="saveRemark" @click.stop />
+          </div>
+        </div>
 
-        <el-divider />
+        <div class="setting-item clickable" @click="switchHistoryMessage">
+          <span class="label">{{ $t('chat.toolbar.history') }}</span>
+          <div class="content">
+            <el-icon class="arrow-icon">
+              <ArrowRight />
+            </el-icon>
+          </div>
+        </div>
+      </div>
 
-        <el-form-item class="danger">
-          <el-button class="danger-btn full-width-btn" link @click="handleDeleteContact">
-            {{ $t('contacts.delete') }}
-          </el-button>
-        </el-form-item>
+      <div class="section-divider"></div>
+
+      <!-- 交互控制区域 -->
+      <div class="settings-section">
+        <div class="setting-item">
+          <span class="label">{{ $t('chat.toolbar.mute') }}</span>
+          <div class="content">
+            <el-switch v-model="messageMute" class="custom-switch" />
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <span class="label">{{ $t('chat.toolbar.pin') }}</span>
+          <div class="content">
+            <el-switch v-model="top" class="custom-switch" />
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 危险操作区域 -->
+      <div class="danger-section">
+        <div class="danger-item clickable" @click="handleClearFriendMessage">
+          {{ $t('dialog.clearChatLog') }}
+        </div>
+        <div class="danger-item clickable" @click="handleDeleteContact">
+          {{ $t('contacts.delete') }}
+        </div>
       </div>
     </el-form>
   </div>
-  <HistoryDialog :visible="historyDialogParam.showDialog" title="聊天历史记录" @handleClose="toggleHistoryDialog" />
+
+  <HistoryDialog :visible="historyDialogParam.showDialog" :title="$t('chat.toolbar.history')"
+    @handleClose="toggleHistoryDialog" />
+
   <el-popover ref="InfoRef" :virtual-ref="popRef" placement="right-end" trigger="click" virtual-triggering width="240">
     <UserPopover :contact="userInfo" />
   </el-popover>
 </template>
 
 <script lang="ts" setup>
-  import { ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus';
-  import { useFriendsStore } from '@/store/modules/friends';
-  import { useChatStore } from '@/store/modules/chat';
-  import HistoryDialog from '@/components/History/index.vue';
-  import Chats from '@/database/entity/Chats';
-  import Avatar from '@/components/Avatar/index.vue';
-  import UserPopover from '@/components/UserPopover/index.vue';
-  import { globalEventBus } from '@/hooks/useEventBus';
-  import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from '@/constants/events';
-  import { MAX_REMARK_LEN } from '@/constants';
-  import type { PopoverInstance } from 'element-plus';
+import { ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus';
+import { useFriendsStore } from '@/store/modules/friends';
+import { useChatStore } from '@/store/modules/chat';
+import HistoryDialog from '@/components/History/index.vue';
+import Chats from '@/database/entity/Chats';
+import Avatar from '@/components/Avatar/index.vue';
+import UserPopover from '@/components/UserPopover/index.vue';
+import { globalEventBus } from '@/hooks/useEventBus';
+import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from '@/constants/events';
+import { MAX_REMARK_LEN } from '@/constants';
+import type { PopoverInstance } from 'element-plus';
 
-  const { t: $t } = useI18n();
-  const chatStore = useChatStore();
-  const friendStore = useFriendsStore();
+const { t: $t } = useI18n();
+const chatStore = useChatStore();
+const friendStore = useFriendsStore();
 
-  // 表单相关
-  const formRef = ref<FormInstance>();
-  const remarkInputRef = ref<HTMLInputElement>();
+const formRef = ref<FormInstance>();
+const remarkInputRef = ref<HTMLInputElement>();
 
-  const form = ref({
-    remark: ''
-  });
+const form = ref({
+  remark: ''
+});
 
-  const rules = ref<FormRules>({
-    remark: [{ required: false, message: '', trigger: 'blur' }]
-  });
+const rules = ref<FormRules>({
+  remark: [{ required: false, message: '', trigger: 'blur' }]
+});
 
-  // 对方用户ID（当前会话 toId）
-  const fromId = computed(() => String(chatStore.currentChat?.toId ?? ''));
+const fromId = computed(() => String(chatStore.currentChat?.toId ?? ''));
+const userInfo = ref<any>();
+const emit = defineEmits(['handleDeleteContact', 'handleClearFriendMessage']);
 
-  const userInfo = ref<any>();
-
-  // 事件定义
-  const emit = defineEmits(['handleDeleteContact', 'handleClearFriendMessage']);
-
-  // 当前会话好友信息
-  const singleInfo = computed(() => {
-    const { currentChat } = chatStore;
-    return {
-      userId: currentChat?.toId,
-      name: currentChat?.name,
-      avatar: currentChat?.avatar,
-      remark: (currentChat as any)?.remark
-    };
-  });
-
-  // 展示头像弹层
-  const InfoRef = ref<PopoverInstance>();
-  const popRef = ref<HTMLElement | null>(null);
-  const toggleAvatarPopover = () => {
-    const pop = InfoRef.value as any;
-    if (pop?.popperRef?.isShow) pop.hide?.();
-    else pop?.show?.();
+const singleInfo = computed(() => {
+  const { currentChat } = chatStore;
+  return {
+    userId: currentChat?.toId,
+    name: currentChat?.name,
+    avatar: currentChat?.avatar,
+    remark: (currentChat as any)?.remark
   };
+});
 
-  // 备注功能
-  const isEditingRemark = ref(false);
+const InfoRef = ref<PopoverInstance>();
+const popRef = ref<HTMLElement | null>(null);
+const toggleAvatarPopover = () => {
+  const pop = InfoRef.value as any;
+  if (pop?.popperRef?.isShow) pop.hide?.();
+  else pop?.show?.();
+};
 
-  const startEditRemark = () => {
-    isEditingRemark.value = true;
-    form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
-    nextTick(() => {
-      remarkInputRef.value?.focus();
-    });
-  };
+const isEditingRemark = ref(false);
 
-  const saveRemark = async () => {
-    const next = (form.value.remark || '').trim();
-    if (!next) {
-      ElMessage.warning($t('errors.remark.empty'));
-      return cancelEdit();
-    }
-    if (next.length > MAX_REMARK_LEN) {
-      ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN }));
-      return;
-    }
-    try {
-      await friendStore.updateFriendRemark(fromId.value, next);
-      isEditingRemark.value = false;
-      ElMessage.success('备注保存成功');
-    } catch (error) {
-      console.error('保存备注失败:', error);
-      ElMessage.error('保存备注失败');
-      isEditingRemark.value = true;
-    }
-  };
+const startEditRemark = () => {
+  isEditingRemark.value = true;
+  form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
+  nextTick(() => {
+    remarkInputRef.value?.focus();
+  });
+};
 
-  const cancelEdit = () => {
+const saveRemark = async () => {
+  const next = (form.value.remark || '').trim();
+  if (!next) {
+    ElMessage.warning($t('errors.remark.empty'));
+    return cancelEdit();
+  }
+  if (next.length > MAX_REMARK_LEN) {
+    ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN }));
+    return;
+  }
+  try {
+    await friendStore.updateFriendRemark(fromId.value, next);
     isEditingRemark.value = false;
-    form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
-  };
+    ElMessage.success('备注保存成功');
+  } catch (error) {
+    console.error('保存备注失败:', error);
+    ElMessage.error('保存备注失败');
+  }
+};
 
-  // 历史消息弹窗
-  const historyDialogParam = ref({ showDialog: false });
-  const switchHistoryMessage = () => {
-    historyDialogParam.value.showDialog = true;
-  };
-  const toggleHistoryDialog = () => {
-    historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
-  };
+const cancelEdit = () => {
+  isEditingRemark.value = false;
+  form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
+};
 
-  // 置顶/免打扰
-  const currentItem = computed(() => {
-    const { currentChat } = chatStore;
-    const chatId = currentChat?.chatId;
-    if (!chatId) return null;
-    return chatStore.getChatById(chatId);
-  });
+const historyDialogParam = ref({ showDialog: false });
+const switchHistoryMessage = () => {
+  historyDialogParam.value.showDialog = true;
+};
+const toggleHistoryDialog = () => {
+  historyDialogParam.value.showDialog = !historyDialogParam.value.showDialog;
+};
 
-  const top = ref(currentItem.value?.isTop === 1);
-  const onTopChange = (newVal: any) => {
-    const boolVal = !!newVal;
-    const item = currentItem.value || { isTop: 0 };
-    (item as any).isTop = boolVal ? 0 : 1;
-    chatStore.handlePinChat(item as Chats);
-  };
+const currentItem = computed(() => {
+  const { currentChat } = chatStore;
+  const chatId = currentChat?.chatId;
+  if (!chatId) return null;
+  return chatStore.getChatById(chatId);
+});
 
-  const messageMute = ref(currentItem.value?.isMute === 1);
-  const onMuteChange = (newVal: any) => {
-    const boolVal = !!newVal;
-    const item = currentItem.value || { isMute: 0 };
-    if (item) {
-      (item as any).isMute = boolVal ? 0 : 1;
-      chatStore.handleMuteChat(item as Chats);
-    }
-  };
+const top = computed({
+  get: () => currentItem.value?.isTop === 1,
+  set: () => {
+    if (currentItem.value) chatStore.handlePinChat(currentItem.value as Chats);
+  }
+});
 
-  // 加载用户信息
-  const loadUserInfo = async () => {
-    const id = chatStore.currentChat?.toId;
-    if (!id) return;
-    userInfo.value = await friendStore.handleGetContactInfo(id);
-    form.value.remark = userInfo.value?.remark ?? '';
-  };
+const messageMute = computed({
+  get: () => currentItem.value?.isMute === 1,
+  set: () => {
+    if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats);
+  }
+});
 
-  // 首次加载 + 事件订阅
-  const onBusChatChanged = (payload: any) => {
-    if (payload && String(payload.chatId) === String(chatStore.currentChat?.chatId)) {
-      loadUserInfo();
-    }
-  };
-  const onRemarkUpdated = (payload: any) => {
-    const id = String(chatStore.currentChat?.toId ?? '');
-    if (payload && String(payload.friendId) === id) loadUserInfo();
-  };
+const loadUserInfo = async () => {
+  const id = chatStore.currentChat?.toId;
+  if (!id) return;
+  userInfo.value = await friendStore.handleGetContactInfo(id);
+  form.value.remark = userInfo.value?.remark ?? '';
+};
 
-  onMounted(() => {
+const onBusChatChanged = (payload: any) => {
+  if (payload && String(payload.chatId) === String(chatStore.currentChat?.chatId)) {
     loadUserInfo();
-    globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.on(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
-  });
-  onUnmounted(() => {
-    globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.off(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
-  });
+  }
+};
+const onRemarkUpdated = (payload: any) => {
+  const id = String(chatStore.currentChat?.toId ?? '');
+  if (payload && String(payload.friendId) === id) loadUserInfo();
+};
 
-  /**
-   * 清空聊天记录
-   */
-  const handleClearFriendMessage = () => {
-    ElMessageBox.confirm('确定清空该好友的聊天记录？', '提示', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-      .then(() => {
-        emit('handleClearFriendMessage');
-      })
-      .catch(() => {});
-  };
+onMounted(() => {
+  loadUserInfo();
+  globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.on(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+});
+onUnmounted(() => {
+  globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.off(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+});
 
-  /**
-   * 删除好友
-   */
-  const handleDeleteContact = () => {
-    ElMessageBox.confirm('确定删除该好友？', '删除好友', {
-      distinguishCancelAndClose: true,
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'error'
+const handleClearFriendMessage = () => {
+  ElMessageBox.confirm('确定清空该好友的聊天记录？', '提示', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'warning'
+  })
+    .then(() => {
+      emit('handleClearFriendMessage');
     })
-      .then(() => {
-        emit('handleDeleteContact');
-      })
-      .catch(() => {});
-  };
+    .catch(() => { });
+};
+
+const handleDeleteContact = () => {
+  ElMessageBox.confirm('确定删除该好友？', '删除好友', {
+    distinguishCancelAndClose: true,
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'error'
+  })
+    .then(() => {
+      emit('handleDeleteContact');
+    })
+    .catch(() => { });
+};
 </script>
 
 <style lang="scss" scoped>
-  /* 滚动条样式 */
-  @mixin scroll-bar($width: 8px) {
-    &::-webkit-scrollbar {
-      width: $width;
-      background-color: transparent;
-    }
-    &::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-      background-color: rgba(0, 0, 0, 0.2);
-    }
-    &::-webkit-scrollbar-track {
-      background-color: transparent;
+.single-container {
+  height: 100%;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+.header-section {
+  padding: 30px 20px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  .avatar-wrapper {
+    cursor: pointer;
+    transition: transform 0.2s;
+
+    &:hover {
+      transform: scale(1.05);
     }
   }
 
-  /* 容器整体 */
-  .single-container {
-    padding: 18px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    @include scroll-bar();
+  .info-details {
+    text-align: center;
 
-    :deep(.el-form-item) {
-      margin-bottom: 0;
-    }
-  }
-
-  /* 好友信息区域 */
-  .friend-info {
-    margin-bottom: 20px;
-
-    .friend-avatar {
-      width: 50px;
-      height: 50px;
-      border: 1px solid #eee;
-      border-radius: 6px;
-      object-fit: cover;
-      display: inline-block;
-    }
-
-    .friend-name {
-      margin-top: 8px;
-      font-size: 14px;
-      text-align: center;
+    .main-name {
+      font-size: 18px;
+      font-weight: 600;
       color: #333;
-      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .sub-name {
+      font-size: 13px;
+      color: #888;
     }
   }
+}
 
-  /* 备注区域 */
-  .remark-form {
-    padding: 5px 8px;
-    .remark-display {
-      color: var(--main-text-color);
-      cursor: pointer;
-      min-height: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .edit-icon {
-      color: #999;
-      font-size: 14px;
-    }
-  }
+.section-divider {
+  height: 12px;
+  background-color: #f0f2f5;
+}
 
-  /* 操作按钮区域 */
-  .friend-actions {
+.settings-section {
+  background-color: #fff;
+
+  .setting-item {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    color: var(--main-text-color);
-    width: 100%;
+    padding: 8px;
+    border-bottom: 1px solid #f0f2f5;
+    min-height: 30px;
 
-    :deep(.el-form-item) {
-      display: flex;
-      width: 100%;
-      .el-form-item__content {
-        flex: 1;
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.clickable {
+      cursor: pointer;
+
+      &:active {
+        background-color: #f5f5f5;
       }
     }
 
-    button.full-width-btn {
-      width: 100%;
-      height: auto;
-      padding: 5px 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border: none;
-      background: transparent;
-      font-weight: 400;
+    .label {
+      font-size: 14px;
+      color: #333;
     }
 
-    :deep(.el-form-item.danger) {
-      width: auto;
-      .el-form-item__content {
-        flex: initial;
-      }
-    }
-    .danger-btn {
-      color: var(--main-red-color);
-      font-weight: 400;
-      text-align: center;
-    }
-
-    .el-button.danger-btn.full-width-btn {
+    .content {
       display: flex;
       align-items: center;
-      font-weight: 500;
-    }
+      gap: 8px;
+      color: #888;
+      font-size: 14px;
+      max-width: 60%;
 
-    .switch-form-item {
-      width: 100%;
-      :deep(.el-form-item__content) {
-        margin-right: 0;
+      .value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .switch-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        padding: 5px 8px;
-        .switch-label {
-          font-size: 14px;
-          font-weight: 400;
-          color: var(--main-text-color);
-        }
-        .switch-btn {
-          cursor: pointer;
-          --el-switch-button-size: 16px;
-          --el-switch-width: 36px;
+
+      .arrow-icon {
+        font-size: 14px;
+        color: #ccc;
+      }
+
+      .remark-input {
+        :deep(.el-input__inner) {
+          text-align: right;
         }
       }
     }
   }
+}
 
-  :deep(.el-divider) {
-    margin: 15px 2px;
+.danger-section {
+  background-color: #fff;
+
+  .danger-item {
+    padding: 14px 20px;
+    text-align: center;
+    font-size: 15px;
+    color: #ff4d4f;
+    border-bottom: 1px solid #f0f2f5;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background-color: #fff1f0;
+    }
   }
+}
+
+.custom-switch {
+  --el-switch-on-color: #409eff;
+}
 </style>
-

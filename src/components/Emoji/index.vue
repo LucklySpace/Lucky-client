@@ -1,74 +1,89 @@
 <template>
-  <div class="emoji-picker-container">
-    <div v-if="loading" class="loading-bar"></div>
+  <div class="emoji-picker-modern no-select">
+    <!-- 顶部进度条 (可选) -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
 
-    <div class="emoji-body">
-      <div v-show="activeTab === 'default'" class="emoji-scroll-area">
-        <div v-if="historyEmojiList.length" class="emoji-group">
-          <div class="group-title">最近使用</div>
+    <div class="emoji-content">
+      <!-- Unicode 表情面板 -->
+      <div v-show="activeTab === 'default'" class="panel-scroll-view">
+        <section v-if="historyEmojiList.length" class="emoji-section">
+          <h3 class="section-title">最近使用</h3>
           <div class="emoji-grid unicode-grid">
-            <div v-for="(emoji, idx) in historyEmojiList" :key="`recent-${idx}`" class="emoji-item unicode-item"
+            <button v-for="(emoji, idx) in historyEmojiList" :key="`recent-${idx}`" class="emoji-cell unicode-cell"
               @click="onSelectEmoji(emoji)">
               {{ emoji }}
-            </div>
+            </button>
           </div>
-        </div>
+        </section>
 
-        <div class="emoji-group">
-          <div class="group-title">所有表情</div>
+        <section class="emoji-section">
+          <h3 class="section-title">所有表情</h3>
           <div class="emoji-grid unicode-grid">
-            <div v-for="(emoji, idx) in emojiData" :key="`all-${idx}`" class="emoji-item unicode-item"
+            <button v-for="(emoji, idx) in emojiData" :key="`all-${idx}`" class="emoji-cell unicode-cell"
               @click="onSelectEmoji(emoji)">
               {{ emoji }}
-            </div>
+            </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      <div v-show="activeTab !== 'default'" class="emoji-scroll-area">
-        <div v-if="currentPackEmojis.length === 0 && !loading" class="empty-state">
-          <span>暂无表情数据</span>
+      <!-- 表情包面板 -->
+      <div v-show="activeTab !== 'default'" class="panel-scroll-view">
+        <div v-if="currentPackEmojis.length === 0 && !loading" class="empty-placeholder">
+          <el-empty :image-size="60" description="暂无表情数据" />
         </div>
 
-        <div class="emoji-grid image-grid">
-          <div v-for="item in currentPackEmojis" :key="item.emojiId" class="emoji-item image-item" :title="item.name"
+        <div class="emoji-grid sticker-grid">
+          <div v-for="item in currentPackEmojis" :key="item.emojiId" class="emoji-cell sticker-cell" :title="item.name"
             @click="onSelectImageEmoji(item)">
-            <img :src="item.url" :alt="item.name" loading="lazy" />
+            <el-image :src="item.url" fit="contain" lazy class="sticker-img">
+              <template #placeholder>
+                <div class="image-slot">
+                  <el-icon>
+                    <Picture />
+                  </el-icon>
+                </div>
+              </template>
+            </el-image>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="emoji-footer">
-      <div class="tab-scroll-container">
-        <div class="tab-item" :class="{ 'is-active': activeTab === 'default' }" @click="switchTab('default')"
-          title="系统表情">
-          <span class="tab-icon">{{ defaultEmojiIcon }}</span>
+    <!-- 底部 Tab 导航 -->
+    <nav class="emoji-navbar">
+      <div class="tabs-wrapper">
+        <div class="nav-tab-item" :class="{ active: activeTab === 'default' }" @click="switchTab('default')">
+          <span class="default-icon">{{ defaultEmojiIcon }}</span>
         </div>
 
-        <div v-for="pack in emojiPacks" :key="pack.packId" class="tab-item"
-          :class="{ 'is-active': activeTab === pack.packId }" @click="switchTab(pack.packId)" :title="pack.name">
-          <img :src="pack.url || pack.cover" :alt="pack.name" class="tab-img" />
+        <div v-for="pack in emojiPacks" :key="pack.packId" class="nav-tab-item"
+          :class="{ active: activeTab === pack.packId }" @click="switchTab(pack.packId)">
+          <el-image :src="pack.url || pack.cover" fit="cover" class="pack-cover" />
         </div>
       </div>
-    </div>
+
+    </nav>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import { Picture } from "@element-plus/icons-vue";
 import emojiJson from "@/assets/json/emoji.json";
 import { useUserStore } from "@/store/modules/user";
 import api from "@/api/index";
-import { Emoji as EmojiModel } from "@/models"; // 确保这里有定义
+import { Emoji as EmojiModel } from "@/models";
 
 // --- 类型定义 ---
 type EmojiStr = string;
 interface EmojiPack {
   packId: string;
   name: string;
-  url?: string; // Tab 图标
-  cover?: string; // 兼容字段
+  url?: string;
+  cover?: string;
   emojiList?: EmojiModel[];
   emojis?: EmojiModel[];
 }
@@ -89,11 +104,10 @@ const activeTab = ref<string>('default');
 const emojiPacks = ref<EmojiPack[]>([]);
 const loading = ref(false);
 
-// Unicode 数据预处理 (Object.freeze 提升大数据量的性能)
+// 性能优化：预处理并冻结数据
 const emojiData = Object.freeze(emojiJson.data.split(","));
 const defaultEmojiIcon = emojiData[0];
 
-// 本地最近使用列表
 const historyEmojiList = ref<EmojiStr[]>(props.historyEmojiList || []);
 
 // --- 计算属性 ---
@@ -116,7 +130,6 @@ const onSelectImageEmoji = (item: EmojiModel) => {
   emit("handleChooseImageEmoji", item);
 };
 
-// --- 数据加载优化 ---
 const loadEmojiPacks = async () => {
   const ids = userStore.userEmojiPackIds;
   if (!ids?.length) {
@@ -126,16 +139,14 @@ const loadEmojiPacks = async () => {
 
   loading.value = true;
   try {
-    // 优化：使用 Promise.all 并发请求，而不是 for循环 await
     const promises = ids.map(id =>
       id ? api.GetEmojiPackInfo(id as string).catch(() => null) : null
     );
 
     const results = await Promise.all(promises);
-    // 过滤掉失败请求(null)
     emojiPacks.value = results.filter((item): item is EmojiPack => !!item);
   } catch (error) {
-    console.error("加载表情包异常", error);
+    console.error("[Emoji] Failed to load packs:", error);
   } finally {
     loading.value = false;
   }
@@ -148,121 +159,124 @@ watch(() => props.historyEmojiList, (val) => {
 
 watch(() => userStore.userEmojiPackIds, loadEmojiPacks, { immediate: true, deep: true });
 
+onMounted(() => {
+  // 可以在这里做一些初始化，比如自动滚动到顶部等
+});
 </script>
 
 <style lang="scss" scoped>
-$bg-color: #ffffff;
-$hover-bg: #f2f3f5;
-$border-color: #e5e6eb;
-$active-bg: #e6f7ff;
-$text-sub: #86909c;
-
-.emoji-picker-container {
+.emoji-picker-modern {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 420px;
-  /* 稍微调低一点高度，适配性更好 */
-  background: $bg-color;
-  border-radius: 2px;
-  /* 圆角 */
-  // box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  /* 增加阴影提升质感 */
+  height: 380px;
+  /* 主流 IM 高度 */
+  background: #fff;
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--el-font-family);
 }
 
-/* 顶部加载条 */
-.loading-bar {
-  height: 2px;
-  background: linear-gradient(90deg, #409eff, #69c0ff);
-  animation: loading 1.5s infinite;
-  width: 100%;
+/* 加载状态 */
+.loading-overlay {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(64, 158, 255, 0.1);
   z-index: 10;
+
+  &::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 30%;
+    background: #409eff;
+    animation: loading-slide 1.5s infinite ease-in-out;
+  }
 }
 
-@keyframes loading {
-  0% {
-    transform: translateX(-100%);
+@keyframes loading-slide {
+  from {
+    left: -30%;
   }
 
-  100% {
-    transform: translateX(100%);
+  to {
+    left: 100%;
   }
 }
 
-/* 主体滚动区 */
-.emoji-body {
+/* 内容区域 */
+.emoji-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px;
+  overflow: hidden;
+  position: relative;
+}
 
-  /* 隐藏默认滚动条但保留功能 (Chrome/Safari) */
+.panel-scroll-view {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 12px;
+
   &::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #dcdfe6;
+    background: #e5e6eb;
     border-radius: 4px;
   }
+}
 
-  &::-webkit-scrollbar-track {
-    background: transparent;
+.emoji-section {
+  margin-bottom: 16px;
+
+  .section-title {
+    font-size: 12px;
+    color: #86909c;
+    font-weight: normal;
+    padding: 12px 4px 8px;
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    z-index: 2;
   }
 }
 
-.emoji-scroll-area {
-  min-height: 100%;
-}
-
-/* 分组标题 */
-.group-title {
-  font-size: 12px;
-  color: $text-sub;
-  margin: 8px 0 8px 4px;
-  font-weight: 500;
-  position: sticky;
-  /* 粘性标题 */
-  top: -12px;
-  /* 抵消 padding */
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(5px);
-  padding: 8px 4px;
-  z-index: 1;
-}
-
-/* Grid 布局通用设置 */
+/* 网格布局 */
 .emoji-grid {
   display: grid;
-  justify-content: start;
   gap: 4px;
 }
 
-/* Unicode 密集网格 */
 .unicode-grid {
-  /* 自动填充，每列最小 34px */
   grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
 }
 
-/* Unicode 单项 */
-.emoji-item {
+.sticker-grid {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 12px;
+  padding: 8px 4px;
+}
+
+/* 单个单元格样式 */
+.emoji-cell {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: transparent;
   cursor: pointer;
   border-radius: 6px;
-  transition: all 0.15s ease;
-  user-select: none;
+  transition: all 0.2s;
+  padding: 0;
 
   &:hover {
-    background-color: $hover-bg;
-    transform: scale(1.1);
+    background-color: #f2f3f5;
+    transform: scale(1.15);
   }
 
   &:active {
@@ -270,103 +284,94 @@ $text-sub: #86909c;
   }
 }
 
-.unicode-item {
+.unicode-cell {
   height: 36px;
   font-size: 24px;
 }
 
-/* 图片表情网格 */
-.image-grid {
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: 12px;
-  padding-top: 8px;
-}
-
-/* 图片单项 */
-.image-item {
-  height: 70px;
-  padding: 6px;
-  border: 1px solid transparent;
+.sticker-cell {
+  aspect-ratio: 1;
+  padding: 4px;
 
   &:hover {
-    background-color: $hover-bg;
-    border-color: rgba(0, 0, 0, 0.05);
+    background-color: #f2f3f5;
+    transform: scale(1.05);
   }
 
-  img {
+  .sticker-img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+
+    .image-slot {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      background: #f5f7fa;
+      color: #909399;
+      font-size: 20px;
+    }
   }
 }
 
-/* 空状态 */
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: $text-sub;
-  font-size: 14px;
+.empty-placeholder {
+  padding-top: 40px;
 }
 
-/* 底部 Tab 栏 */
-.emoji-footer {
-  height: 50px;
-  // background: #f7f8fa;
-  border-top: 1px solid $border-color;
+/* 底部导航栏 */
+.emoji-navbar {
+  height: 44px;
+  background: #f7f8fa;
+  border-top: 1px solid #e5e6eb;
   display: flex;
   align-items: center;
-  padding: 0 4px;
+  padding: 0 8px;
   flex-shrink: 0;
-}
 
-.tab-scroll-container {
-  display: flex;
-  align-items: center;
-  overflow-x: auto;
-  width: 100%;
-  height: 100%;
+  .tabs-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Firefox */
 
-  &::-webkit-scrollbar {
-    display: none;
-    /* 底部 Tab 隐藏滚动条 */
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
+
 }
 
-.tab-item {
-  width: 40px;
-  height: 36px;
-  margin: 0 4px;
+.nav-tab-item {
+  width: 36px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
 
   &:hover {
-    background-color: rgba(17, 14, 14, 0.05);
+    background-color: rgba(0, 0, 0, 0.04);
   }
 
-  &.is-active {
-    background-color: rgba(0, 0, 0, 0.05);
-
-    .tab-icon {
-      transform: scale(1.1);
-    }
+  &.active {
+    background-color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 
-  .tab-icon {
-    font-size: 25px;
-    transition: transform 0.2s;
+  .default-icon {
+    font-size: 20px;
   }
 
-  .tab-img {
-    width: 28px;
-    height: 28px;
-    object-fit: cover;
+  .pack-cover {
+    width: 24px;
+    height: 24px;
     border-radius: 4px;
   }
 }

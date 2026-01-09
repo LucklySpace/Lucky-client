@@ -131,15 +131,15 @@ const getMenuConfig = (item: any) => {
   .image-wrapper {
     position: relative;
     display: flex;
-    border-radius: 8px;
+    border-radius: 5px;
     overflow: hidden;
     transition: transform 0.2s ease;
 
     img {
       display: block;
-      width: 100%;
+      width: 90%;
       height: auto;
-      max-height: 400px;
+      max-height: 300px;
       object-fit: cover;
       cursor: pointer;
       border-radius: 8px;
