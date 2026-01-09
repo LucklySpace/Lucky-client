@@ -50,6 +50,7 @@ export function useScreenshot() {
     showButtonGroup: false,
     buttonStyle: { width: 700, height: 40 },
     currentTool: "",
+    isInitial: true, //初始选取不可移动或调整
 
     // 用于移动选区时记录鼠标相对于选区左上角的偏移
     moveOffsetX: 0,
@@ -238,14 +239,16 @@ export function useScreenshot() {
   // --- 事件处理：mask canvas 鼠标事件（选区绘制/移动/完成） ---
   function handleMaskMouseDown(e: MouseEvent) {
     // 如果绘图工具处于绘制状态则让绘图 hook 处理
-    if (canvasTool.isDrawing()) return;
+    if (canvasTool.isDrawing()) {
+      return;
+    }
 
     // 鼠标位置（像素级，考虑 scale）
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
 
     // 判断是否在已经选好的矩形内 => 进入移动
-    if (isInSelection(offsetX, offsetY)) {
+    if (isInSelection(offsetX, offsetY) && !state.isInitial) { //不是初始状态
       state.isMoving = true;
       state.showButtonGroup = false;
 
@@ -267,6 +270,11 @@ export function useScreenshot() {
     if (state.hasMoved) {
       // 如果已经平移过，不允许再次重新绘制（和你原逻辑一致）
       return;
+    }
+
+    if(state.isInitial) {
+      state.isInitial = false; //解除初始锁定
+      drawMask();  //立即蒙版, 消除边框绘制
     }
 
     state.startX = offsetX;
@@ -346,6 +354,7 @@ export function useScreenshot() {
 
   // 鼠标抬起：结束绘制或移动
   function handleMaskMouseUp(e: MouseEvent) {
+    //绘制选区框
     if (state.isDrawing) {
       state.endX = e.offsetX * state.scaleX;
       state.endY = e.offsetY * state.scaleY;
@@ -354,12 +363,26 @@ export function useScreenshot() {
       state.width = Math.abs(state.endX - state.startX);
       state.height = Math.abs(state.endY - state.startY);
 
-      if (state.width > 5 && state.height > 5) {
+      const CLICK_THRESHOLD = 5;
+      if (state.width > CLICK_THRESHOLD && state.height > CLICK_THRESHOLD) {
         updateButtonGroupPosition();
         state.showButtonGroup = true;
+      } else {
+        state.startX = 0;
+        state.startY = 0;
+        updateButtonGroupPosition();
+        state.showButtonGroup = true;
+        drawRectangle(0, 0, state.endX, state.endY, 1);
       }
 
       emitPluginEvent("onEndDraw", state);
+    } else { // 否则为移动选区
+      // const edge = hitTestEdge(e.offsetX * state.scaleX, e.offsetY * state.scaleY)
+      // if (edge) {
+      //   isResizing = true
+      //   resizeEdge = edge
+        
+      // }
     }
 
     if (state.isMoving) {
