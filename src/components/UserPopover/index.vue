@@ -166,7 +166,6 @@
   const saveRemark = async () => {
     if (!props.contact?.friendId) return;
     const next = (remark.value || "").trim();
-    console.log("next", next);
     if (!next) {
       ElMessage.warning($t("errors.remark.empty"));
       return;
@@ -244,7 +243,7 @@
 <style lang="scss" scoped>
   /* 变量：建议使用 Element Plus 的变量，或者根据你的深色主题调整 */
   $avatar-size: 64px;
-  $text-main: #ffffff;      /* 主文字改为白色 */
+  $text-main: --content-font-color;      /* 主文字改为白色 */
   $text-sub: #a6a6a6;       /* 次要文字改为浅灰 */
   $bg-hover: rgba(255, 255, 255, 0.05); /* 鼠标悬停背景 */
 
