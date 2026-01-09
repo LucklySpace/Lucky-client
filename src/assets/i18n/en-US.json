@@ -307,7 +307,15 @@
       },
       "general": {
         "label": "General",
-        "language": "Language",
+        "language": {
+          "label": "Language",
+          "download": "Download Languages",
+          "downloadMore": "Download More Languages",
+          "refresh": "Refresh List",
+          "installed": "Installed",
+          "updateAvailable": "Update Available",
+          "update": "Update"
+        },
         "select": "Select Language",
         "ChatLog": "Chat History",
         "clearChat": "Clear Chat History",

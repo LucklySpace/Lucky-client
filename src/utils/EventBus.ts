@@ -1,81 +1,240 @@
-/***
- * 本文介绍了如何使用一个基于同源策略的EventBus类，实现浏览器中跨标签页的事件传递，包括事件注册、广播、处理以及管理订阅和清除功能。
- * 原文链接：https://blog.csdn.net/HuaiCheng9067/article/details/137052023
- * 第一步：注册事件
- * 第二步：广播事件
- * 第三步：处理事件
+/**
+ * EventBus 事件总线
+ * 支持跨标签页通信的事件管理器
+ * 使用 BroadcastChannel API 实现同源标签页间的消息传递
  */
 
-// source：消息发起源href，将在跨标签页通信时传入
-interface callback {
-  (data: any, source: any): void;
+/**
+ * 事件回调函数类型
+ * @param data 事件数据
+ * @param source 消息来源（跨标签页时传递页面 URL）
+ */
+type EventCallback<T = any> = (data: T, source?: string) => void;
+
+/**
+ * 事件名称类型
+ */
+type EventName = string | symbol;
+
+/**
+ * BroadcastChannel 消息格式
+ */
+interface BroadcastMessage<T = any> {
+  eventName: EventName;
+  data: T;
+  source: string;
 }
 
-type eventName = string;
-
+/**
+ * 事件总线类
+ * 提供事件的发布、订阅、取消订阅功能
+ * 支持同源标签页间的事件广播
+ */
 class EventBus {
-  protected eventMap: any = new Map();
-  protected channel: any = new BroadcastChannel("__event-bus");
+  /**
+   * 事件映射表
+   */
+  private eventMap: Map<EventName, Set<EventCallback>> = new Map();
 
-  // 广播事件
-  emit(eventName: eventName, data?: any) {
+  /**
+   * BroadcastChannel 实例（用于跨标签页通信）
+   */
+  private channel: BroadcastChannel | null = null;
+
+  /**
+   * 是否已初始化 BroadcastChannel
+   */
+  private channelInitialized = false;
+
+  constructor(channelName: string = "__event-bus") {
+    this.initBroadcastChannel(channelName);
+  }
+
+  /**
+   * 初始化 BroadcastChannel
+   * @param channelName 频道名称
+   */
+  private initBroadcastChannel(channelName: string): void {
+    if (typeof BroadcastChannel === "undefined") {
+      console.warn("BroadcastChannel is not supported in this environment");
+      return;
+    }
+
+    try {
+      this.channel = new BroadcastChannel(channelName);
+      
+      // 接收跨标签页消息
+      this.channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
+        try {
+          const { eventName, data, source } = event.data;
+          this.tryRunCallback(eventName, data, source);
+        } catch (error) {
+          console.error("EventBus: Error handling broadcast message", error);
+        }
+      };
+
+      this.channel.onmessageerror = (event) => {
+        console.error("EventBus: BroadcastChannel message error", event);
+      };
+
+      this.channelInitialized = true;
+    } catch (error) {
+      console.error("EventBus: Failed to create BroadcastChannel", error);
+    }
+  }
+
+  /**
+   * 发布事件
+   * @param eventName 事件名称
+   * @param data 事件数据
+   */
+  emit<T = any>(eventName: EventName, data?: T): void {
+    // 本地触发回调
     this.tryRunCallback(eventName, data);
-    // 跨标签页 发送消息
-    this.channel.postMessage({ eventName, data, source: location.href });
+
+    // 跨标签页广播
+    if (this.channelInitialized && this.channel) {
+      try {
+        const message: BroadcastMessage<T> = {
+          eventName,
+          data: data as T,
+          source: location.href
+        };
+        this.channel.postMessage(message);
+      } catch (error) {
+        console.error("EventBus: Failed to broadcast message", error);
+      }
+    }
   }
 
-  // 订阅事件
-  on(eventName: eventName, callback: callback) {
+  /**
+   * 订阅事件
+   * @param eventName 事件名称
+   * @param callback 回调函数
+   * @returns 取消订阅的函数
+   */
+  on<T = any>(eventName: EventName, callback: EventCallback<T>): () => void {
     this.register(eventName, callback);
-    // 跨标签页 接收订阅消息
-    this.channel.onmessage = (event: { data: any }) => {
-      const data = event.data;
-      this.tryRunCallback(data.eventName, data.data, data.source);
+
+    // 返回取消订阅函数
+    return () => this.off(eventName, callback);
+  }
+
+  /**
+   * 订阅一次性事件
+   * @param eventName 事件名称
+   * @param callback 回调函数
+   */
+  once<T = any>(eventName: EventName, callback: EventCallback<T>): void {
+    const onceWrapper: EventCallback<T> = (data, source) => {
+      callback(data, source);
+      this.off(eventName, onceWrapper);
     };
+    this.on(eventName, onceWrapper);
   }
 
-  // 移除某个订阅事件
-  off(eventName: eventName, callback: callback) {
+  /**
+   * 取消订阅事件
+   * @param eventName 事件名称
+   * @param callback 回调函数（不传则移除所有回调）
+   */
+  off(eventName: EventName, callback?: EventCallback): void {
     if (!this.eventMap.has(eventName)) return;
+
+    if (!callback) {
+      // 未传入回调则清除该事件的所有监听器
+      this.eventMap.delete(eventName);
+      return;
+    }
+
     const callbacks = this.eventMap.get(eventName);
-    this.eventMap.set(
-      eventName,
-      callbacks.filter((cb: callback) => cb !== callback)
-    );
+    if (callbacks) {
+      callbacks.delete(callback);
+      
+      // 如果没有剩余回调，删除该事件
+      if (callbacks.size === 0) {
+        this.eventMap.delete(eventName);
+      }
+    }
   }
 
-  // 清除某个事件的所有订阅
-  clear(eventName: eventName) {
+  /**
+   * 清除某个事件的所有订阅
+   * @param eventName 事件名称
+   */
+  clear(eventName: EventName): void {
     this.eventMap.delete(eventName);
   }
 
-  // 清除所有订阅事件
-  clearAll() {
-    this.eventMap = new Map();
+  /**
+   * 清除所有订阅事件
+   */
+  clearAll(): void {
+    this.eventMap.clear();
   }
 
-  protected register(eventName: eventName, callback: callback) {
+  /**
+   * 获取某个事件的监听器数量
+   * @param eventName 事件名称
+   */
+  listenerCount(eventName: EventName): number {
+    return this.eventMap.get(eventName)?.size ?? 0;
+  }
+
+  /**
+   * 获取所有事件名称
+   */
+  eventNames(): EventName[] {
+    return Array.from(this.eventMap.keys());
+  }
+
+  /**
+   * 注册事件回调
+   * @param eventName 事件名称
+   * @param callback 回调函数
+   */
+  private register(eventName: EventName, callback: EventCallback): void {
     if (!this.eventMap.has(eventName)) {
-      this.eventMap.set(eventName, []);
+      this.eventMap.set(eventName, new Set());
     }
-    this.eventMap.get(eventName).push(callback);
+    this.eventMap.get(eventName)!.add(callback);
   }
 
-  protected tryRunCallback(eventName: eventName, data: any, source?: string) {
-    if (!this.eventMap.has(eventName)) return;
-    this.eventMap.get(eventName).forEach((callback: callback) => {
-      callback(data, source);
+  /**
+   * 尝试执行回调函数
+   * @param eventName 事件名称
+   * @param data 事件数据
+   * @param source 消息来源
+   */
+  private tryRunCallback(eventName: EventName, data: any, source?: string): void {
+    const callbacks = this.eventMap.get(eventName);
+    if (!callbacks || callbacks.size === 0) return;
+
+    callbacks.forEach((callback) => {
+      try {
+        callback(data, source);
+      } catch (error) {
+        console.error(`EventBus: Error executing callback for event "${String(eventName)}"`, error);
+      }
     });
+  }
+
+  /**
+   * 销毁 EventBus 实例
+   * 清除所有事件监听并关闭 BroadcastChannel
+   */
+  destroy(): void {
+    this.clearAll();
+    
+    if (this.channel) {
+      this.channel.close();
+      this.channel = null;
+      this.channelInitialized = false;
+    }
   }
 }
 
+/**
+ * 默认导出 EventBus 单例
+ */
 export default new EventBus();
-
-// 使用方式
-// import Event from "EventBus"
-
-// Event.on('事件名', () => {
-//     //....
-// })
-
-// Event.emit('事件名', { ...数据 })

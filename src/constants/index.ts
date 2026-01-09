@@ -149,7 +149,7 @@ export enum FileType {
 }
 
 /** 每个 FileType 对应的后缀列表 */
-const extensionMap: Record<FileType, string[]> = {
+export const extensionMap: Record<FileType, string[]> = {
   [FileType.Video]: ["mp4", "mov", "avi", "wmv", "mkv", "mpeg", "flv", "webm"],
   [FileType.Markdown]: ["md"],
   [FileType.Image]: ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"],
@@ -160,37 +160,37 @@ const extensionMap: Record<FileType, string[]> = {
   [FileType.Other]: [] // 默认类型，无需后缀
 };
 
-// /**
-//  * 从文件名中提取扩展名（不包含点），小写返回
-//  * @param fileName 文件名，例如 "example.PDF"
-//  */
-// function getExtension(fileName: string): string {
-//   const idx = fileName.lastIndexOf('.');
-//   if (idx === -1 || idx === fileName.length - 1) {
-//     return '';
-//   }
-//   return fileName.slice(idx + 1).toLowerCase();
-// }
+/**
+ * 从文件名中提取扩展名（不包含点），小写返回
+ * @param fileName 文件名，例如 "example.PDF"
+ */
+function getExtension(fileName: string): string {
+  const idx = fileName.lastIndexOf('.');
+  if (idx === -1 || idx === fileName.length - 1) {
+    return '';
+  }
+  return fileName.slice(idx + 1).toLowerCase();
+}
 
-// /**
-//  * 根据扩展名（不含点）返回对应的 FileType 枚举
-//  * @param extension 扩展名，如 "pdf"
-//  */
-// export function fromExtension(extension: string): FileType {
-//   const ext = extension.toLowerCase();
-//   for (const [type, exts] of Object.entries(extensionMap)) {
-//     if (exts.includes(ext)) {
-//       return type as FileType;
-//     }
-//   }
-//   return FileType.Other;
-// }
+/**
+ * 根据扩展名（不含点）返回对应的 FileType 枚举
+ * @param extension 扩展名，如 "pdf"
+ */
+export function fromExtension(extension: string): FileType {
+  const ext = extension.toLowerCase();
+  for (const [type, exts] of Object.entries(extensionMap)) {
+    if (exts.includes(ext)) {
+      return type as FileType;
+    }
+  }
+  return FileType.Other;
+}
 
-// /**
-//  * 根据文件名返回对应的 FileType 枚举
-//  * @param fileName 文件名，例如 "report.PPTX"
-//  */
-// export function fromFileName(fileName: string): FileType {
-//   const ext = getExtension(fileName);
-//   return fromExtension(ext);
-// }
+/**
+ * 根据文件名返回对应的 FileType 枚举
+ * @param fileName 文件名，例如 "report.PPTX"
+ */
+export function fromFileName(fileName: string): FileType {
+  const ext = getExtension(fileName);
+  return fromExtension(ext);
+}

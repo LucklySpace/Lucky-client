@@ -56,7 +56,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import emojiJson from "@/assets/json/emoji.json";
 import { useUserStore } from "@/store/modules/user";
 import api from "@/api/index";
@@ -147,15 +147,10 @@ watch(() => props.historyEmojiList, (val) => {
 });
 
 watch(() => userStore.userEmojiPackIds, loadEmojiPacks, { immediate: true, deep: true });
+
 </script>
 
 <style lang="scss" scoped>
-/* 设计风格：
-  - 简洁：去除多余线条，使用间距区分
-  - 配色：背景纯白，Hover 浅灰，选中态深色/高亮
-  - 布局：Flex + Grid
-*/
-
 $bg-color: #ffffff;
 $hover-bg: #f2f3f5;
 $border-color: #e5e6eb;
@@ -169,7 +164,7 @@ $text-sub: #86909c;
   height: 420px;
   /* 稍微调低一点高度，适配性更好 */
   background: $bg-color;
-  border-radius: 8px;
+  border-radius: 2px;
   /* 圆角 */
   // box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   /* 增加阴影提升质感 */
@@ -340,8 +335,8 @@ $text-sub: #86909c;
 }
 
 .tab-item {
-  width: 44px;
-  height: 40px;
+  width: 40px;
+  height: 36px;
   margin: 0 4px;
   display: flex;
   align-items: center;

@@ -2,11 +2,27 @@
   <div class="setting-container">
     <!-- 语言选择行 -->
     <div class="form-row">
-      <div :title="$t('settings.general.language')" class="row-label">{{ $t("settings.general.language") }}</div>
+      <div :title="$t('settings.general.language.label')" class="row-label">{{ $t("settings.general.language.label") }}</div>
       <div class="row-control">
-        <el-select v-model="locale" :placeholder="$t('settings.general.select')" @change="onChangeLocale(locale)">
-          <el-option v-for="item in languageOptions" :key="item.locale" :label="item.name" :value="item.locale" />
+        <el-select 
+          v-model="locale" 
+          :placeholder="$t('settings.general.select')" 
+          @change="onChangeLocale(locale)"
+        >
+          <el-option 
+            v-for="item in languageOptions" 
+            :key="item.locale" 
+            :label="item.name" 
+            :value="item.locale" 
+          />
         </el-select>
+        <el-button 
+          type="primary" 
+          :icon="Download" 
+          circle 
+          @click="handleOpenLanguageDownload"
+          :title="$t('settings.general.language.downloadMore')"
+        />
       </div>
     </div>
 
@@ -38,27 +54,43 @@
     </div>
 
     <StorageManageDialog ref="storageDialogRef" />
+    <LanguageDownload ref="languageDownloadRef" />
   </div>
 </template>
 
 <script lang="ts" setup>
-  import { Delete, Folder } from "@element-plus/icons-vue";
+  import { ref, onMounted } from "vue";
+  import { Delete, Folder, Download } from "@element-plus/icons-vue";
   import { ElMessageBox } from "element-plus";
   import { useI18n } from "@/i18n";
   import { useI18n as vueI18n } from "vue-i18n";
   import StorageManageDialog from "./StorageManageDialog.vue";
+  import LanguageDownload from "./LanguageDownload.vue";
+
   // 引入 Hook
   const { locale, languageOptions, setLocale, loadLocaleOptions } = useI18n();
   const { t } = vueI18n();
 
-  // 切换语言时调用 Hook 方法
+  const storageDialogRef = ref();
+  const languageDownloadRef = ref();
+
+  /**
+   * 切换语言
+   */
   async function onChangeLocale(lang: string) {
     await setLocale(lang);
   }
 
-  const storageDialogRef = ref();
+  /**
+   * 打开语言下载对话框
+   */
+  function handleOpenLanguageDownload() {
+    languageDownloadRef.value?.showDialog();
+  }
 
-  // 清空聊天记录
+  /**
+   * 清空聊天记录
+   */
   const handleClearChat = () => {
     ElMessageBox.confirm(t("dialog.confirmClearChat"), t("dialog.warning"), {
       confirmButtonText: t("dialog.confirm"),
@@ -74,9 +106,11 @@
       });
   };
 
-  // 存储空间管理
+  /**
+   * 存储空间管理
+   */
   const handleStorageManage = () => {
-    storageDialogRef.value.showDialog();
+    storageDialogRef.value?.showDialog();
   };
 
   onMounted(() => {
@@ -111,10 +145,19 @@
 
   .row-control {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 8px;
     flex-grow: 1;
   }
+
   .row-control ::v-deep(.el-select) {
     width: 200px;
+  }
+
+  .row-control .el-button.is-circle {
+    width: 32px;
+    height: 32px;
+    padding: 0;
   }
 </style>

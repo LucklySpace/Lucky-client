@@ -267,7 +267,6 @@ export const useMediaCacheStore = defineStore(
     };
   },
   {
-    // 只把 mediaMap 持久化到 sessionStorage（你已有的策略）
     persist: [
       {
         key: `${StoresEnum.MEDIA_CACHE}_session`,
@@ -277,80 +276,3 @@ export const useMediaCacheStore = defineStore(
     ]
   }
 );
-
-// type MediaType = 'image' | 'video'
-
-// interface MediaState {
-//     status: 'idle' | 'loading' | 'done' | 'error'
-//     src?: string
-// }
-
-// export const useMediaCacheStore = defineStore('mediaCache', () => {
-
-//     // { [url]: { status, src } }
-//     const cache = ref<Record<string, MediaState>>({})
-
-//     /**
-//      * 预加载并缓存一条资源（图片或视频）
-//      * @param url 资源原始 URL
-//      * @param type 'image' | 'video'
-//      */
-//     async function fetchMedia(url: string, type: MediaType): Promise<MediaState> {
-
-//         // 已经触发过或完成过，直接返回
-//         if (cache.value[url]) {
-//             return cache.value[url]
-//         }
-
-//         // 初始化状态
-//         cache.value[url] = { status: 'loading' }
-//         try {
-//             let localSrc: string
-
-//             if (type === 'image') {
-//                 // 调用前面写好的 cacheImage
-//                 localSrc = await cacheImage(url)
-//             } else {
-//                 // 这里假设你实现了类似 cacheVideo 的函数
-//                 // localSrc = await cacheVideo(url)
-//                 // 暂时先用原始 URL 或 data URI 回落
-//                 localSrc = url
-//             }
-
-//             cache.value[url] = { status: 'done', src: localSrc }
-//         } catch (e) {
-//             console.error(`Failed to cache ${type}`, url, e)
-//             cache.value[url].status = 'error'
-//         }
-//         return cache.value[url]
-//     }
-
-//     /**
-//      * 取已缓存的本地地址（可能还在 loading 或 error）
-//      */
-//     function getMediaSrc(url: string): string | undefined {
-//         return cache.value[url]?.src
-//     }
-
-//     /**
-//      * 清除某个 URL 的缓存
-//      */
-//     function clearMedia(url: string) {
-//         delete cache.value[url]
-//     }
-
-//     /**
-//      * 清空所有缓存
-//      */
-//     function clearAll() {
-//         cache.value = {}
-//     }
-
-//     return {
-//         cache,
-//         fetchMedia,
-//         getMediaSrc,
-//         clearMedia,
-//         clearAll,
-//     }
-// })

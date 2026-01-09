@@ -3,7 +3,11 @@ import { SchemaGenerator } from "./core/SchemaGenerator";
 import { QueryBuilder, SqlFragment } from "./query/QueryBuilder";
 import { ColumnMeta, Metadata } from "./annotation/Decorators";
 import XMLSQLParser from "./parser/XMLSQLParser";
+import { useLogger } from "@/hooks/useLogger";
 
+/**
+ * 分页查询结果接口
+ */
 export interface PageResult<T> {
   records?: T[] | null;
   total?: number;
@@ -11,7 +15,9 @@ export interface PageResult<T> {
   size?: number;
 }
 
-// 日志
+/**
+ * 日志实例
+ */
 const log = useLogger();
 
 /**

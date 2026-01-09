@@ -1,3 +1,9 @@
+import "element-plus/theme-chalk/dark/css-vars.css";
+import "@/assets/style/scss/index.scss";
+import "@/assets/style/scss/theme.scss";
+import "@/assets/style/scss/setting.scss";
+import "element-plus/dist/index.css";
+
 // 创建 vue web 容器
 import { createApp } from "vue";
 import App from "./App.vue";
@@ -20,27 +26,61 @@ import { getTauriStore } from "@/store/plugins/TauriStorage";
 // 主题选择
 import { useThemeColor } from "@/hooks/useThemeColor";
 
-async function bootstrap() {
-  const app = createApp(App);
+/**
+ * 应用启动入口
+ * 负责初始化 Vue 应用及其依赖项
+ */
+async function bootstrap(): Promise<void> {
+  try {
+    const app = createApp(App);
 
-  // 应用启动时预先初始化 Store 实例
-  await getTauriStore().catch(console.error);
+    // 应用启动时预先初始化 Store 实例
+    try {
+      await getTauriStore();
+    } catch (error) {
+      console.error("初始化 Tauri Store 失败:", error);
+    }
 
-  // 使用插件和组件
-  app.use(plugins);
-  app.use(directive);
-  app.use(components);
+    // 使用插件和组件
+    app.use(plugins);
+    app.use(directive);
+    app.use(components);
 
-  // 在挂载前初始化语言环境, 异步创建并注册 i18n
-  const { i18n, initI18n } = useI18n();
-  await initI18n();
-  app.use(i18n);
+    // 在挂载前初始化语言环境, 异步创建并注册 i18n
+    try {
+      const { i18n, initI18n } = useI18n();
+      await initI18n();
+      app.use(i18n);
+    } catch (error) {
+      console.error("初始化 i18n 失败:", error);
+      throw error;
+    }
 
-  // 初始化主题
-  useThemeColor();
+    // 初始化主题
+    try {
+      useThemeColor();
+    } catch (error) {
+      console.warn("初始化主题失败:", error);
+    }
 
-  // 最后挂载应用
-  app.mount("#app");
+    // 最后挂载应用
+    app.mount("#app");
+
+    console.info("应用启动成功");
+  } catch (error) {
+    console.error("应用启动失败:", error);
+    // 可以在这里显示错误提示界面
+    document.body.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: Arial, sans-serif;">
+        <div style="text-align: center;">
+          <h1 style="color: #f56c6c;">应用启动失败</h1>
+          <p style="color: #909399;">请刷新页面重试或联系技术支持</p>
+          <p style="color: #909399; font-size: 12px;">${error instanceof Error ? error.message : '未知错误'}</p>
+        </div>
+      </div>
+    `;
+  }
 }
 
+// 启动应用
 bootstrap();

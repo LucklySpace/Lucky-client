@@ -39,6 +39,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
   // 初始化其他 stores
   const userStore = useUserStore();
   const chatMessageStore = useChatStore();
+  const logger = useLogger();
 
   // 定义响应式状态
   const contacts = ref<any[]>([]);
@@ -97,114 +98,168 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
   /**
    * 删除联系人
    * @param chat 会话
+   * @throws 删除失败时抛出错误
    */
-  const handleDeleteContact = async (chat: Chats) => {
-    console.log("okok delete");
-    // 当前会话为单聊
-    if (chat.chatType == IMessageType.SINGLE_MESSAGE.code) {
-      api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId }).then(async () => {
+  const handleDeleteContact = async (chat: Chats): Promise<void> => {
+    try {
+      if (!chat) {
+        throw new Error("会话信息不能为空");
+      }
+
+      logger.info("开始删除联系人", { chatId: chat.chatId, chatType: chat.chatType });
+
+      // 当前会话为单聊
+      if (chat.chatType === IMessageType.SINGLE_MESSAGE.code) {
+        await api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId });
+        
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
+        
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
-        // 删除联系人
+        
+        // 删除联系人数据
         try {
           await friendsMapper.deleteById(chat.toId, "friendId");
           await friendsMapper.deleteFTSById?.(chat.toId as any);
-        } catch {
-          console.error("删除联系人失败");
+        } catch (error) {
+          logger.error("删除联系人数据失败", error);
         }
+        
         // 本地联系人列表即时更新
         try {
           const idx = contacts.value.findIndex((c: any) => String(c.friendId) === String(chat.toId));
-          if (idx !== -1) contacts.value.splice(idx, 1);
-          if (shipInfo.value && String(shipInfo.value.friendId) === String(chat.toId)) shipInfo.value = {};
-        } catch {}
+          if (idx !== -1) {
+            contacts.value.splice(idx, 1);
+          }
+          if (shipInfo.value && String(shipInfo.value.friendId) === String(chat.toId)) {
+            shipInfo.value = {};
+          }
+        } catch (error) {
+          logger.warn("更新本地联系人列表失败", error);
+        }
+        
         // 异步重载联系人以与服务端对齐（非阻塞）
-        loadContacts();
-        // 广播会话变更以便标题等订阅方清空展示
-        try {
-          globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
-        } catch {}
-      });
-    } else {
-      api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId }).then(async () => {
+        loadContacts().catch(err => logger.warn("重载联系人列表失败", err));
+        
+        logger.info("删除单聊联系人成功", { toId: chat.toId });
+      } else {
+        // 退出群聊
+        await api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId });
+        
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
+        
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
+        
         // 本地群列表即时更新
         try {
           const gIdx = groups.value.findIndex((g: any) => String(g.groupId) === String(chat.toId));
-          if (gIdx !== -1) groups.value.splice(gIdx, 1);
-          if (shipInfo.value && String((shipInfo.value as any).groupId) === String(chat.toId)) shipInfo.value = {};
-        } catch {}
-        // 可选：异步刷新群列表
-        loadGroups();
-        // 广播会话变更以便标题等订阅方清空展示
-        try {
-          globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
-        } catch {}
+          if (gIdx !== -1) {
+            groups.value.splice(gIdx, 1);
+          }
+          if (shipInfo.value && String((shipInfo.value as any).groupId) === String(chat.toId)) {
+            shipInfo.value = {};
+          }
+        } catch (error) {
+          logger.warn("更新本地群列表失败", error);
+        }
+        
+        // 异步刷新群列表
+        loadGroups().catch(err => logger.warn("重载群列表失败", err));
+        
+        logger.info("退出群聊成功", { groupId: chat.toId });
+      }
+
+      // 广播会话变更以便标题等订阅方清空展示
+      try {
+        globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
+      } catch (error) {
+        logger.warn("广播会话变更事件失败", error);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "删除联系人失败";
+      logger.error("删除联系人失败", error);
+      throw new Error(errorMsg);
+    }
+  };
+
+  /**
+   * 查询好友申请列表
+   * @throws 查询失败时抛出错误
+   */
+  const loadNewFriends = async (): Promise<void> => {
+    try {
+      const newList = (await api.GetNewFriends({
+        userId: storage.get("userId")
+      })) || [];
+
+      if (!Array.isArray(newList) || newList.length === 0) {
+        logger.debug("好友申请列表无更新");
+        return;
+      }
+
+      if (ignore.value) {
+        ignore.value = false;
+      }
+
+      newFriends.value = [...newList].sort((a, b) => {
+        return (b.createTime || 0) - (a.createTime || 0);
       });
+
+      logger.info("好友申请列表加载成功", { count: newList.length });
+    } catch (error) {
+      logger.error("加载好友申请列表失败", error);
+      throw error;
     }
   };
 
   /**
-   * 查询好友申请
-   * @returns 
+   * 查询群聊列表
+   * @throws 查询失败时抛出错误
    */
-  const loadNewFriends = async () => {
-    const newList =
-      (await api.GetNewFriends({
+  const loadGroups = async (): Promise<void> => {
+    try {
+      const newList = (await api.GetGroups({
         userId: storage.get("userId")
       })) || [];
 
-    if (!Array.isArray(newList) || newList.length === 0) {
-      console.info("群列表无更新");
-      return;
+      if (!Array.isArray(newList) || newList.length === 0) {
+        logger.debug("群列表无更新");
+        return;
+      }
+
+      groups.value = [...newList];
+      logger.info("群列表加载成功", { count: newList.length });
+    } catch (error) {
+      logger.error("加载群列表失败", error);
+      throw error;
     }
-    if (ignore.value) {
-      ignore.value = false;
-    }
-    newFriends.value = [...newList].sort((a, b) => {
-      return (b.createTime || 0) - (a.createTime || 0);
-    });
   };
 
   /**
-   * 查询群聊
-   * @returns 
+   * 查询联系人列表
+   * @throws 查询失败时抛出错误
    */
-  const loadGroups = async () => {
-    const newList =
-      (await api.GetGroups({
-        userId: storage.get("userId")
-      })) || [];
-
-    if (!Array.isArray(newList) || newList.length === 0) {
-      console.info("群列表无更新");
-      return;
-    }
-    groups.value = [...newList];
-  };
-
-  /**
-   * 查询联系人
-   * @returns 
-   */
-  const loadContacts = async () => {
-    const newList =
-      (await api.GetContacts({
+  const loadContacts = async (): Promise<void> => {
+    try {
+      const newList = (await api.GetContacts({
         userId: storage.get("userId"),
         sequence: 0
       })) || [];
 
-    if (!Array.isArray(newList) || newList.length === 0) {
-      console.info("好友列表无更新");
-      return;
-    }
+      if (!Array.isArray(newList) || newList.length === 0) {
+        logger.debug("好友列表无更新");
+        return;
+      }
 
-    contacts.value = [...newList];
+      contacts.value = [...newList];
+      logger.info("好友列表加载成功", { count: newList.length });
+    } catch (error) {
+      logger.error("加载好友列表失败", error);
+      throw error;
+    }
   };
 
   /**

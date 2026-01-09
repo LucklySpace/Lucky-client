@@ -7,7 +7,7 @@
         <i class="iconfont icon-biaoqing-xue"></i>
         <!-- 使用 v-model:visible 控制 popover 显示，避免直接调用底层 API -->
         <el-popover ref="emojiPopoverRef" v-model:visible="emojiVisible" :virtual-ref="emojiBtnRef" placement="top"
-          popper-class="emoji-popper" trigger="click" virtual-triggering width="390">
+          trigger="click" virtual-triggering width="390">
           <emoji :historyEmojiList="historyEmojiList" @handleChooseEmoji="handleChooseEmoji" />
         </el-popover>
       </div>
@@ -788,11 +788,6 @@ onBeforeUnmount(() => {
     box-shadow: 1px 1px 2px #cec5c5;
     border: 1px solid rgba(255, 255, 255, 0.8);
   }
-}
-
-
-:deep(.emoji-popper .el-popover) {
-  padding: 0 !important;
 }
 
 /* @ 标签样式 */

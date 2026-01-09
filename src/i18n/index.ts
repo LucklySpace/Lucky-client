@@ -4,6 +4,7 @@ import { BaseDirectory, exists, mkdir, readDir, readTextFile, writeTextFile } fr
 import { useSettingStore } from "@/store/modules/setting";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useLogger } from "@/hooks/useLogger";
 
 /** i18n 文件结构定义 */
 interface I18nFile {
@@ -56,6 +57,7 @@ class I18nManager {
   private settingStore = useSettingStore();
   private initialized = false;
   private winLabel = getCurrentWebviewWindow().label;
+  private logger = useLogger();
 
   private constructor() {
     // 私有构造，确保单例
@@ -87,7 +89,7 @@ class I18nManager {
       }
 
       if (!file) {
-        console.warn(`[i18n] locale ${lang} not found`);
+        this.logger.warn(`语言包未找到: ${lang}`);
         if (lang !== i18nOptions.fallbackLocale) {
           await this.loadLocale(i18nOptions.fallbackLocale);
         }
@@ -111,9 +113,9 @@ class I18nManager {
       this.meta.value = file.meta ?? null;
       this.settingStore.language = lang;
 
-      console.info(`[i18n] Loaded locale: ${lang}`, file.meta);
-    } catch (e) {
-      console.error(`[i18n] Error loading locale ${lang}:`, e);
+      this.logger.info(`成功加载语言: ${lang}`, file.meta);
+    } catch (error) {
+      this.logger.error(`加载语言失败: ${lang}`, error);
       if (lang !== i18nOptions.fallbackLocale) {
         await this.loadLocale(i18nOptions.fallbackLocale);
       }
@@ -125,18 +127,27 @@ class I18nManager {
    * @param lang 语言代码
    * @param file I18nFile 对象
    */
+  /**
+   * 保存语言文件到 AppData（仅当不存在时写入）
+   * @param lang 语言代码
+   * @param file I18nFile 对象
+   */
   public async saveLocaleFile(lang: string, file: I18nFile) {
     const filePath = `i18n/${lang}.json`;
     try {
-      if (!(await exists(filePath, { baseDir }))) {
-        await mkdir("i18n", { baseDir });
+      const fileExists = await exists(filePath, { baseDir });
+      if (!fileExists) {
+        const dirExists = await exists("i18n", { baseDir });
+        if (!dirExists) {
+          await mkdir("i18n", { baseDir, recursive: true });
+        }
         await writeTextFile(filePath, JSON.stringify(file, null, 2), { baseDir });
-        console.info(`[i18n] Saved locale file: ${filePath}`);
+        this.logger.info(`语言文件已保存: ${filePath}`);
       } else {
-        console.info(`[i18n] locale file exists, skip save: ${filePath}`);
+        this.logger.debug(`语言文件已存在，跳过保存: ${filePath}`);
       }
-    } catch (e) {
-      console.error(`[i18n] Error saving locale ${lang}:`, e);
+    } catch (error) {
+      this.logger.error(`保存语言文件失败: ${lang}`, error);
     }
   }
 
@@ -156,13 +167,17 @@ class I18nManager {
    * 切换语言并广播
    * @param lang 目标语言
    */
+  /**
+   * 切换语言并广播
+   * @param lang 目标语言
+   */
   public async setLocale(lang: string) {
     await this.loadLocale(lang);
     try {
       await emit("i18n:update", { label: this.winLabel, lang });
-      console.log("[i18n] Change lang success", lang);
-    } catch (e) {
-      console.warn("[i18n] emit i18n:update failed:", e);
+      this.logger.info(`语言切换成功: ${lang}`);
+    } catch (error) {
+      this.logger.warn("语言切换广播失败", error);
     }
   }
 
@@ -198,21 +213,30 @@ class I18nManager {
    * @param sourceLabel 来源标签（用于日志）
    * @returns 解析后的 I18nFile 或 undefined
    */
+  /**
+   * 解析 i18n 文件（支持 JSON 字符串或模块对象）
+   * @param raw 原始数据（string 或模块对象）
+   * @param sourceLabel 来源标签（用于日志）
+   * @returns 解析后的 I18nFile 或 undefined
+   */
   private parseI18nFile(raw: any, sourceLabel: string): I18nFile | undefined {
     if (!raw) return undefined;
+    
     let parsed: any = raw;
     if (typeof raw === "string") {
       try {
         parsed = JSON.parse(raw);
-      } catch (e) {
-        console.warn(`[i18n] parse JSON failed from ${sourceLabel}:`, e);
+      } catch (error) {
+        this.logger.warn(`JSON 解析失败 (${sourceLabel})`, error);
         return undefined;
       }
     }
+    
     if (parsed.locale && parsed.messages) {
       return parsed as I18nFile;
     }
-    console.warn(`[i18n] invalid i18n structure from ${sourceLabel}, missing locale/messages`);
+    
+    this.logger.warn(`无效的 i18n 文件结构 (${sourceLabel}), 缺少 locale 或 messages 字段`);
     return undefined;
   }
 
@@ -237,13 +261,13 @@ class I18nManager {
               const raw = await readTextFile(`i18n/${f.name}`, { baseDir });
               const parsed = this.parseI18nFile(raw, `appdata/${f.name}`);
               if (parsed) results.push(parsed);
-            } catch (e) {
-              console.warn(`[i18n] failed read/parse appdata file ${f.name}:`, e);
+            } catch (error) {
+              this.logger.warn(`读取/解析 AppData 语言文件失败: ${f.name}`, error);
             }
           });
         await Promise.all(tasks); // 并行加载
-      } catch (e) {
-        console.warn("[i18n] readDir AppData/i18n failed:", e);
+      } catch (error) {
+        this.logger.warn("读取 AppData i18n 目录失败", error);
       }
     } else if (source === "assets") {
       try {
@@ -254,8 +278,8 @@ class I18nManager {
           const parsed = this.parseI18nFile(mod, `asset:${key}`);
           if (parsed) results.push(parsed);
         }
-      } catch (e) {
-        console.warn("[i18n] load assets i18n failed:", e);
+      } catch (error) {
+        this.logger.warn("加载 assets i18n 文件失败", error);
       }
     }
     return results;

@@ -20,21 +20,16 @@
           <el-input v-model="loginForm.principal" :placeholder="$t('login.inputUsername')" type="text"></el-input>
         </el-form-item>
         <el-form-item :label="$t('login.password')" prop="password">
-          <el-input
-            v-model="loginForm.credentials"
-            :placeholder="$t('login.inputPassword')"
-            show-password
-            type="password"
-            @keyup.enter.native="login"
-          ></el-input>
+          <el-input v-model="loginForm.credentials" :placeholder="$t('login.inputPassword')" show-password
+            type="password" @keyup.enter.native="login"></el-input>
         </el-form-item>
 
         <a href="#" style="float: right" @click.prevent="selectForm('sms')">{{ $t("login.phone") }}</a>
         <!-- <a style="float: right; margin-right: 10px;" href="#" @click.prevent="selectForm('scan')">扫码登录</a> -->
 
         <br />
-        <el-button :loading="loginLoading" class="login-button" type="primary" @click.prevent="login()"
-          >{{ $t("login.label") }}
+        <el-button :loading="loginLoading" class="login-button" type="primary" @click.prevent="login()">{{
+          $t("login.label") }}
         </el-button>
       </el-form>
 
@@ -44,19 +39,11 @@
           <el-input v-model="loginForm.principal" :placeholder="$t('login.inputPhoneNumber')" type="text"></el-input>
         </el-form-item>
         <el-form-item :label="$t('login.code')" prop="credentials">
-          <el-input
-            v-model="loginForm.credentials"
-            :placeholder="$t('login.inputCode')"
-            type="text"
-            @keyup.enter.native="login"
-          >
+          <el-input v-model="loginForm.credentials" :placeholder="$t('login.inputCode')" type="text"
+            @keyup.enter.native="login">
             <template #append>
-              <el-button
-                :disabled="isDisabled"
-                :style="`color: var(--el-color-primary)`"
-                type="primary"
-                @click.prevent="sendSmsCode"
-              >
+              <el-button :disabled="isDisabled" :style="`color: var(--el-color-primary)`" type="primary"
+                @click.prevent="sendSmsCode">
                 {{ buttonText }}
               </el-button>
             </template>
@@ -65,8 +52,7 @@
 
         <a href="#" style="float: right" @click.prevent="selectForm('form')">{{ $t("login.account") }}</a>
         <br />
-        <el-button :loading="loginLoading" class="login-button" type="primary" @click="login()"
-          >{{ $t("login.label") }}
+        <el-button :loading="loginLoading" class="login-button" type="primary" @click="login()">{{ $t("login.label") }}
         </el-button>
       </el-form>
 
@@ -92,277 +78,399 @@
 </template>
 
 <script lang="ts" setup>
-  import svgIcon from "@/components/SvgIcon/index.vue";
-  import system from "@/components/System/index.vue";
-  import Avatar from "@/components/Avatar/index.vue";
-  import { ElMessage } from "element-plus";
-  import { useUserStore } from "@/store/modules/user";
-  import api from "@/api";
-  import RSA from "@/utils/Auth";
-  import defaultImg from '@/assets/img/icon1.png';
+import svgIcon from "@/components/SvgIcon/index.vue";
+import system from "@/components/System/index.vue";
+import Avatar from "@/components/Avatar/index.vue";
+import { ElMessage } from "element-plus";
+import { useUserStore } from "@/store/modules/user";
+import api from "@/api";
+import RSA from "@/utils/Auth";
+import defaultImg from '@/assets/img/icon1.png';
+import { storage } from "@/utils/Storage";
 
-  const { t } = useI18n();
+const { t } = useI18n();
 
-  const rsa = new RSA();
-  const userStore = useUserStore();
-  // const inst = getCurrentInstance()!;
+// RSA 加密实例（单例复用）
+const rsa = new RSA();
+const userStore = useUserStore();
 
-  // console.log("当前 locale:", inst.appContext.config.globalProperties.$i18n.locale);
-  // console.log("可用 locales:", inst.appContext.config.globalProperties.$i18n.availableLocales);
-  //console.log("en-US messages:", inst.appContext.config.globalProperties.$i18n.getLocaleMessage("en-US"));
+// 登录方式，默认是用户名登录
+const loginType = ref<"form" | "sms" | "scan">("form");
 
-  // 登录方式，默认是用户名登录
-  const loginType = ref<"form" | "sms" | "scan">("form");
+// 登录按钮加载
+const loginLoading = ref(false);
 
-  // 登录按钮加载
-  const loginLoading = ref(false);
+// 公钥是否已初始化
+const isPublicKeyReady = ref(false);
 
-  // 登录窗口初始化
-  const init = async () => {
-    // 登录时 移除 token 和  userId
-    // storage.remove("token");
-    // storage.remove("userId");
-
-    // 初始化公钥
+// 登录窗口初始化 - 获取公钥
+const initPublicKey = async (): Promise<boolean> => {
+  try {
     const res: any = await api.GetPublicKey();
-    rsa.setPublicKey(res.publicKey);
-  };
-
-  // 登录表单数据
-  const loginForm = ref({
-    principal: "100001",
-    credentials: "123456"
-  });
-
-  // 倒计时按钮文本和状态
-  const buttonText = ref(t("login.sendCode"));
-  const isDisabled = ref(false);
-  let timer: any = null;
-
-  // 扫码相关状态
-  const qrCodeUrl = ref("");
-  const qrCode = ref("");
-  let requestTimer: any = ref(null);
-  let scanInterval: any = ref(null);
-
-  // 发送验证码的倒计时逻辑
-  const startTimer = () => {
-    let count = 60;
-    isDisabled.value = true;
-    buttonText.value = `${count}s`;
-    timer = setInterval(() => {
-      count--;
-      buttonText.value = `${count}s`;
-      if (count === 0) {
-        clearInterval(timer);
-        buttonText.value = t("login.sendCode");
-        isDisabled.value = false;
-      }
-    }, 1000);
-  };
-
-  // 切换登录方式
-  const selectForm = (type: string) => {
-    (loginType.value as any) = type;
-    loginForm.value.credentials = "";
-    loginForm.value.principal = "";
-    if (type === "scan") {
-      requestQRCode(); // 进入扫码登录时自动请求二维码
-    } else {
-      clearInterval(scanInterval.value); // 清除扫码轮询
+    if (res?.publicKey) {
+      rsa.setPublicKey(res.publicKey);
+      isPublicKeyReady.value = true;
+      return true;
     }
-  };
+    console.warn("获取公钥失败：响应数据无效");
+    return false;
+  } catch (error) {
+    console.error("获取公钥失败：", error);
+    ElMessage.error(t("login.initError") || "初始化失败，请刷新重试");
+    return false;
+  }
+};
 
-  // 登录函数
-  const login = async () => {
-    if (loginForm.value.principal === "" || loginForm.value.credentials === "") {
-      ElMessage.error(t("login.accountNull"));
+// 登录表单数据
+const loginForm = ref({
+  principal: "100001",
+  credentials: "123456"
+});
+
+// 倒计时按钮文本和状态
+const buttonText = ref(t("login.sendCode"));
+const isDisabled = ref(false);
+const smsTimerId = ref<ReturnType<typeof setInterval> | null>(null);
+
+// 扫码相关状态
+const qrCodeUrl = ref("");
+const qrCode = ref("");
+const qrCodeExpireAt = ref<number>(0);
+const scanIntervalId = ref<ReturnType<typeof setInterval> | null>(null);
+
+// 清理短信倒计时定时器
+const clearSmsTimer = () => {
+  if (smsTimerId.value) {
+    clearInterval(smsTimerId.value);
+    smsTimerId.value = null;
+  }
+};
+
+// 清理二维码轮询定时器
+const clearScanInterval = () => {
+  if (scanIntervalId.value) {
+    clearInterval(scanIntervalId.value);
+    scanIntervalId.value = null;
+  }
+};
+
+// 清理用户信息
+const clearUserInfo = () => {
+  loginForm.value.principal = "";
+  loginForm.value.credentials = "";
+  storage.remove("token");
+  storage.remove("userId");
+};
+
+// 发送验证码的倒计时逻辑
+const startSmsCountdown = () => {
+  clearSmsTimer();
+  let count = 60;
+  isDisabled.value = true;
+  buttonText.value = `${count}s`;
+
+  smsTimerId.value = setInterval(() => {
+    count--;
+    buttonText.value = `${count}s`;
+    if (count <= 0) {
+      clearSmsTimer();
+      buttonText.value = t("login.sendCode");
+      isDisabled.value = false;
+    }
+  }, 1000);
+};
+
+// 切换登录方式
+const selectForm = (type: "form" | "sms" | "scan") => {
+  // 切换时清理之前的定时器
+  if (loginType.value === "scan") {
+    clearScanInterval();
+  }
+
+  loginType.value = type;
+  loginForm.value.credentials = "";
+  loginForm.value.principal = "";
+
+  if (type === "scan") {
+    requestQRCode();
+  }
+};
+
+// 表单验证
+const validateForm = (): boolean => {
+  const { principal, credentials } = loginForm.value;
+
+  if (!principal.trim()) {
+    ElMessage.warning(loginType.value === "sms" ? t("login.inputPhoneNumber") : t("login.inputUsername"));
+    return false;
+  }
+
+  if (!credentials.trim()) {
+    ElMessage.warning(loginType.value === "sms" ? t("login.inputCode") : t("login.inputPassword"));
+    return false;
+  }
+
+  // 手机号格式验证
+  if (loginType.value === "sms" && !/^1[3-9]\d{9}$/.test(principal.trim())) {
+    ElMessage.warning(t("login.phoneFormatError") || "手机号格式不正确");
+    return false;
+  }
+
+  return true;
+};
+
+// 登录函数
+const login = async () => {
+  if (!validateForm()) return;
+
+  // 确保公钥已初始化
+  if (!isPublicKeyReady.value) {
+    const success = await initPublicKey();
+    if (!success) {
+      ElMessage.error(t("login.initError") || "初始化失败，请重试");
       return;
     }
-    const password = rsa.rsaPublicData(loginForm.value.credentials);
-    if (password) {
-      loginLoading.value = true;
+  }
 
-      let formData = {
-        principal: loginForm.value.principal,
-        credentials: password,
-        authType: loginType.value
-      };
-      userStore
-        .login(formData)
-        .then(res => {
-          loginLoading.value = false;
-        })
-        .catch(err => {
-          loginLoading.value = false;
-        });
-    } else {
-      init();
+  const password = rsa.rsaPublicData(loginForm.value.credentials.trim());
+  if (!password) {
+    // 加密失败，重新获取公钥
+    ElMessage.warning(t("login.encryptError") || "加密失败，正在重试...");
+    isPublicKeyReady.value = false;
+    const success = await initPublicKey();
+    if (!success) return;
+
+    // 重新加密
+    const retryPassword = rsa.rsaPublicData(loginForm.value.credentials.trim());
+    if (!retryPassword) {
+      ElMessage.error(t("login.encryptError") || "加密失败，请刷新页面重试");
+      return;
     }
-  };
+  }
 
-  // 发送短信验证码
-  const sendSmsCode = async () => {
-    if (loginForm.value.principal !== "") {
-      api
-        .Sms({ phone: loginForm.value.principal })
-        .then((res: any) => {})
-        .catch((err: any) => {
-          ElMessage.error(t("login.qrcodeError"));
-        });
-      startTimer(); // 开始倒计时
-    }
-  };
+  loginLoading.value = true;
 
-  // 获取二维码
-  const requestQRCode = async () => {
-    // 生成UUID作为二维码标识
-    qrCode.value = Math.random().toString(36).substring(2);
+  try {
+    const formData = {
+      principal: loginForm.value.principal.trim(),
+      credentials: password || rsa.rsaPublicData(loginForm.value.credentials.trim()),
+      authType: loginType.value
+    };
+    await userStore.login(formData);
+  } catch (error: any) {
+    // 错误已在 store 中处理
+    console.error("登录失败：", error);
+  } finally {
+    loginLoading.value = false;
+  }
+};
 
-    // 调用接口获取二维码
+// 发送短信验证码
+const sendSmsCode = async () => {
+  const phone = loginForm.value.principal.trim();
+
+  if (!phone) {
+    ElMessage.warning(t("login.inputPhoneNumber"));
+    return;
+  }
+
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    ElMessage.warning(t("login.phoneFormatError") || "手机号格式不正确");
+    return;
+  }
+
+  try {
+    await api.Sms({ phone });
+    ElMessage.success(t("login.codeSent") || "验证码已发送");
+    startSmsCountdown();
+  } catch (error) {
+    console.error("发送验证码失败：", error);
+    ElMessage.error(t("login.smsError") || "发送验证码失败");
+  }
+};
+
+// 生成二维码唯一标识
+const generateQRCodeId = (): string => {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
+};
+
+// 获取二维码
+const requestQRCode = async () => {
+  clearScanInterval();
+  qrCodeUrl.value = "";
+
+  try {
+    qrCode.value = generateQRCodeId();
     const result: any = await api.GetQRCode({ qrCode: qrCode.value });
 
-    if (result) {
+    if (result?.imageBase64) {
       qrCodeUrl.value = result.imageBase64;
-      requestTimer.value = result.expireAt;
-      checkQRCodeStatus(qrCode.value);
+      qrCodeExpireAt.value = result.expireAt || (Date.now() + 180000); // 默认3分钟过期
+      startQRCodePolling(qrCode.value);
     } else {
       ElMessage.error(t("login.getQrcodeError"));
     }
-  };
+  } catch (error) {
+    console.error("获取二维码失败：", error);
+    ElMessage.error(t("login.getQrcodeError"));
+  }
+};
 
-  // 轮训检查二维码状态
-  const checkQRCodeStatus = async (qrCode: string) => {
-    scanInterval.value = setInterval(async () => {
-      // 调用接口检查二维码状态
-      const result: any = await api.CheckQRCodeStatus({ qrCode });
+// 开始轮询检查二维码状态
+const startQRCodePolling = (code: string) => {
+  clearScanInterval();
 
-      if (result && result.code === qrCode) {
-        if (result && result.status == "EXPIRED") {
-          clearInterval(scanInterval.value);
-          ElMessage.error(t("login.qrcodeExpired"));
+  scanIntervalId.value = setInterval(async () => {
+    // 检查是否超时（3分钟）
+    if (Date.now() > qrCodeExpireAt.value) {
+      clearScanInterval();
+      ElMessage.warning(t("login.qrcodeExpired"));
+      requestQRCode();
+      return;
+    }
+
+    try {
+      const result: any = await api.CheckQRCodeStatus({ qrCode: code });
+
+      if (!result || result.code !== code) return;
+
+      switch (result.status) {
+        case "EXPIRED":
+          clearScanInterval();
+          ElMessage.warning(t("login.qrcodeExpired"));
           requestQRCode();
-        }
-        // 扫码完成未授权
-        if (result.status == "SCANNED") {
-        }
-        // 扫码完成已授权
-        if (result.status == "AUTHORIZED") {
-          clearInterval(scanInterval.value);
-          // 获取登录结果,使用后台传过来的临时密码登录
-          let formData = {
-            principal: qrCode,
-            credentials: result.extra.password,
+          break;
+
+        case "SCANNED":
+          // 已扫码，等待授权，可以更新UI提示
+          break;
+
+        case "AUTHORIZED":
+          clearScanInterval();
+          // 使用后台传过来的临时密码登录
+          const formData = {
+            principal: code,
+            credentials: result.extra?.password,
             authType: loginType.value
           };
-          await userStore.login(formData);
-          //ElMessage.success(t("login.loginSuccess"));
-        }
+
+          if (!formData.credentials) {
+            ElMessage.error(t("login.authError") || "授权信息无效");
+            requestQRCode();
+            return;
+          }
+
+          try {
+            await userStore.login(formData);
+          } catch (error) {
+            console.error("扫码登录失败：", error);
+          }
+          break;
       }
+    } catch (error) {
+      console.error("检查二维码状态失败：", error);
+      // 网络错误不中断轮询，继续尝试
+    }
+  }, 3000);
+};
 
-      // 超过三分钟重新请求二维码
-      if (new Date().getTime() - requestTimer.value > 1000 * 60 * 3) {
-        clearInterval(scanInterval.value);
-        ElMessage.error(t("login.qrcodeExpired"));
-        requestQRCode();
-      }
-    }, 3000);
-  };
+onMounted(() => {
+  clearUserInfo();
+  initPublicKey();
+});
 
-  onMounted(() => {
-    init();
-  });
-
-  onUnmounted(() => {
-    clearInterval(scanInterval.value); // 清除扫码轮询
-  });
+onUnmounted(() => {
+  // 清理所有定时器
+  clearSmsTimer();
+  clearScanInterval();
+});
 </script>
 
 <style lang="scss" scoped>
-  .login-head {
-    // border-bottom: 1px solid var(--header-border-bottom-color);
-    background-color: var(--header-bg-color);
-  }
+.login-head {
+  // border-bottom: 1px solid var(--header-border-bottom-color);
+  background-color: var(--header-bg-color);
+}
 
-  .login-control {
-    margin: 0;
-    padding: 0;
+.login-control {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: var(--content-bg-color);
+}
+
+.login-control-form {
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: center;
+}
+
+.login-button {
+  border-radius: 5px;
+  width: 200px;
+  height: 35px;
+  margin: 0 auto;
+  display: block;
+}
+
+.el-form-item__label {
+  justify-content: flex-start !important;
+}
+
+.el-form-item {
+  width: 230px;
+}
+
+.avatar {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  background-color: transparent;
+  border-radius: 5px;
+  border: transparent;
+  margin: 5px;
+}
+
+a {
+  color: #1677ff;
+  text-decoration: none;
+  background-color: transparent;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 15px;
+  transition: color 0.3s;
+}
+
+.qr-code {
+  margin-top: 10px;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto;
+
+  img {
     width: 100%;
-    height: 100vh;
-    background-color: var(--content-bg-color);
+    height: 100%;
   }
+}
 
-  .login-control-form {
-    padding-top: 10px;
-    display: flex;
-    flex-direction: column;
-    justify-content: start;
-    align-items: center;
-  }
+/* 新增样式让SVG图标靠右 */
+.login-svg-container {
+  position: relative;
+}
 
-  .login-button {
-    border-radius: 5px;
-    width: 200px;
-    height: 35px;
-    margin: 0 auto;
-    display: block;
-  }
+.login-svg {
+  margin-top: 7px;
+  margin-right: 5px;
+  float: right;
+  transform: rotateX(180deg);
+  cursor: pointer;
+}
 
-  .el-form-item__label {
-    justify-content: flex-start !important;
-  }
-
-  .el-form-item {
-    width: 230px;
-  }
-
-  .avatar {
-    position: relative;
-    width: 70px;
-    height: 70px;
-    background-color: transparent;
-    border-radius: 5px;
-    border: transparent;
-    margin: 5px;
-  }
-
-  a {
-    color: #1677ff;
-    text-decoration: none;
-    background-color: transparent;
-    font-size: 14px;
-    outline: none;
-    cursor: pointer;
-    margin-bottom: 15px;
-    transition: color 0.3s;
-  }
-
-  .qr-code {
-    margin-top: 10px;
-    width: 200px;
-    height: 200px;
-    margin: 0 auto;
-
-    img {
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  /* 新增样式让SVG图标靠右 */
-  .login-svg-container {
-    position: relative;
-  }
-
-  .login-svg {
-    margin-top: 7px;
-    margin-right: 5px;
-    float: right;
-    transform: rotateX(180deg);
-    cursor: pointer;
-  }
-
-  .send-code-button {
-    color: var(--el-color-primary);
-  }
+.send-code-button {
+  color: var(--el-color-primary);
+}
 </style>

@@ -1,21 +1,9 @@
 /**
- * https://github.com/iimeta/iim-web/blob/main/src/utils/strings.js
+ * 将字符串中的 URL 转为 <a> 标签
+ * @param str 输入字符串
+ * @returns 处理后的 HTML 字符串
  */
-
-/**
- * 将字符串中的 URL 转为 <a> 标签，但不触发默认跳转，而是交给 JS 处理
- * @param {String} str
- */
-// export function urlToLink(str: string): string {
-//   // const re: RegExp = /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
-//   const re: RegExp = new RegExp("(ftp|http|https?://)?([a-zA-Z0-9-]+.)+[a-zA-Z]{2,}(/[^s]*)?", "g");
-//   return str.replace(re, match => {
-//     const safeUrl = match.replace(/"/g, "&quot;");
-//     return `<a  style="text-decoration: none; cursor: pointer; color:#0000EE" data-url="${safeUrl}">${match}</a>`;
-//   });
-// }
-
-export function urlToLink(str: string) {
+export function urlToLink(str: string): string {
   const re: RegExp =
     /((ftp|http|https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[^\s]*)?)/g;
   return str.replace(re, function (website) {

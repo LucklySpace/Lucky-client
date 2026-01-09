@@ -561,6 +561,21 @@ class MainManager {
   handleWebSocketMessage(res: any) {
     messageQueue.push(res).then(async item => {
       const { code, data } = item;
+
+      // 处理强制下线
+      if (code === IMessageType.FORCE_LOGOUT.code) {
+        log.prettyWarn("websocket", "收到强制下线通知");
+        await userStore.forceLogout(data?.message || "您的账号在其他设备登录");
+        return;
+      }
+
+      // 处理登录过期
+      if (code === IMessageType.LOGIN_OVER.code) {
+        log.prettyWarn("websocket", "登录已过期");
+        await userStore.forceLogout("登录已过期，请重新登录");
+        return;
+      }
+
       if (!data) return;
 
       if (code === IMessageType.SINGLE_MESSAGE.code || code === IMessageType.GROUP_MESSAGE.code) {

@@ -1,15 +1,17 @@
+import { defineStore } from "pinia";
+import { ElMessage } from "element-plus";
 import { IMessageType, StoresEnum, WebRTCType } from "@/constants";
 import { emitTo } from "@tauri-apps/api/event";
 import {
   CloseCallAcceptWindow,
   CreateCallAcceptWindow,
   CreateCallWindow,
-  ShowCallWindow,
   waitForWindowReady
 } from "@/windows/call";
 import { useChatStore } from "@/store/modules/chat";
 import api from "@/api";
-import { LayoutMode, Participant } from "@/types/env";
+import { Participant } from "@/types/env";
+import { useLogger } from "@/hooks/useLogger";
 
 const chatStore = useChatStore();
 const logger = useLogger();

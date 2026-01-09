@@ -80,7 +80,7 @@
 
 <script lang="ts" setup>
   import { computed, defineAsyncComponent, ref, unref } from "vue";
-  import { ElMessage } from "element-plus";
+  import { ElMessageBox } from "element-plus";
   import System from "@/components/System/index.vue";
   import Avatar from "@/components/Avatar/index.vue";
   import { useUserStore } from "@/store/modules/user";
@@ -91,6 +91,7 @@
   import { ShowLoginWindow } from "@/windows/login";
   import { useSystemClose } from "@/hooks/useSystem";
 
+  const { t } = useI18n();
   const { currPlatform } = useSystemClose();
 
   const Setting = defineAsyncComponent(() => import("@/views/setting/index.vue"));
@@ -172,11 +173,31 @@
     settingDialogParam.value.showDialog = false;
   }
 
-  function logout() {
-    ElMessage("退出登录");
-    userStore.loginOut();
-    CloseMainWindow();
-    ShowLoginWindow();
+  /**
+   * 退出登录
+   * - 先关闭设置弹窗
+   * - 确认后调用 store 的 loginOut 方法（已集成 WebSocket 断开和窗口操作）
+   */
+  async function logout() {
+    // 关闭设置弹窗
+    unref(settingPopoverRef)?.hide?.();
+    
+    try {
+      await ElMessageBox.confirm(
+        t("settings.logoutConfirm") || "确定要退出登录吗？",
+        t("settings.logout") || "退出登录",
+        {
+          confirmButtonText: t("common.confirm") || "确定",
+          cancelButtonText: t("common.cancel") || "取消",
+          type: "warning"
+        }
+      );
+      
+      // 用户确认退出，调用 store 方法（已处理 WebSocket 断开和窗口操作）
+      await userStore.loginOut();
+    } catch {
+      // 用户取消退出，不做任何操作
+    }
   }
 </script>
 
