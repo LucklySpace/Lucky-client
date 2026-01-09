@@ -9,7 +9,7 @@ import Log from "@/utils/Log";
  * @param name 名称
  * @param url 预览地址
  */
-export const CreatePreviewWindow = async (name: string, url: string) => {
+export const CreatePreviewWindow = async (name: string, url: string, type: string) => {
   let webview = new WebviewWindow(StoresEnum.PREVIEW_MEDIA, {
     url: "/preview/media",
     width: 900,
@@ -21,7 +21,7 @@ export const CreatePreviewWindow = async (name: string, url: string) => {
   });
 
   const unlisten = await listen("preview-media-create", () => {
-    emitTo(StoresEnum.PREVIEW_MEDIA, "preview-media-load", { name, url });
+    emitTo(StoresEnum.PREVIEW_MEDIA, "preview-media-load", { name, url, type });
     Log.prettySuccess("图片预览页面创建完成");
     unlisten();
   });
@@ -36,14 +36,14 @@ export const CreatePreviewWindow = async (name: string, url: string) => {
  * @param name 名称
  * @param url 预览地址
  */
-export const ShowPreviewWindow = async (name: string, url: string) => {
+export const ShowPreviewWindow = async (name: string, url: string, type: string) => {
   const previewWindow = await Window.getByLabel(StoresEnum.PREVIEW_MEDIA);
   if (previewWindow) {
-    emitTo(StoresEnum.PREVIEW_MEDIA, "preview-media-load", { name, url }); // 执行相应的操作
+    emitTo(StoresEnum.PREVIEW_MEDIA, "preview-media-load", { name, url, type }); // 执行相应的操作
     previewWindow.show();
     previewWindow.setFocus();
   } else {
-    CreatePreviewWindow(name, url);
+    CreatePreviewWindow(name, url, type);
   }
 };
 

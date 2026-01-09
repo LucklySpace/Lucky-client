@@ -92,7 +92,7 @@ Http.interceptors.response.use(async (data: any) => {
       ElMessage.warning("登录凭证已过期");
       break;
     case MessageCode.AUTHENTICATION_FAILED:
-      ElMessage.warning("身份验证失败");
+      ElMessage.warning("身份验证失败,请检查登录信息是否正确");
       break;
     case MessageCode.CAPTCHA_ERROR:
       ElMessage.warning("验证码错误");
@@ -255,10 +255,16 @@ export default {
   GetEmojiPackInfo: (id: string) => Http.get(`/plat/api/v1/emoji/pack/${id}`),
 
   /** 文件上传 */
-  UploadFile: (data: any) => Http.upload("/service/api/v1/file/formUpload", data),
+  UploadFile: (data: any) => Http.upload("/upload/api/v1/file/upload", data),
+
+  /** 文件下载 */
+  DownloadFile: (params: any) => Http.get("/upload/api/v1/file/download", { params }),
 
   /** 图片上传 */
-  uploadImage: (data: FormData) => Http.upload("/upload/api/v1/media/image", data),
+  uploadImage: (data: FormData) => Http.upload("/upload/api/v1/media/image/upload", data),
+
+  /** 头像上传 */
+  uploadAvatar: (data: FormData) => Http.upload("/upload/api/v1/media/avatar/upload", data),
 
   /** 异常上报 */
   ExceptionReport: (params: any) => Http.get("/service/api/v1/tauri/exception/report", { params })

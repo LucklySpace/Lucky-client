@@ -68,8 +68,8 @@
 
     <!-- 输入框：contenteditable -->
     <div ref="inputContentRef" :data-placeholder="chatStore.getCurrentType === IMessageType.GROUP_MESSAGE.code
-        ? $t('chat.input.mentionHint', { at: '@' })
-        : $t('chat.input.placeholder')
+      ? $t('chat.input.mentionHint', { at: '@' })
+      : $t('chat.input.placeholder')
       " class="chat-container-input" contenteditable="true" spellcheck="false" @click="handleSelection"
       @input="handleSelection" @keydown="handleKeyDown" @keyup="handleKeyUp" @paste.prevent="handlePaste"></div>
 
@@ -113,7 +113,7 @@ import { useCallStore } from "@/store/modules/call";
 import { storage } from "@/utils/Storage";
 import onPaste from "@/utils/Paste.ts";
 import { useLogger } from "@/hooks/useLogger";
-import { IMessageType } from "@/constants";
+import { FileType, fromFileName, IMessageType } from "@/constants";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { IMessagePart } from "@/models";
 
@@ -403,7 +403,15 @@ const handleFileChange = (event: Event) => {
   if (!files || files.length === 0) return;
   // 可以将所有文件打包为要发送的 parts
   const parts: any[] = [];
-  for (let i = 0; i < files.length; i++) parts.push({ type: "file", file: files[i] });
+  for (let i = 0; i < files.length; i++) {
+    if (fromFileName(files[i].name) == FileType.Image) {
+      parts.push({ type: "image", file: files[i] })
+    } else if (fromFileName(files[i].name) == FileType.Video) {
+      parts.push({ type: "video", file: files[i] })
+    } else {
+      parts.push({ type: "file", file: files[i] })
+    }
+  };
   if (parts.length) {
     chatStore.handleSendMessage(parts);
     logger.prettyInfo("send files", parts);
