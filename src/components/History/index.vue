@@ -119,7 +119,7 @@
 
   .history-container {
     // max-height: calc(70vh - 120px);
-    height: calc(70vh - 110px);
+    height: calc(70vh - 120px);
     overflow-y: auto;
     padding: 5px;
     margin-top: 5px;

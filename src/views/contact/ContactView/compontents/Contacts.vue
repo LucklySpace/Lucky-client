@@ -375,10 +375,6 @@
         max-width: 220px;
         margin-right: 6px;
       }
-
-      .signature {
-        font-style: italic;
-      }
     }
 
     .actions-row {
