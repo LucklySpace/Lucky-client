@@ -60,13 +60,7 @@
             <el-icon class="edit-icon"><Edit /></el-icon>
           </template>
           <template v-else>
-            <el-input
-              v-model="remark"
-              size="small"
-              class="remark-input"
-              @keyup.enter="saveRemark"
-              @blur="cancelEdit"
-            />
+            <el-input v-model="remark" size="small" class="remark-input" @keyup.enter="saveRemark" @blur="cancelEdit" />
           </template>
         </div>
         <div v-if="friendInfo.name" class="info-row">
@@ -191,7 +185,7 @@
   }
   // 失焦取消编辑（与 single.vue 保持一致：回车保存、失焦取消）
   function cancelEdit() {
-    remark.value = (friendInfo.value as any)?.remark ?? (friendInfo.value as any)?.name ?? '';
+    remark.value = (friendInfo.value as any)?.remark ?? (friendInfo.value as any)?.name ?? "";
     isEditingRemark.value = false;
   }
 
@@ -357,27 +351,24 @@
     }
 
     .info-section {
+      color: var(--content-font-color);
       .info-row {
         display: flex;
         gap: 8px;
         align-items: flex-start;
         font-size: 14px;
-        color: #333;
         margin-bottom: 8px;
 
         strong {
-          color: #6b6b6b;
           min-width: 84px;
         }
       }
 
       .remark-text {
         cursor: pointer;
-        color: var(--main-text-color);
       }
       .edit-icon {
         font-size: 12px;
-        color: #6b6b6b;
         margin-left: 4px;
       }
       .remark-input {
@@ -386,7 +377,6 @@
       }
 
       .signature {
-        color: #495057;
         font-style: italic;
       }
     }
