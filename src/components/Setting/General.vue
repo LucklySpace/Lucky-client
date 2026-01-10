@@ -129,7 +129,6 @@
   .form-row {
     display: flex;
     align-items: center;
-    padding: 10px 0;
     justify-content: space-between;
 
     &.footer-row {

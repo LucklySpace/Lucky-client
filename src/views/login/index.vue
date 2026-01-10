@@ -158,8 +158,6 @@ const clearScanInterval = () => {
 const clearUserInfo = () => {
   loginForm.value.principal = "";
   loginForm.value.credentials = "";
-  storage.remove("token");
-  storage.remove("userId");
 };
 
 // 发送验证码的倒计时逻辑
@@ -231,7 +229,7 @@ const login = async () => {
       return;
     }
   }
-
+  
   const password = rsa.rsaPublicData(loginForm.value.credentials.trim());
   if (!password) {
     // 加密失败，重新获取公钥

@@ -1,915 +1,585 @@
 <template>
   <el-scrollbar :height="chatHeight">
     <div class="group-container">
-      <!-- 顶层表单容器：承载整个页面块（参照 single.vue 的组织形式） -->
       <el-form :model="groupInfoData" label-position="top" @submit.prevent>
         <!-- 搜索群成员 -->
-        <el-form-item class="search-members" :label="$t('chat.groupChat.searchMembers')">
-          <el-input
-            v-model="ui.search"
-            class="input-with-select"
-            clearable
-            :placeholder="$t('chat.groupChat.searchMembers')"
-          >
-            <template #append>
-              <el-button icon="el-icon-search"></el-button>
-            </template>
+        <div class="search-section">
+          <el-input v-model="ui.search" class="group-search" clearable
+            :placeholder="$t('chat.groupChat.searchMembers')">
           </el-input>
-        </el-form-item>
-
-        <!-- 群成员列表 -->
-        <el-form-item class="members-list" :label="$t('chat.groupChat.members')">
-          <el-row :gutter="20">
-            <!-- 群成员 -->
-            <el-col v-for="item in displayedMembers" :key="item.userId" :span="6">
-              <!-- 保持你的头像样式与组件 -->
-              <span class="member-avatar">
-                <Avatar :avatar="item.avatar" :name="item.name" :width="35" :borderRadius="2"></Avatar>
-              </span>
-              <div :title="item.name ?? ''" class="member-name">{{ item.name }}</div>
-            </el-col>
-
-            <!-- 添加按钮 -->
-            <el-col :span="6">
-              <el-button class="member-btn" style="margin-bottom: 3px" @click="handleInviteDialog">
-                <i class="iconfont icon-jia" style="margin-left: -5px"></i>
-              </el-button>
-              <div class="member-name">{{ $t("actions.add") }}</div>
-            </el-col>
-          </el-row>
-
-          <!-- 折叠按钮 -->
-          <el-button v-if="filteredMembers.length > 16" class="group-footer" link type="primary" @click="toggleExpand">
-            {{ ui.members.expanded ? $t("chat.groupChat.collapse") : $t("chat.groupChat.viewMore") }}
-          </el-button>
-        </el-form-item>
-
-        <el-divider></el-divider>
-
-        <!-- 群聊名称 -->
-        <el-form-item :label="$t('chat.groupChat.groupName')" class="group-header">
-          <!-- 群聊名称编辑区域 -->
-          <div class="editable-field" @click="startEditGroupName" v-if="!ui.edit.name.editing">
-            <span class="field-text">{{ groupInfoData.name }}</span>
-            <el-icon v-if="isOwner" class="edit-icon"><Edit /></el-icon>
-          </div>
-          <!-- 编辑输入框 -->
-          <div v-else class="edit-field" v-click-outside="checkAndCancelEditGroupName">
-            <el-input
-              v-if="isOwner"
-              ref="groupNameInputRef"
-              v-model="ui.edit.name.value"
-              :placeholder="groupInfoData.name"
-              @keydown.enter.prevent="saveGroupInfo"
-              size="small"
-            />
-          </div>
-        </el-form-item>
-
-        <!-- 群公告（仅管理员/群主可编辑） -->
-        <el-form-item :label="$t('chat.groupChat.groupNotice')" class="group-notice">
-          <div
-            :class="['group-notice-display', { 'no-permission': !canEditNotice }]"
-            @click="canEditNotice ? startEditGroupNotice() : onNoPermission()"
-            v-if="!ui.edit.notice.editing"
-          >
-            {{ groupInfoData.notification?.trim() ? groupInfoData.notification : $t("group.noAnnouncement") }}
-          </div>
-          <div v-else class="el-textarea" v-click-outside="checkAndCancelEditGroupNotice">
-            <el-input
-              ref="groupNoticeRef"
-              type="textarea"
-              :rows="3"
-              style="width: 255px"
-              v-model="ui.edit.notice.value"
-              :placeholder="groupInfoData.notification"
-              @keydown.enter.prevent="saveGroupInfo"
-            />
-          </div>
-        </el-form-item>
-
-        <el-divider></el-divider>
-
-        <!-- 底部操作（保持你的 class 与内容，仅用 form-item 承载） -->
-        <div class="group-footer">
-          <el-form-item style="margin-bottom: 0">
-            <button class="ordinary-btn" @click="switchHistoryMessage">
-              <span>{{ $t("chat.toolbar.history") }}</span>
-              <span
-                ><el-icon><ArrowRight /></el-icon
-              ></span>
-            </button>
-          </el-form-item>
-
-          <el-divider />
-
-          
-
-          <el-form-item class="switch-form-item" style="margin-bottom: 0">
-            <div class="ordinary-btn">
-              <span class="switch-label">{{ $t("chat.toolbar.mute") }}</span>
-              <span><el-switch v-model="ui.switches.mute" class="switch-btn" /></span>
-            </div>
-          </el-form-item>
-
-          <el-form-item class="switch-form-item" style="margin-bottom: 0">
-            <div class="ordinary-btn">
-              <span class="switch-label">{{ $t("chat.toolbar.pin") }}</span>
-              <el-switch v-model="ui.switches.top" class="switch-btn" />
-            </div>
-          </el-form-item>
         </div>
 
-        <el-divider />
+        <!-- 群成员网格 -->
+        <div class="members-section">
+          <div class="section-header">
+            <span>{{ $t('chat.groupChat.members') }} ({{ filteredMembers.length }})</span>
+          </div>
+          <div class="members-grid">
+            <div v-for="item in displayedMembers" :key="item.userId" class="member-item">
+              <Avatar class="member-avatar" :avatar="item.avatar" :name="item.name" :width="42" :borderRadius="6" />
+              <div class="member-name" :title="item.name">{{ item.name }}</div>
+            </div>
+            <!-- 添加成员按钮 -->
+            <div class="member-item clickable" @click="handleInviteDialog">
+              <div class="add-btn">
+                <el-icon>
+                  <Plus />
+                </el-icon>
+              </div>
+              <div class="member-name">{{ $t("actions.add") }}</div>
+            </div>
+          </div>
+          <div v-if="filteredMembers.length > 15" class="expand-btn-wrapper">
+            <el-button link type="primary" @click="toggleExpand">
+              {{ ui.members.expanded ? $t("chat.groupChat.collapse") : $t("chat.groupChat.viewMore") }}
+            </el-button>
+          </div>
+        </div>
 
-        <div class="group-footer">
-          <el-form-item style="margin-bottom: 0" class="danger">
-            <button link class="danger-btn" @click="handleClearGroupMessage">
-              {{ $t("dialog.clearChatLog") }}
-            </button>
-          </el-form-item>
+        <div class="section-divider"></div>
 
-          <el-divider />
+        <!-- 基本设置 -->
+        <div class="settings-section">
+          <div class="setting-item" :class="{ clickable: isOwner }" @click="startEditGroupName">
+            <span class="label">{{ $t('chat.groupChat.groupName') }}</span>
+            <div class="content">
+              <template v-if="!ui.edit.name.editing">
+                <span class="value">{{ groupInfoData.name }}</span>
+                <el-icon v-if="isOwner" class="arrow-icon">
+                  <ArrowRight />
+                </el-icon>
+              </template>
+              <el-input v-else ref="groupNameInputRef" v-model="ui.edit.name.value" size="small"
+                @blur="checkAndCancelEditGroupName" @keydown.enter.prevent="saveGroupInfo" @click.stop />
+            </div>
+          </div>
 
-          <el-form-item class="danger">
-            <button link class="danger-btn" @click="handleQuitGroup">
-              {{ $t("contacts.deleteGroup") }}
-            </button>
-          </el-form-item>
+          <div class="setting-item" :class="{ clickable: canEditNotice }" @click="startEditGroupNotice">
+            <span class="label">{{ $t('chat.groupChat.groupNotice') }}</span>
+            <div class="content notice-content">
+              <template v-if="!ui.edit.notice.editing">
+                <span class="value notice-text">{{ groupInfoData.notification || $t("group.noAnnouncement") }}</span>
+                <el-icon v-if="canEditNotice" class="arrow-icon">
+                  <ArrowRight />
+                </el-icon>
+              </template>
+              <el-input v-else ref="groupNoticeRef" v-model="ui.edit.notice.value" type="textarea" :rows="3"
+                @blur="checkAndCancelEditGroupNotice" @click.stop />
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- 交互设置 -->
+        <div class="settings-section">
+          <div class="setting-item clickable" @click="switchHistoryMessage">
+            <span class="label">{{ $t('chat.toolbar.history') }}</span>
+            <div class="content">
+              <el-icon class="arrow-icon">
+                <ArrowRight />
+              </el-icon>
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <span class="label">{{ $t('chat.toolbar.mute') }}</span>
+            <div class="content">
+              <el-switch v-model="ui.switches.mute" class="custom-switch" />
+            </div>
+          </div>
+
+          <div class="setting-item">
+            <span class="label">{{ $t('chat.toolbar.pin') }}</span>
+            <div class="content">
+              <el-switch v-model="ui.switches.top" class="custom-switch" />
+            </div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- 危险操作 -->
+        <div class="danger-section">
+          <div class="danger-item clickable" @click="handleClearGroupMessage">
+            {{ $t("dialog.clearChatLog") }}
+          </div>
+          <div class="danger-item clickable" @click="handleQuitGroup">
+            {{ isOwner ? $t("contacts.deleteGroup") : $t("contacts.quitGroup") }}
+          </div>
         </div>
       </el-form>
 
-      <!-- 原有弹窗保持不变 -->
-      <el-dialog
-        :destroy-on-close="true"
-        :model-value="ui.dialogs.invite"
-        class="status_change"
-        :title="$t('search.invite.title')"
-        width="550"
-      >
+      <!-- 弹窗 -->
+      <el-dialog v-model="ui.dialogs.invite" :destroy-on-close="true" class="invite-dialog"
+        :title="$t('search.invite.title')" width="550px">
         <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
       </el-dialog>
 
-      <HistoryDialog
-        :visible="ui.dialogs.history"
-        :title="$t('chat.toolbar.history')"
-        @handleClose="toggleHistoryDialog"
-      />
+      <HistoryDialog :visible="ui.dialogs.history" :title="$t('chat.toolbar.history')"
+        @handleClose="toggleHistoryDialog" />
     </div>
   </el-scrollbar>
-      
 </template>
 
 <script lang="ts" setup>
-  import SelectContact from "@/components/SelectContact/index.vue";
-  import { reactive } from "vue";
-  import { ElMessageBox, ElMessage } from "element-plus";
-  import { useChatStore } from "@/store/modules/chat";
-  import { IMessageType } from "@/constants";
-  import Chats from "@/database/entity/Chats";
-  import HistoryDialog from "@/components/History/index.vue";
-  import { ClickOutside as vClickOutside } from "element-plus";
-  import Avatar from "@/components/Avatar/index.vue";
-  import { globalEventBus } from "@/hooks/useEventBus";
-  import { CHAT_CHANGED, GROUP_RENAMED, GROUP_NOTICE_CHANGED } from "@/constants/events";
+import SelectContact from "@/components/SelectContact/index.vue";
+import { reactive, computed, onMounted, onUnmounted, nextTick, ref } from "vue";
+import { ElMessageBox, ElMessage } from "element-plus";
+import { useChatStore } from "@/store/modules/chat";
+import { IMessageType } from "@/constants";
+import Chats from "@/database/entity/Chats";
+import HistoryDialog from "@/components/History/index.vue";
+import Avatar from "@/components/Avatar/index.vue";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { CHAT_CHANGED, GROUP_RENAMED, GROUP_NOTICE_CHANGED } from "@/constants/events";
+import { useI18n } from "vue-i18n";
 
-  const chatStore = useChatStore();
+const { t: $t } = useI18n();
+const chatStore = useChatStore();
+const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
 
-  const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
+const ui = reactive({
+  search: "",
+  members: { expanded: false },
+  dialogs: { invite: false, history: false },
+  edit: {
+    name: { editing: false, value: "" },
+    notice: { editing: false, value: "" }
+  },
+  switches: {} as any
+});
 
-  // 统一界面状态容器（避免零散 ref）
-  const ui = reactive({
-    search: "",
-    members: { expanded: false },
-    dialogs: { invite: false, history: false },
-    edit: {
-      name: { editing: false, value: "" },
-      notice: { editing: false, value: "" }
-    },
-    switches: {} as any
-  });
+const chatHeight = computed(() => window.innerHeight - 60);
 
-  //
+const groupInfoData = reactive({
+  name: "",
+  notification: ""
+});
 
-  //获取聊天框高度
-  const chatHeight = computed(() => {
-    return window.innerHeight - 120;
-  });
+const myMember = computed(() => {
+  const raw = (chatStore as any).currentChatGroupMemberMap;
+  const source: any = Array.isArray(raw?.value ?? raw) ? raw?.value ?? raw : Object.values(raw?.value ?? raw ?? {});
+  const me = String(chatStore.getOwnerId || "");
+  return source.find((m: any) => String(m?.userId ?? m?.id) === me);
+});
 
-  /**
-   * 获取群详情
-   * —— 改为 reactive（变量名不变）
-   * —— 改为 reactive（变量名不变）
-   */
-  const groupInfoData = reactive({
-    name: "",
-    notification: "暂无"
-  });
+const myRole = computed<number>(() => {
+  const m = myMember.value as any;
+  const roleLike = m?.role ?? m?.memberRole ?? m?.roleType ?? 0;
+  const n = Number(roleLike);
+  return Number.isFinite(n) ? n : 0;
+});
 
-  // 当前用户群内角色：0 普通成员，1 管理员，2 群主（仅用于“群公告”权限判断）
-  const myMember = computed(() => {
-    const raw = (chatStore as any).currentChatGroupMemberMap;
-    const source: any = Array.isArray(raw?.value ?? raw) ? raw?.value ?? raw : Object.values(raw?.value ?? raw ?? {});
-    const me = String(chatStore.getOwnerId || "");
-    return source.find((m: any) => String(m?.userId ?? m?.id) === me);
-  });
-  const myRole = computed<number>(() => {
-    const m = myMember.value as any;
-    const roleLike = m?.role ?? m?.memberRole ?? m?.roleType ?? 0;
-    const n = Number(roleLike);
-    return Number.isFinite(n) ? n : 0;
-  });
-  const isAdmin = computed(() => myRole.value === 1);
-  const canEditNotice = computed(() => isOwner.value || isAdmin.value);
+const isAdmin = computed(() => myRole.value === 1);
+const isOwner = computed(() => {
+  const currentChat = chatStore.currentChat;
+  if (!currentChat) return false;
+  const me = chatStore.getOwnerId;
+  return currentChat.ownerId === me;
+});
+const canEditNotice = computed(() => isOwner.value || isAdmin.value);
 
-  const onNoPermission = () => {
-    ElMessage.warning("只有管理员或群主可以修改群公告");
-  };
+const onNoPermission = () => {
+  ElMessage.warning($t("chat.groupChat.noPermission"));
+};
 
-  // 事件处理器（用于 EventBus 订阅/反订阅）
-  const onBusGroupRenamed = (payload: any) => {
-    if (payload && chatStore.currentChat && String(payload.groupId) === String(chatStore.currentChat.chatId)) {
-      nextTick(() => {
-        groupInfoData.name = payload.groupName ?? groupInfoData.name;
-      });
-    }
-  };
-
-  const onBusChatChanged = (payload: any) => {
-    if (payload && chatStore.currentChat && String(payload.chatId) === String(chatStore.currentChat.chatId)) {
-      nextTick(() => {
-        if (payload.name !== undefined) groupInfoData.name = payload.name;
-        if (payload.notification !== undefined) groupInfoData.notification = payload.notification || "暂无";
-      });
-    }
-  };
-
-  const onBusGroupNoticeChanged = (payload: any) => {
-    if (!payload) return;
-    const cid = chatStore.currentChat?.chatId;
-    const target = payload.chatId ?? payload.groupId;
-    if (!cid || (target && String(target) !== String(cid))) return;
+const onBusGroupRenamed = (payload: any) => {
+  if (payload && chatStore.currentChat && String(payload.groupId) === String(chatStore.currentChat.chatId)) {
     nextTick(() => {
-      if (payload.content !== undefined) groupInfoData.notification = payload.content || "暂无";
+      groupInfoData.name = payload.groupName ?? groupInfoData.name;
     });
-  };
-
-  // 更新群组信息的函数
-  function updateGroupInfoData() {
-    const currentChat = chatStore.currentChat;
-    if (currentChat && currentChat.chatType == IMessageType.GROUP_MESSAGE.code) {
-      groupInfoData.name = currentChat.name ?? "未知用户";
-      groupInfoData.notification = (currentChat as any).notification || "暂无";
-    }
   }
+};
 
-  // 组件挂载时初始化群组信息
-  onMounted(() => {
-    updateGroupInfoData();
+const onBusChatChanged = (payload: any) => {
+  if (payload && chatStore.currentChat && String(payload.chatId) === String(chatStore.currentChat.chatId)) {
+    nextTick(() => {
+      if (payload.name !== undefined) groupInfoData.name = payload.name;
+      if (payload.notification !== undefined) groupInfoData.notification = payload.notification || "";
+    });
+  }
+};
 
-    globalEventBus.on(GROUP_RENAMED as any, onBusGroupRenamed as any);
-    globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.on(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+const onBusGroupNoticeChanged = (payload: any) => {
+  if (!payload) return;
+  const cid = chatStore.currentChat?.chatId;
+  const target = payload.chatId ?? payload.groupId;
+  if (!cid || (target && String(target) !== String(cid))) return;
+  nextTick(() => {
+    if (payload.content !== undefined) groupInfoData.notification = payload.content || "";
   });
+};
 
-  onUnmounted(() => {
-    globalEventBus.off(GROUP_RENAMED as any, onBusGroupRenamed as any);
-    globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.off(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
-  });
+function updateGroupInfoData() {
+  const currentChat = chatStore.currentChat;
+  if (currentChat && currentChat.chatType == IMessageType.GROUP_MESSAGE.code) {
+    groupInfoData.name = currentChat.name ?? "";
+    groupInfoData.notification = (currentChat as any).notification || "";
+  }
+}
 
-  // 首次挂载时初始化（后续通过 EventBus 同步，无需 watch）
-  // 已在 onMounted 中调用 updateGroupInfoData()
+onMounted(() => {
+  updateGroupInfoData();
+  globalEventBus.on(GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.on(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+});
 
-  /**
-   * 获取群成员
-   */
-  const filteredMembers = computed(() => {
-    const raw = (chatStore as any).currentChatGroupMemberMap; // 可能是 ref
-    const source: any = raw?.value ?? raw;
-    let members: any[] = [];
-    if (Array.isArray(source)) members = source;
-    else if (source && typeof source === "object") members = Object.values(source);
+onUnmounted(() => {
+  globalEventBus.off(GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.off(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+});
 
-    const q = ui.search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m: any) => (m?.name || "").toLowerCase().includes(q));
-  });
+const filteredMembers = computed(() => {
+  const raw = (chatStore as any).currentChatGroupMemberMap;
+  const source: any = raw?.value ?? raw;
+  let members: any[] = [];
+  if (Array.isArray(source)) members = source;
+  else if (source && typeof source === "object") members = Object.values(source);
 
-  /** 显示成员 */
-  const displayedMembers = computed(() =>
-    ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 15)
-  );
+  const q = ui.search.trim().toLowerCase();
+  if (!q) return members;
+  return members.filter((m: any) => (m?.name || "").toLowerCase().includes(q));
+});
 
-  /** 控制展开 */
-  const toggleExpand = () => {
-    ui.members.expanded = !ui.members.expanded;
-  };
+const displayedMembers = computed(() =>
+  ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 14)
+);
 
-  const handleInviteDialog = () => {
-    ui.dialogs.invite = !ui.dialogs.invite;
-  };
+const toggleExpand = () => {
+  ui.members.expanded = !ui.members.expanded;
+};
 
-  /** 邀请群成员 */
-  /** 邀请群成员 */
-  const handleAddGroupMember = (arr: any) => {
-    if (arr && arr.length <= 0) return;
-    chatStore.handleAddGroupMember(arr, true);
-  };
+const handleInviteDialog = () => {
+  ui.dialogs.invite = !ui.dialogs.invite;
+};
 
-  //编辑群聊名称
-  //判断是否为群主
-  const isOwner = computed(() => {
-    const currentChat = chatStore.currentChat;
-    if (!currentChat) return false;
-    const me = chatStore.getOwnerId;
-    if (!me) return false;
-    return currentChat.ownerId === me;
-  });
+const handleAddGroupMember = (arr: any) => {
+  if (arr && arr.length <= 0) return;
+  chatStore.handleAddGroupMember(arr, true);
+};
 
-  // 名称编辑态使用 ui.edit.name
-  const groupNameInputRef = ref();
-
-  const startEditGroupName = () => {
-    if (isOwner.value) {
-      ui.edit.name.editing = true;
-      ui.edit.name.value = groupInfoData.name;
-      nextTick(() => {
-        if (groupNameInputRef.value) {
-          groupNameInputRef.value.focus();
-        }
-      });
-    } else {
-      ElMessage.warning("只有群主才能修改群名称");
-    }
-  };
-
-  // 编辑发布群公告
-  // 公告编辑态使用 ui.edit.notice
-  ui.edit.notice.value = groupInfoData.notification ?? "";
-
-  // 更新群聊信息
-  const saveGroupInfo = async () => {
-    // 后端 groupId 使用服务端群ID；本地更新需要 chatId，store 内部将按 chatId 处理
-    const chatId = chatStore.currentChat?.chatId;
-    const groupId = chatStore.currentChat?.toId;
-    if (!chatId || !groupId) return;
-
-    const updateData: {
-      groupId: string; // 服务端群ID
-      chatId?: string; // 本地会话ID
-      groupName?: string;
-      notification?: string;
-    } = { groupId, chatId };
-
-    if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
-      updateData.groupName = ui.edit.name.value;
-    }
-    if (ui.edit.notice.value.trim() && ui.edit.notice.value !== groupInfoData.notification) {
-      // 仅管理员/群主可修改群公告
-      if (!canEditNotice.value) {
-        onNoPermission();
-      } else {
-        updateData.notification = ui.edit.notice.value;
-      }
-    }
-
-    if (!updateData.groupName && !updateData.notification) {
-      ui.edit.name.editing = false;
-      ui.edit.notice.editing = false;
-      return;
-    }
-
-    try {
-      await chatStore.updateGroupInfo(updateData as any);
-      if (updateData.groupName) groupInfoData.name = updateData.groupName;
-      if (updateData.notification) groupInfoData.notification = updateData.notification;
-      ui.edit.name.editing = false;
-      ui.edit.notice.editing = false;
-      ElMessage.success("群信息已更新");
-      // 广播群名变更（如有），以及群公告变更（如有）
-      if (updateData.groupName) {
-        try {
-          globalEventBus.emit(
-            GROUP_RENAMED as any,
-            {
-              groupId,
-              chatId,
-              groupName: updateData.groupName
-            } as any
-          );
-        } catch {}
-      }
-      if (updateData.notification) {
-        try {
-          globalEventBus.emit(
-            GROUP_NOTICE_CHANGED as any,
-            {
-              chatId,
-              groupId,
-              content: updateData.notification
-            } as any
-          );
-        } catch {}
-      }
-    } catch (e) {
-      ElMessage.error("更新失败");
-    }
-  };
-
-  const checkAndCancelEditGroupName = () => {
-    if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
-      ElMessageBox.confirm("检测到群名称有更改，是否保存更改？", "提示", {
-        confirmButtonText: "保存",
-        cancelButtonText: "不保存",
-        type: "warning"
-      })
-        .then(() => saveGroupInfo())
-        .catch(() => cancelEditGroupName());
-    } else {
-      cancelEditGroupName();
-    }
-  };
-
-  const cancelEditGroupName = () => {
-    ui.edit.name.editing = false;
+const groupNameInputRef = ref();
+const startEditGroupName = () => {
+  if (isOwner.value) {
+    ui.edit.name.editing = true;
     ui.edit.name.value = groupInfoData.name;
-  };
+    nextTick(() => groupNameInputRef.value?.focus());
+  } else {
+    ElMessage.warning("只有群主才能修改群名称");
+  }
+};
 
-  const startEditGroupNotice = () => {
+const saveGroupInfo = async () => {
+  const chatId = chatStore.currentChat?.chatId;
+  const groupId = chatStore.currentChat?.toId;
+  if (!chatId || !groupId) return;
+
+  const updateData: any = { groupId, chatId };
+  let hasChange = false;
+
+  if (ui.edit.name.editing && ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
+    updateData.groupName = ui.edit.name.value;
+    hasChange = true;
+  }
+  if (ui.edit.notice.editing && ui.edit.notice.value.trim() !== groupInfoData.notification) {
     if (!canEditNotice.value) {
       onNoPermission();
-      return;
-    }
-    ui.edit.notice.editing = true;
-    ui.edit.notice.value = groupInfoData.notification ?? "";
-  };
-  const checkAndCancelEditGroupNotice = () => {
-    if (ui.edit.notice.value.trim() && ui.edit.notice.value !== groupInfoData.notification) {
-      ElMessageBox.confirm("检测到群公告有更改，是否保存更改？", "提示", {
-        confirmButtonText: "保存",
-        cancelButtonText: "不保存",
-        type: "warning"
-      })
-        .then(() => {
-          saveGroupInfo();
-        })
-        .catch(() => {
-          cancelEditGroupNotice();
-        });
     } else {
-      cancelEditGroupNotice();
+      updateData.notification = ui.edit.notice.value;
+      hasChange = true;
     }
-  };
-  const cancelEditGroupNotice = () => {
+  }
+
+  if (!hasChange) {
+    ui.edit.name.editing = false;
     ui.edit.notice.editing = false;
-    ui.edit.notice.value = groupInfoData.notification ?? "";
-  };
+    return;
+  }
 
-  //查找聊天信息
-  const switchHistoryMessage = () => {
-    ui.dialogs.history = true;
-  };
-  const toggleHistoryDialog = () => {
-    ui.dialogs.history = !ui.dialogs.history;
-  };
+  try {
+    await chatStore.updateGroupInfo(updateData);
+    if (updateData.groupName) groupInfoData.name = updateData.groupName;
+    if (updateData.notification !== undefined) groupInfoData.notification = updateData.notification;
+    ui.edit.name.editing = false;
+    ui.edit.notice.editing = false;
+    ElMessage.success("群信息已更新");
+  } catch (e) {
+    ElMessage.error("更新失败");
+  }
+};
 
-  //置顶聊天
-  const currentItem = computed(() => {
-    const { currentChat } = chatStore;
-    const chatId = currentChat?.chatId;
-    if (!chatId) return null;
-    return chatStore.getChatById(chatId);
-  });
-
-  const top = computed<boolean>({
-    get: () => (currentItem.value?.isTop ?? 0) === 1,
-    set: (_v: boolean) => {
-      if (currentItem.value) chatStore.handlePinChat(currentItem.value as Chats);
-    }
-  });
-
-  //消息免打扰
-  const messageMute = computed<boolean>({
-    get: () => (currentItem.value?.isMute ?? 0) === 1,
-    set: (_v: boolean) => {
-      if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats);
-    }
-  });
-
-  // 暴露给模板的开关容器（computed 可作为 v-model 使用）
-  (ui as any).switches = { top, mute: messageMute };
-
-  const handleClearGroupMessage = () => {
-    ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {
-      confirmButtonText: "确认",
+const checkAndCancelEditGroupName = () => {
+  if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
+    ElMessageBox.confirm("是否保存群名称更改？", "提示", {
+      confirmButtonText: "保存",
       cancelButtonText: "取消",
       type: "warning"
-    })
-      .then(() => {
-        emit("handleClearGroupMessage");
-      })
-      .catch(() => {});
-  };
+    }).then(() => saveGroupInfo()).catch(() => {
+      ui.edit.name.editing = false;
+      ui.edit.name.value = groupInfoData.name;
+    });
+  } else {
+    ui.edit.name.editing = false;
+  }
+};
 
-  const handleQuitGroup = () => {
-    ElMessageBox.confirm("确定退出群聊?", "退出群聊", {
-      distinguishCancelAndClose: true,
-      confirmButtonText: "确认",
-      cancelButtonText: "取消"
-    })
-      .then(() => {
-        emit("handleQuitGroup");
-      })
-      .catch(() => {});
-  };
+const startEditGroupNotice = () => {
+  if (!canEditNotice.value) {
+    onNoPermission();
+    return;
+  }
+  ui.edit.notice.editing = true;
+  ui.edit.notice.value = groupInfoData.notification;
+};
+
+const checkAndCancelEditGroupNotice = () => {
+  if (ui.edit.notice.value !== groupInfoData.notification) {
+    ElMessageBox.confirm("是否保存群公告更改？", "提示", {
+      confirmButtonText: "保存",
+      cancelButtonText: "取消",
+      type: "warning"
+    }).then(() => saveGroupInfo()).catch(() => {
+      ui.edit.notice.editing = false;
+      ui.edit.notice.value = groupInfoData.notification;
+    });
+  } else {
+    ui.edit.notice.editing = false;
+  }
+};
+
+const switchHistoryMessage = () => ui.dialogs.history = true;
+const toggleHistoryDialog = () => ui.dialogs.history = !ui.dialogs.history;
+
+const currentItem = computed(() => {
+  const { currentChat } = chatStore;
+  const chatId = currentChat?.chatId;
+  return chatId ? chatStore.getChatById(chatId) : null;
+});
+
+const top = computed({
+  get: () => currentItem.value?.isTop === 1,
+  set: () => { if (currentItem.value) chatStore.handlePinChat(currentItem.value as Chats); }
+});
+
+const messageMute = computed({
+  get: () => currentItem.value?.isMute === 1,
+  set: () => { if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats); }
+});
+
+ui.switches = { top, mute: messageMute };
+
+const handleClearGroupMessage = () => {
+  ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {
+    confirmButtonText: "确认",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => emit("handleClearGroupMessage")).catch(() => { });
+};
+
+const handleQuitGroup = () => {
+  const title = isOwner.value ? "解散群聊" : "退出群聊";
+  const msg = isOwner.value ? "确定解散该群聊？" : "确定退出群聊？";
+  ElMessageBox.confirm(msg, title, {
+    confirmButtonText: "确认",
+    cancelButtonText: "取消",
+    type: "warning"
+  }).then(() => emit("handleQuitGroup")).catch(() => { });
+};
 </script>
 
-<!-- 样式保持备份版 -->
-<!-- 样式保持备份版 -->
 <style lang="scss" scoped>
-  /* 定义滚动条宽度 */
-  @mixin scroll-bar($width: 6px) {
-    &::-webkit-scrollbar-track {
-      border-radius: 10px;
-      background-color: #ddd;
-      background-color: #ddd;
-    }
-    &::-webkit-scrollbar {
-      width: thin;
-      height: 10px;
-      color: none;
-      width: thin;
-      height: 10px;
-      color: none;
-      background-color: transparent;
-      transition: opacity 0.3s ease;
-      transition: opacity 0.3s ease;
-    }
-    &::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-      background-color: rgba(155, 155, 155, 0.2);
-    }
-  }
+.group-container {
+  height: 100%;
+  background-color: #f8f9fa;
+}
 
-  .group-container {
-    padding: 18px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    @include scroll-bar();
+.search-section {
+  padding: 15px 20px;
+  background-color: #fff;
 
-    &::-webkit-scrollbar-thumb {
-      &:hover {
-        background-color: rgba(155, 155, 155, 0.2);
+  .group-search {
+    :deep(.el-input__wrapper) {
+      background-color: #f0f2f5;
+      box-shadow: none;
+      border-radius: 8px;
+
+      &.is-focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 1px #409eff inset;
       }
-      background-color: rgba(155, 155, 155, 0.2);
     }
   }
+}
 
-  
+.members-section {
+  padding: 10px;
+  background-color: #fff;
 
-  :deep(.el-divider) {
-    position: relative;
-    margin: 15px 2px;
-  }
-
-  p {
-    margin: 0;
-    font-size: 13px;
+  .section-header {
+    font-size: 14px;
     color: #888;
+    margin-bottom: 15px;
+    padding-left: 5px;
   }
 
-  
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px 10px;
 
-  .group-header {
-    /* 群聊名称编辑区域样式 */
-    .editable-field {
+    .member-item {
       display: flex;
+      flex-direction: column;
       align-items: center;
+      gap: 6px;
       cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s ease;
 
-      .field-text {
-        border: none;
-        flex: 1;
-        font-size: 14px;
-        color: var(--main-text-color);
-        word-break: break-all;
-      }
-
-      .edit-icon {
-        margin-left: 8px;
-        color: #999;
+      .member-name {
         font-size: 12px;
-      }
-    }
-
-    /* 编辑输入框容器样式 */
-    .edit-field {
-      width: 100%;
-      padding: 4px 0;
-      .el-input {
-        margin-bottom: 8px;
-        :deep(.el-input__inner) {
-          font-size: 14px;
-          padding: 1px 1px;
-          border-radius: 4px;
-          border: 1px solid transparent;
-        }
-      }
-    }
-
-    /* 群公告样式 */
-    .group-notice {
-      /* 群公告显示样式 */
-      .group-notice-display {
-        font-size: 13px;
         color: #666;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      .el-textarea {
-        :deep(.el-textarea__inner) {
-          font-size: 13px;
-          color: #666;
-          border-radius: 4px;
-          border: 1px solid #dcdfe6;
-
-          &:focus {
-            border-color: #409eff;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-          }
-        }
-      }
-    }
-
-    /* 表单项目样式 */
-    .group-title {
-      :deep(.el-form-item) {
-        .el-form-item__label {
-          font-size: 13px;
-          color: #666;
-          padding: 0 0 6px 0;
-        }
-      }
-    }
-    /* 群聊名称编辑区域样式 */
-    .editable-field {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-
-      .field-text {
-        border: none;
-        flex: 1;
-        font-size: 14px;
-        color: var(--main-text-color);
-        word-break: break-all;
+        width: 100%;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .edit-icon {
-        margin-left: 8px;
+      .add-btn {
+        width: 42px;
+        height: 42px;
+        border: 1px dashed #ccc;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: #999;
-        font-size: 12px;
-      }
-    }
+        font-size: 20px;
+        transition: all 0.2s;
 
-    /* 编辑输入框容器样式 */
-    .edit-field {
-      width: 100%;
-      padding: 4px 0;
-      .el-input {
-        margin-bottom: 8px;
-        :deep(.el-input__inner) {
-          font-size: 14px;
-          padding: 1px 1px;
-          border-radius: 4px;
-          border: 1px solid transparent;
-        }
-      }
-    }
-
-    /* 群公告样式 */
-    .group-notice {
-      /* 群公告显示样式 */
-      .group-notice-display {
-        font-size: 13px;
-        color: #666;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      .el-textarea {
-        :deep(.el-textarea__inner) {
-          font-size: 13px;
-          color: #666;
-          border-radius: 4px;
-          border: 1px solid #dcdfe6;
-
-          &:focus {
-            border-color: #409eff;
-            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-          }
-        }
-      }
-    }
-
-    /* 表单项目样式 */
-    .group-title {
-      :deep(.el-form-item) {
-        .el-form-item__label {
-          font-size: 13px;
-          color: #666;
-          padding: 0 0 6px 0;
+        &:hover {
+          border-color: #409eff;
+          color: #409eff;
         }
       }
     }
   }
 
-  .search-members {
-    margin-bottom: 20px;
+  .expand-btn-wrapper {
+    text-align: center;
+    margin-top: 15px;
   }
+}
 
-  .members-list {
-    margin-bottom: 20px;
-  }
+.section-divider {
+  height: 12px;
+  background-color: #f0f2f5;
+}
 
-  .group-footer {
-    // margin-top: 10px;
-    // margin-top: 10px;
+.settings-section {
+  background-color: #fff;
+
+  .setting-item {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    align-items: center;
-    width: 100%;
+    padding: 8px;
+    border-bottom: 1px solid #f0f2f5;
+    min-height: 30px;
 
-    :deep(.el-form-item) {
-      display: flex;
-      width: 100%;
-      .el-form-item__content {
-        flex: 1;
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.clickable {
+      cursor: pointer;
+
+      &:active {
+        background-color: #f5f5f5;
       }
     }
-    :deep(.el-form-item) {
-      display: flex;
-      width: 100%;
-      .el-form-item__content {
-        flex: 1;
-      }
+
+    .label {
+      font-size: 14px;
+      color: #333;
+      white-space: nowrap;
+      margin-top: 2px;
     }
-    //普通样式
-    .ordinary-btn {
+
+    .content {
       display: flex;
-      border: none;
-      height: auto;
-      padding: 5px 8px;
-      background: transparent;
       align-items: center;
-      justify-content: space-between;
-      color: var(--main-text-color);
-      font-weight: 400;
-      width: 100%;
+      gap: 8px;
+      color: #888;
+      font-size: 14px;
+      max-width: 70%;
+      text-align: right;
 
-      // 开关行（消息免打扰、置顶聊天）
+      &.notice-content {
+        flex-direction: column;
+        align-items: flex-end;
+        width: 100%;
+      }
 
-      .switch-label {
+      .value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        -webkit-box-orient: vertical;
+
+        &.notice-text {
+          -webkit-line-clamp: 3;
+          line-clamp: 3;
+          text-align: right;
+          line-height: 1.4;
+        }
+      }
+
+      .arrow-icon {
         font-size: 14px;
-        color: var(--main-text-color);
+        color: #ccc;
+        flex-shrink: 0;
       }
-      .switch-btn {
-        cursor: pointer;
-        --el-switch-button-size: 16px;
-        --el-switch-width: 36px;
-      }
-    }
-    :deep(.el-form-item:not(.danger)) {
-      display: flex;
-      width: 100%;
-      .el-form-item__content {
-        flex: 1;
-      }
-    }
-    :deep(.el-form-item.danger) {
-      width: auto; // 1. 允许 el-form-item 本身宽度自适应
-      .el-form-item__content {
-        flex: initial; // 2. 阻止内容区伸展，让其包裹按钮即可
-      display: flex;
-      border: none;
-      height: auto;
-      padding: 5px 8px;
-      background: transparent;
-      align-items: center;
-      justify-content: space-between;
-      color: var(--main-text-color);
-      font-weight: 400;
-      width: 100%;
-
-      // 开关行（消息免打扰、置顶聊天）
-
-      .switch-label {
-        font-size: 14px;
-        color: var(--main-text-color);
-      }
-      .switch-btn {
-        cursor: pointer;
-        --el-switch-button-size: 16px;
-        --el-switch-width: 36px;
-      }
-    }
-    :deep(.el-form-item:not(.danger)) {
-      display: flex;
-      width: 100%;
-      .el-form-item__content {
-        flex: 1;
-      }
-    }
-    :deep(.el-form-item.danger) {
-      width: auto; // 1. 允许 el-form-item 本身宽度自适应
-      .el-form-item__content {
-        flex: initial; // 2. 阻止内容区伸展，让其包裹按钮即可
-      }
-    }
-    }
-    .danger-btn {
-      color: var(--main-red-color);
-      text-align: center;
-      font-weight: 500;
-
-      border: none;
-      background: transparent;
-      font-weight: 500;
-
-      border: none;
-      background: transparent;
     }
   }
+}
 
-  .member-avatar {
-    width: 35px;
-    height: 35px;
-    border: 1px solid #eee;
-    border-radius: 2px;
-    object-fit: cover;
-    margin: 0 auto;
-    display: block;
-  }
+.danger-section {
+  background-color: #fff;
 
-  .member-btn {
-    width: 35px;
-    height: 35px;
-    border: 1px solid #eee;
-    border-radius: 2px;
-    object-fit: cover;
-    display: block;
-    margin: 0 auto;
-  }
-
-  .member-name {
-    height: 20px;
-    line-height: 20px;
-    margin-top: 5px;
-    font-size: 12px;
+  .danger-item {
+    padding: 14px 20px;
     text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* 无权限时的鼠标样式（覆盖通用 pointer） */
-  .group-notice .group-notice-display.no-permission {
-    cursor: default;
-  }
-
-  .add-btn {
-    width: 35px;
-    height: 35px;
-    font-size: 20px;
-    line-height: 35px;
-    text-align: center;
-    border: none;
-    background-color: #409eff;
-    color: white;
-  }
-
-  .add-btn i {
-    margin-right: 0;
-  }
-
-  .expand-btn {
-    margin-top: 10px;
+    font-size: 15px;
+    color: #ff4d4f;
+    border-bottom: 1px solid #f0f2f5;
     cursor: pointer;
-  }
 
-  :deep(.el-dialog__header) {
-    padding-bottom: 0px;
-  }
+    &:last-child {
+      border-bottom: none;
+    }
 
-  .status_change {
-    .el-dialog__header {
-      padding-bottom: 0px;
+    &:active {
+      background-color: #fff1f0;
     }
   }
-</style>
+}
 
+.custom-switch {
+  --el-switch-on-color: #409eff;
+}
+
+:deep(.invite-dialog) {
+  .el-dialog__header {
+    padding-bottom: 10px;
+  }
+
+  .el-dialog__body {
+    padding: 0;
+  }
+}
+</style>

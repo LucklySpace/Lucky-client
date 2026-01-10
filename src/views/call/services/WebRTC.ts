@@ -28,7 +28,6 @@ const Http = HttpClient.create({
  *  - Windows：检查摄像头/麦克风权限与驱动；浏览器外的 WebView（如 Tauri），可能需要在 host 应用中声明权限
  *  - Linux：注意 pulseaudio/pipewire/alsa 驱动与权限，设备名与 deviceId 的兼容性
  *
- * 尽量保持原来行为。若需要将 offer/answer 的 candidate 单独上报（trickle ICE），可在 onicecandidate 中扩展 HTTPClient 调用。
  */
 
 export default class WebRTC {

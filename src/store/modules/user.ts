@@ -6,6 +6,7 @@ import { storage } from "@/utils/Storage";
 import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
 import { ElMessage } from "element-plus";
 import defaultImg from "@/assets/avatar/default.jpg";
+import useCrypo from "@/hooks/useCrypo";
 
 // 用户信息接口
 interface UserInfo {
@@ -40,6 +41,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   const userInfo = ref<UserInfo>({});
   const userEmojiPackIds = ref<String[]>([]);
   const loginStatus = ref<LoginStatus>(LoginStatus.IDLE);
+  const { md5 } = useCrypo();
 
   // 计算属性
   /**
@@ -61,8 +63,8 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   /**
    * 是否正在登录/退出
    */
-  const isLoading = computed(() => 
-    loginStatus.value === LoginStatus.LOGGING_IN || 
+  const isLoading = computed(() =>
+    loginStatus.value === LoginStatus.LOGGING_IN ||
     loginStatus.value === LoginStatus.LOGGING_OUT
   );
 
@@ -84,9 +86,12 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
 
     loginStatus.value = LoginStatus.LOGGING_IN;
 
+    // 重置用户状态
+    resetUserState();
+
     try {
       const res: any = await api.Login(loginForm);
-      
+
       if (!res || !res.accessToken || !res.userId) {
         throw new Error("登录响应数据不完整");
       }
@@ -101,7 +106,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
       // 创建主窗口并关闭登录窗口
       await CreateMainWindow();
       await HideLoginWindow();
-      
+
       ElMessage.success("登录成功");
       logger.info("用户登录成功", { userId: res.userId });
     } catch (error) {
@@ -119,14 +124,14 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   const refreshToken = async (): Promise<void> => {
     try {
       const res: any = await api.RefreshToken();
-      
+
       if (!res || !res.token) {
         throw new Error("Token 刷新响应数据不完整");
       }
 
       token.value = res.token;
       saveToStorage();
-      
+
       logger.info("Token 刷新成功");
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Token 刷新失败";
@@ -143,7 +148,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   const updateUserInfo = async (profile: any): Promise<void> => {
     try {
       const res: any = await api.UpdateUserInfo(profile);
-      
+
       if (!res) {
         throw new Error("更新用户信息失败");
       }
@@ -169,11 +174,13 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
         throw new Error("文件不能为空");
       }
 
+      const md5Str = await md5(file)
       const formData = new FormData();
+      formData.append("identifier", md5Str.toString());
       formData.append("file", file);
-      
-      const res: any = await api.uploadImage(formData);
-      
+
+      const res: any = await api.uploadAvatar(formData);
+
       if (!res) {
         throw new Error("上传头像失败");
       }
@@ -194,14 +201,14 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   const handleGetUserInfo = async (): Promise<void> => {
     try {
       const currentUserId = userId.value;
-      
+
       if (!currentUserId) {
         throw new Error("用户ID不存在");
       }
 
       // 获取用户基本信息
       const userRes: any = await api.GetUserInfo({ userId: currentUserId });
-      
+
       if (userRes) {
         userInfo.value = userRes;
       } else {
@@ -235,7 +242,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
    */
   const loginOut = async (options: { showWindow?: boolean; closeMain?: boolean } = {}): Promise<void> => {
     const { showWindow = true, closeMain = true } = options;
-    
+
     if (loginStatus.value === LoginStatus.LOGGING_OUT) {
       logger.warn("退出操作正在进行中");
       return;
@@ -245,7 +252,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
 
     try {
       const currentUserId = userId.value;
-      
+
       // 1. 断开 WebSocket 连接
       try {
         const { disconnect, destroy } = useWebSocketWorker();
@@ -264,10 +271,10 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
           logger.warn("调用退出接口失败（非致命）", apiError);
         }
       }
-      
+
       // 3. 清空本地状态
       resetUserState();
-      
+
       // 4. 窗口操作
       if (closeMain) {
         await CloseMainWindow();
@@ -275,7 +282,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
       if (showWindow) {
         await ShowLoginWindow();
       }
-      
+
       ElMessage.success("已退出登录");
       logger.info("用户退出登录成功");
     } catch (error) {
@@ -292,7 +299,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
    */
   const forceLogout = async (reason?: string): Promise<void> => {
     logger.warn("强制退出登录", { reason });
-    
+
     // 断开 WebSocket
     try {
       const { disconnect, destroy } = useWebSocketWorker();
@@ -301,12 +308,12 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     } catch (e) {
       // ignore
     }
-    
+
     resetUserState();
-    
+
     await CloseMainWindow();
     await ShowLoginWindow();
-    
+
     if (reason) {
       ElMessage.warning(reason);
     }

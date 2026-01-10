@@ -31,6 +31,7 @@ import { highlightTextByTokens } from "@/utils/Strings";
 import { Segmenter } from "@/database";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { CHAT_CHANGED } from "@/constants/events";
+import useCrypo from "@/hooks/useCrypo";
 
 // 初始化数据库映射器
 const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
@@ -74,6 +75,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   const { buildMessagePreview, buildDraftMessagePreview, findChatIndex, removeMentionHighlightsFromHtml } = useChatInput();
   const { addTask } = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   const { play } = useAudioPlayer();
+  const { md5 } = useCrypo();
 
   // 状态定义
   const chatList = ref<Chats[]>([]);
@@ -239,7 +241,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
           notification: (currentChat.value as any)?.notification
         } as any);
       }
-    } catch {}
+    } catch { }
     // 切换会话时重置消息状态
     handleResetMessage();
   };
@@ -262,7 +264,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
           name: currentChat.value?.name,
           notification: (currentChat.value as any)?.notification
         } as any);
-      } catch {}
+      } catch { }
       return;
     }
 
@@ -280,7 +282,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
           name: currentChat.value?.name,
           notification: (currentChat.value as any)?.notification
         } as any);
-      } catch {}
+      } catch { }
       setError(null);
     } catch (e: any) {
       setError(e?.message || "创建会话失败");
@@ -428,7 +430,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
         messageCount.value = 0;
         messageNum.value = 1;
         currentUrls.value = [];
-      } catch {}
+      } catch { }
       try {
         // 清空当前群成员缓存
         // 兼容数组或对象形态
@@ -437,7 +439,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
         } else {
           currentChatGroupMemberMap.value = {} as any;
         }
-      } catch {}
+      } catch { }
     }
 
     // 删除草稿
@@ -445,7 +447,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       if (chatDraftMap.value && Object.prototype.hasOwnProperty.call(chatDraftMap.value, chat.chatId as any)) {
         delete (chatDraftMap.value as any)[chat.chatId as any];
       }
-    } catch {}
+    } catch { }
   };
 
   /**
@@ -744,11 +746,14 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   const uploadAndSendFile = async (file: File, currentChat: any, contentType: number) => {
     if (!file || !currentChat) throw new Error("Invalid params for uploadAndSendFile");
 
+    const md5Str = await md5(file)
     const formData = new FormData();
+    formData.append("identifier", md5Str.toString());
     formData.append("file", file);
 
-    const uploadRes: any = await api.UploadFile(formData);
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
+
+    const uploadRes: any = contentType === MessageContentType.IMAGE.code ? await api.uploadImage(formData) : await api.UploadFile(formData);
 
     const form = handleCreateMessageContext(
       { ...uploadRes, size: file.size, suffix: ext },
@@ -1075,7 +1080,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
         if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(groupDto.groupId)) {
           (friendsStore.shipInfo as any).groupName = groupDto.groupName;
         }
-      } catch {}
+      } catch { }
     }
 
     if (groupDto.notification !== undefined) {
@@ -1096,7 +1101,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
         if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(groupDto.groupId)) {
           (friendsStore.shipInfo as any).notification = groupDto.notification;
         }
-      } catch {}
+      } catch { }
     }
 
     return result;
