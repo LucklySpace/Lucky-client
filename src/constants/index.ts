@@ -2,16 +2,17 @@
  * 消息内容枚举
  */
 export const MessageContentType = {
+  TIP: { code: 0, type: "系统提示" },
   TEXT: { code: 1, type: "文字" },
   IMAGE: { code: 2, type: "图片" },
   VIDEO: { code: 3, type: "视频" },
   AUDIO: { code: 4, type: "语音" },
   FILE: { code: 5, type: "文件" },
-  LOCAL: { code: 6, type: "位置" },
-  COMPLEX: { code: 7, type: "混合" },
-  GROUP_INVITE: { code: 8, type: "群组邀请" },
-  GROUP_JOIN_APPROVE: { code: 9, type: "群组加入审批" },
-  TIP: { code: 10, type: "系统提示" }
+  EMOJI: { code: 6, type: "表情" },
+  LOCAL: { code: 7, type: "位置" },
+  COMPLEX: { code: 8, type: "混合" },
+  GROUP_INVITE: { code: 9, type: "群组邀请" },
+  GROUP_JOIN_APPROVE: { code: 10, type: "群组加入审批" },
 };
 
 /**
@@ -24,7 +25,8 @@ export const WebRTCType = {
   RTC_CANCEL: { code: 104, type: "取消呼叫" },
   RTC_FAILED: { code: 105, type: "呼叫失败" },
   RTC_HANDUP: { code: 106, type: "挂断" },
-  RTC_CANDIDATE: { code: 107, type: "同步candidate" }
+  RTC_CANDIDATE: { code: 107, type: "同步candidate" },
+  RTC_OFFLINE: { code: 108, type: "对方离线" },
 };
 
 /**

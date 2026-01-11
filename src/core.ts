@@ -32,9 +32,9 @@ import { useFriendsStore } from "@/store/modules/friends";
 import { initDatabase, useMappers } from "@/database";
 import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
 import { MessageQueue } from "./utils/MessageQueue";
-import { AudioEnum } from "./hooks/useAudioPlayer";
+
 // 获取和初始化数据库操作
-const { chatsMapper, singleMessageMapper, groupMessageMapper, friendsMapper } = useMappers();
+const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
 // 状态管理实例
 const callStore = useCallStore();
 const chatMessageStore = useChatStore();
@@ -296,7 +296,7 @@ class MainManager {
     const t0 = performance.now();
     try {
       await Promise.all([this.syncOfflineMessages(), this.syncChatSessions(), this.syncFriends()]);
-     
+
       log.prettySuccess("sync", "用户数据同步完成");
     } catch (err) {
       log.prettyError("sync", "用户数据同步失败", err);
@@ -311,6 +311,8 @@ class MainManager {
    */
   syncFriends() {
     friendStore.loadNewFriends();
+    friendStore.loadGroups();
+    friendStore.loadContacts();
   }
 
   /**

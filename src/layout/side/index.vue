@@ -187,8 +187,8 @@
         t("settings.logoutConfirm") || "确定要退出登录吗？",
         t("settings.logout") || "退出登录",
         {
-          confirmButtonText: t("common.confirm") || "确定",
-          cancelButtonText: t("common.cancel") || "取消",
+          confirmButtonText: t("actions.confirm") || "确定",
+          cancelButtonText: t("actions.cancel") || "取消",
           type: "warning"
         }
       );

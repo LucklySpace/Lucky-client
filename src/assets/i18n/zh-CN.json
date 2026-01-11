@@ -22,7 +22,7 @@
       "cancel": "取消",
       "change": "更改",
       "clear": "清空画布",
-      "confirm": "确定",
+      "confirm": "确认",
       "login": "登 录",
       "manage": "管理",
       "add": "添加",
@@ -246,21 +246,22 @@
       "saveChanges": "保存修改",
       "updateSuccess": "个人信息更新成功",
       "updateFailed": "更新失败，请重试",
-      "address": "地址:",
+      "address": "地址",
       "birthday": "生日",
+      "remark": "备注",
       "enterAddress": "请输入地址",
       "enterMobile": "请输入手机号",
       "enterNickname": "请输入昵称",
       "enterSignature": "请输入个性签名",
-      "mobile": "手机号:",
-      "nickname": "昵称:",
+      "mobile": "手机号",
+      "nickname": "昵称",
       "selectBirthday": "选择生日",
       "sex": {
         "female": "女",
-        "label": "性别:",
+        "label": "性别",
         "male": "男"
       },
-      "signature": "签名:"
+      "signature": "签名"
     },
     "dialog": {
       "confirmClearChat": "确定要清空所有聊天记录吗？此操作不可恢复",
@@ -295,6 +296,7 @@
     "settings": {
       "label": "设置",
       "logout": "退出登录",
+      "logoutConfirm": "确定要退出登录吗？",
       "tabs": {
         "about": "关于",
         "fileManagement": "文件管理",
@@ -435,7 +437,6 @@
       "addFriend": {
         "title": "添加好友验证",
         "verifyLabel": "验证信息",
-        "remarkLabel": "备注",
         "addButton": "添加",
         "addedLabel": "已添加"
       },

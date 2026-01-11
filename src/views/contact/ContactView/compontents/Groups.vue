@@ -6,7 +6,8 @@
       <el-row align="middle" class="card-top">
         <el-col :span="6" class="avatar-col no-select">
           <span>
-            <Avatar :avatar="avatarSrc || ' '" :name="displayName" :width="84" :borderRadius="6" backgroundColor="#ffb36b" />
+            <Avatar :avatar="avatarSrc || ' '" :name="displayName" :width="84" :borderRadius="6"
+              backgroundColor="#ffb36b" />
           </span>
         </el-col>
 

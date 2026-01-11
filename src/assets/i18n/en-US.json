@@ -247,21 +247,22 @@
       "saveChanges": "Save Changes",
       "updateSuccess": "Profile updated successfully",
       "updateFailed": "Update failed, please try again",
-      "address": "Address:",
+      "address": "Address",
       "birthday": "Birthday",
+      "remark": "Remark",
       "enterAddress": "Enter address",
       "enterMobile": "Enter phone number",
       "enterNickname": "Enter nickname",
       "enterSignature": "Enter signature",
-      "mobile": "Phone:",
-      "nickname": "Nickname:",
+      "mobile": "Phone",
+      "nickname": "Name",
       "selectBirthday": "Select birthday",
       "sex": {
         "female": "Female",
-        "label": "Gender:",
+        "label": "Gender",
         "male": "Male"
       },
-      "signature": "Signature:"
+      "signature": "Signature"
     },
     "dialog": {
       "confirmClearChat": "Are you sure you want to clear all chat history? This action cannot be undone",
@@ -296,6 +297,7 @@
     "settings": {
       "label": "Settings",
       "logout": "Logout",
+      "logoutConfirm": "Are you sure you want to logout?",
       "tabs": {
         "about": "About",
         "fileManagement": "File",
@@ -437,7 +439,6 @@
       "addFriend": {
         "title": "Add Friend Verification",
         "verifyLabel": "Verification",
-        "remarkLabel": "Remark",
         "addButton": "Add",
         "addedLabel": "Already Added"
       },

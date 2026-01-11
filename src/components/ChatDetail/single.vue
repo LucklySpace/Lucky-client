@@ -19,7 +19,7 @@
       <div class="settings-section">
         <!-- 备注设置 -->
         <div class="setting-item clickable" @click="startEditRemark">
-          <span class="label">{{ $t('search.addFriend.remarkLabel') }}</span>
+          <span class="label">{{ $t('profile.remark') }}</span>
           <div class="content">
             <template v-if="!isEditingRemark">
               <span class="value">{{ form.remark || singleInfo.name || $t('common.noData') }}</span>
