@@ -779,13 +779,15 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
    * @param isSender 是否为发送者
    */
   const handleCreateMessage = (id: string | number, message: any, messageType: number, isSender: boolean = false) => {
-    const currentChatValue = currentChat.value;
 
-    const ownId = getOwnerId.value;
-    const userInfo = userStore.userInfo;
-    messageList.value.push(normalizeMessageForUI(message, ownId, userInfo, currentChatValue));
+    // 当前会话
+    if (id === currentChat.value?.toId) {
+      const ownId = getOwnerId.value;
+      const userInfo = userStore.userInfo;
+      messageList.value.push(normalizeMessageForUI(message, ownId, userInfo, currentChat.value));
 
-    if (isSender) handleCreateOrUpdateChat(message, currentChatValue?.toId as any);
+      if (isSender) handleCreateOrUpdateChat(message, currentChat.value?.toId as any);
+    }
 
     handleInsertToDatabase(message, messageType);
   };
@@ -1160,10 +1162,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
     return result;
   };
-
-
-
-
 
   /* ==================== 通用方法 ==================== */
 

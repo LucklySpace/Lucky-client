@@ -76,7 +76,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useDebounceFn } from "@vueuse/core";
-import defaultImg from "@/assets/avatar/default.jpg";
 import Avatar from "@/components/Avatar/index.vue";
 import { useFriendsStore } from "@/store/modules/friends";
 
@@ -116,8 +115,7 @@ const overscan = 3; // overscan 行数，提升滚动平滑度
 // 计算得到的 friend 列表（从 store 中读取并按搜索过滤）
 // 假设 friendsStore.friendList 是一个 map: { id: memberObj }
 const friendList = computed<any[]>(() => {
-  const map = friendsStore.contacts || {};
-  const arr = Object.values(map) as any[];
+  const arr = friendsStore.contacts || [];
   if (!searchKey.value) return arr;
   const q = searchKey.value;
   return arr.filter(m => (m.name || "").toLowerCase().includes(q) || (m.friendId || "").toString().includes(q));
@@ -215,6 +213,9 @@ onMounted(async () => {
   if (boxRef.value) {
     containerHeight.value = boxRef.value.clientHeight || containerHeight.value;
     boxRef.value.addEventListener("scroll", onScrollOnce, { passive: true });
+  }
+  if (friendsStore.contacts.length === 0) {
+    await friendsStore.loadContacts();
   }
 });
 
