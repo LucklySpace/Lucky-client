@@ -1,55 +1,18 @@
-/**
- * 消息内容枚举
- */
-export const MessageContentType = {
-  TIP: { code: 0, type: "系统提示" },
-  TEXT: { code: 1, type: "文字" },
-  IMAGE: { code: 2, type: "图片" },
-  VIDEO: { code: 3, type: "视频" },
-  AUDIO: { code: 4, type: "语音" },
-  FILE: { code: 5, type: "文件" },
-  EMOJI: { code: 6, type: "表情" },
-  LOCAL: { code: 7, type: "位置" },
-  COMPLEX: { code: 8, type: "混合" },
-  GROUP_INVITE: { code: 9, type: "群组邀请" },
-  GROUP_JOIN_APPROVE: { code: 10, type: "群组加入审批" },
+// ========== 导出新的常量模块 ==========
+export * from "./MessageContentType";
+export * from "./MessageActionType";
+export * from "./MessageCode";
+export * from "./MessageType";
+
+
+// 事件常量定义，供全局事件总线使用
+export const Events = {
+  FRIEND_REMARK_UPDATED: "friend:remarkUpdated",
+  GROUP_RENAMED: "group:renamed",
+  GROUP_NOTICE_CHANGED: "group:noticeChanged",
+  CHAT_CHANGED: "chat:changed",
 };
 
-/**
- * webrtc枚举
- */
-export const WebRTCType = {
-  RTC_CALL: { code: 101, type: "呼叫" },
-  RTC_ACCEPT: { code: 102, type: "接受" },
-  RTC_REJECT: { code: 103, type: "拒绝" },
-  RTC_CANCEL: { code: 104, type: "取消呼叫" },
-  RTC_FAILED: { code: 105, type: "呼叫失败" },
-  RTC_HANDUP: { code: 106, type: "挂断" },
-  RTC_CANDIDATE: { code: 107, type: "同步candidate" },
-  RTC_OFFLINE: { code: 108, type: "对方离线" },
-};
-
-/**
- * websocket 通信枚举
- */
-export const IMessageType = {
-  ERROR: { code: -1, description: "信息异常" },
-  LOGIN_OVER: { code: 900, description: "登录过期" },
-  REFRESHTOKEN: { code: 999, description: "刷新token" },
-  LOGIN: { code: 1000, description: "登陆" },
-  HEART_BEAT: { code: 1001, description: "心跳" },
-  FORCE_LOGOUT: { code: 1002, description: "强制下线" },
-  SINGLE_MESSAGE: { code: 1003, description: "私聊消息" },
-  GROUP_MESSAGE: { code: 1004, description: "群发消息" },
-  VIDEO_MESSAGE: { code: 1005, description: "视频消息" },
-  AUDIO_MESSAGE: { code: 1006, description: "音频通话" },
-
-  CREATE_GROUP: { code: 1500, description: "创建群聊" },
-  GROUP_INVITE: { code: 1501, description: "群聊邀请" },
-
-  ROBOT: { code: 2000, description: "机器人" },
-  PUBLIC: { code: 2001, description: "公众号" }
-};
 
 /**
  * 状态枚举
@@ -59,7 +22,7 @@ export const MessageSendCode = {
   FAILED: { code: 1, type: "失败" },
   SENDING: { code: 2, type: "发送中" },
   OTHER: { code: 3, type: "其它异常" }
-};
+} as const;
 
 /**
  * 消息状态枚举
@@ -68,7 +31,7 @@ export const MessageStatus = {
   UNREAD: { code: 0, type: "未读" },
   ALREADY_READ: { code: 1, type: "已读" },
   RECALL: { code: 2, type: "已撤回" }
-};
+} as const;
 
 /**
  * 视频通话枚举
@@ -76,7 +39,7 @@ export const MessageStatus = {
 export const VideoMaster = {
   CALLER: { code: 0, type: "呼叫方" },
   ACCEPT: { code: 1, type: "接收方" }
-};
+} as const;
 
 /**
  * 视频通话连接状态枚举
@@ -90,7 +53,7 @@ export const ConnectionStatus = {
   CANCELLED: { code: 600, type: "取消连接" },
   CLOSED: { code: 700, type: "连接关闭" },
   ERROR: { code: 800, type: "连接错误" }
-};
+} as const;
 
 /** pinia存储的名称 */
 export enum StoresEnum {

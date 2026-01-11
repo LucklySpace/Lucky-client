@@ -75,7 +75,7 @@ export function useChatInput() {
       [MessageContentType.VIDEO.code]: t("chat.placeholder.video"),
       [MessageContentType.AUDIO.code]: t("chat.placeholder.audio"),
       [MessageContentType.FILE.code]: t("chat.placeholder.file"),
-      [MessageContentType.LOCAL.code]: t("chat.placeholder.location"),
+      [MessageContentType.LOCATION.code]: t("chat.placeholder.location"),
       [MessageContentType.GROUP_INVITE.code]: t("chat.placeholder.groupInvite")
     };
     return map[code] ?? t("chat.placeholder.unknown");

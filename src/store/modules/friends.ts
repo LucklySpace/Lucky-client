@@ -7,7 +7,7 @@ import { useUserStore } from "./user";
 import { useChatStore } from "@/store/modules/chat";
 import { ref, computed } from "vue";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from "@/constants/events";
+import { Events } from "@/constants";
 
 // mappers（DB 操作）
 const { friendsMapper, chatsMapper } = useMappers();
@@ -54,7 +54,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
    * 获取总未读消息数
    * @returns 所有会话未读消息的总和
    */
-  const getTotalNewFriends = computed(() => 
+  const getTotalNewFriends = computed(() =>
     ignore.value ? newFriends.value.filter(c => c.approveStatus == 0).length ?? 0 : 0
   );
 
@@ -111,13 +111,13 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
       // 当前会话为单聊
       if (chat.chatType === IMessageType.SINGLE_MESSAGE.code) {
         await api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId });
-        
+
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
-        
+
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
-        
+
         // 删除联系人数据
         try {
           await friendsMapper.deleteById(chat.toId, "friendId");
@@ -125,7 +125,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch (error) {
           logger.error("删除联系人数据失败", error);
         }
-        
+
         // 本地联系人列表即时更新
         try {
           const idx = contacts.value.findIndex((c: any) => String(c.friendId) === String(chat.toId));
@@ -138,21 +138,21 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch (error) {
           logger.warn("更新本地联系人列表失败", error);
         }
-        
+
         // 异步重载联系人以与服务端对齐（非阻塞）
         loadContacts().catch(err => logger.warn("重载联系人列表失败", err));
-        
+
         logger.info("删除单聊联系人成功", { toId: chat.toId });
       } else {
         // 退出群聊
         await api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId });
-        
+
         // 删除聊天记录
         await chatMessageStore.handleClearMessage(chat);
-        
+
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
-        
+
         // 本地群列表即时更新
         try {
           const gIdx = groups.value.findIndex((g: any) => String(g.groupId) === String(chat.toId));
@@ -165,16 +165,16 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         } catch (error) {
           logger.warn("更新本地群列表失败", error);
         }
-        
+
         // 异步刷新群列表
         loadGroups().catch(err => logger.warn("重载群列表失败", err));
-        
+
         logger.info("退出群聊成功", { groupId: chat.toId });
       }
 
       // 广播会话变更以便标题等订阅方清空展示
       try {
-        globalEventBus.emit(CHAT_CHANGED as any, { chatId: null } as any);
+        globalEventBus.emit(Events.CHAT_CHANGED as any, { chatId: null } as any);
       } catch (error) {
         logger.warn("广播会话变更事件失败", error);
       }
@@ -308,7 +308,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
       const idx = contacts.value.findIndex((c: any) => c?.friendId === friendId);
       if (idx !== -1) contacts.value[idx].remark = next;
       if (shipInfo.value && shipInfo.value.friendId === friendId) shipInfo.value.remark = next;
-    } catch {}
+    } catch { }
 
     try {
       const idx = chatMessageStore.chatList.findIndex(
@@ -327,22 +327,22 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
       ) {
         (chatMessageStore.currentChat as any).name = next;
         try {
-          globalEventBus.emit(CHAT_CHANGED as any, {
+          globalEventBus.emit(Events.CHAT_CHANGED as any, {
             chatId: chatMessageStore.currentChat.chatId,
             name: next,
             notification: (chatMessageStore.currentChat as any)?.notification
           });
-        } catch {}
+        } catch { }
       }
-    } catch {}
+    } catch { }
 
     try {
-      globalEventBus.emit(FRIEND_REMARK_UPDATED as any, { friendId, remark: next } as any);
-    } catch {}
+      globalEventBus.emit(Events.FRIEND_REMARK_UPDATED as any, { friendId, remark: next } as any);
+    } catch { }
 
     try {
       await friendsMapper.updateById(friendId, { remark: next } as any);
-    } catch {}
+    } catch { }
   };
 
   /**

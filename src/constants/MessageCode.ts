@@ -1,4 +1,3 @@
-// src/constants/MessageCode.ts
 
 /**
  * 全局消息状态码及对应的国际化 key

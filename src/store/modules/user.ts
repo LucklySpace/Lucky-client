@@ -107,7 +107,6 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
       await CreateMainWindow();
       await HideLoginWindow();
 
-      ElMessage.success("登录成功");
       logger.info("用户登录成功", { userId: res.userId });
     } catch (error) {
       loginStatus.value = LoginStatus.IDLE;

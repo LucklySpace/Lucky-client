@@ -250,6 +250,7 @@
       "address": "Address",
       "birthday": "Birthday",
       "remark": "Remark",
+      "telephone": "Telephone",
       "enterAddress": "Enter address",
       "enterMobile": "Enter phone number",
       "enterNickname": "Enter nickname",

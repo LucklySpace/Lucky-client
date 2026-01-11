@@ -10,7 +10,6 @@ import { useTray } from "@/hooks/useTray";
 import { exit } from "@tauri-apps/plugin-process";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { globalEventBus } from "@/hooks/useEventBus";
-// import { useUpdate } from "@/hooks/useUpdate"
 // 路由
 import router from "@/router";
 // 窗口操作
@@ -21,7 +20,6 @@ import { appIsMinimizedOrHidden, ShowMainWindow } from "@/windows/main";
 import api from "@/api/index";
 // 配置和初始化
 import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
-//import loadWorker from "@/worker/LoadWorker";
 // 状态管理和数据存储
 import { useChatStore } from "@/store/modules/chat";
 import { useUserStore } from "@/store/modules/user";
@@ -33,602 +31,488 @@ import { initDatabase, useMappers } from "@/database";
 import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
 import { MessageQueue } from "./utils/MessageQueue";
 
-// 获取和初始化数据库操作
-const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
-// 状态管理实例
-const callStore = useCallStore();
-const chatMessageStore = useChatStore();
-const userStore = useUserStore();
-const settingStore = useSettingStore();
-const friendStore = useFriendsStore();
-// 系统托盘
-const { initSystemTray, flash } = useTray();
-// 事件总线
-const { onceEventDebounced } = useTauriEvent();
-// 日志
-const log = useLogger();
+// ==================== 工具函数 ====================
+
+/** 性能计时装饰器 - 简化重复的计时逻辑 */
+async function withTiming<T>(
+  tag: string,
+  label: string,
+  fn: () => Promise<T>,
+  log: ReturnType<typeof useLogger>
+): Promise<T> {
+  const t0 = performance.now();
+  try {
+    const result = await fn();
+    log.prettySuccess(tag, `${label}成功`);
+    return result;
+  } catch (err) {
+    log.prettyError(tag, `${label}失败`, err);
+    throw err;
+  } finally {
+    log.prettyInfo(tag, `${label}耗时 ${Math.round(performance.now() - t0)} ms`);
+  }
+}
+
+/** 消息内容类型到显示文本的映射 */
+const MESSAGE_DISPLAY_MAP: Record<number, string | ((msg: any) => string)> = {
+  [MessageContentType.TEXT.code]: (msg) => msg.message,
+  [MessageContentType.IMAGE.code]: "[图片]",
+  [MessageContentType.VIDEO.code]: "[视频]",
+  [MessageContentType.AUDIO.code]: "[语音]",
+  [MessageContentType.FILE.code]: "[文件]",
+  [MessageContentType.LOCATION.code]: "[位置]",
+};
+
+/** 安全调度空闲任务 */
+const scheduleIdleTask = (fn: () => void, delay = 50) => {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(fn);
+  } else {
+    setTimeout(fn, delay);
+  }
+};
+
 const { connect, disconnect, onMessage } = useWebSocketWorker();
-// 异步（空闲）任务执行器
-const exec = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
-// 消息队列 用于 削峰填谷
-const messageQueue = new MessageQueue<any>();
-// const { fetchVersion } = useUpdate();
+
+// ==================== 主管理器 ====================
 
 /**
- * 客户端主初始化管理器
- * - 负责初始化客户端的关键路径（用户、数据库、聊天存储、WebSocket）。
- * - 异步执行后台任务（如数据同步、托盘、快捷键）。
- * - 提供启动、停止和清理方法。
+ * IM 客户端主初始化管理器
+ * - 关键路径：用户 → 数据库 → 聊天存储 → WebSocket
+ * - 后台任务：文件目录、数据同步、托盘、快捷键
  */
 class MainManager {
   private static instance: MainManager;
-  private backgroundTasksRunning = false;
+  private initialized = false;
+
+  // 延迟初始化的依赖
+  private readonly log = useLogger();
+  private readonly exec = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
+  private readonly messageQueue = new MessageQueue<any>();
+  private readonly tray = useTray();
+  private readonly tauriEvent = useTauriEvent();
+
+  // Store 实例
+  private readonly stores = {
+    user: useUserStore(),
+    chat: useChatStore(),
+    call: useCallStore(),
+    setting: useSettingStore(),
+    friend: useFriendsStore(),
+  };
+
+  // Mapper 实例
+  private readonly mappers = useMappers();
 
   private constructor() { }
 
-  /**
-   * 获取 MainManager 单例实例。
-   * @returns {MainManager} 单例实例。
-   */
-  public static getInstance(): MainManager {
-    if (!MainManager.instance) {
-      MainManager.instance = new MainManager();
-    }
-    return MainManager.instance;
+  static getInstance(): MainManager {
+    return (MainManager.instance ??= new MainManager());
   }
 
-  /* ---------------------- 客户端主初始化入口 ---------------------- */
+  // ==================== 公共 API ====================
 
-  /**
-   * 初始化客户端（主入口）。
-   * - 仅等待关键路径初始化（用户信息、数据库、聊天存储、WebSocket）。
-   * - 后台任务（如数据同步、托盘、快捷键）异步执行。
-   * - 初始化顺序：语言 > 用户 > 数据库 > 聊天存储 > WebSocket > 事件监听 > 后台任务。
-   */
-  async initClient() {
+  /** 初始化客户端（主入口） */
+  async initClient(): Promise<void> {
+    if (this.initialized) return;
+
     const t0 = performance.now();
-    log.prettyInfo("core", "客户端初始化开始");
+    this.log.prettyInfo("core", "客户端初始化开始");
 
     try {
-      // 1. 启动语言加载
-      this.initLanguage().catch(err => log.prettyWarn("init", "语言初始化失败（非致命）", err));
+      // 1. 语言初始化
+      this.initLanguage();
 
-      // 2. 获取用户信息
+      // 2. 关键路径：串行执行（有依赖关系）
       await this.initUser();
-
-      // 3. 初始化数据库
       await this.initDatabase();
 
-      // 4. 本地聊天存储初始化
-      await this.initChatStore();
+      // 3. 并行执行：聊天存储 + WebSocket（无依赖）
+      await Promise.all([this.initChatStore()]);
 
-      // 5. 初始化 WebSocket
-      await this.initWebSocket();
+      this.initWebSocket();
 
-      // 6. 初始化事件监听。
+      // 4. 事件监听
       this.initEventListeners();
 
-      // 7. 启动后台任务 数据库同步、托盘等
-      this.runBackgroundTasks().catch(err => log.prettyError("core", "后台任务启动失败（非致命）", err));
+      // 5. 后台任务（非阻塞）
+      this.initBackgroundTasks();
 
-      const t1 = performance.now();
-      log.prettySuccess("core", `客户端关键路径初始化完成（${Math.round(t1 - t0)} ms）`);
+      this.initialized = true;
+
+      this.log.prettySuccess("core", `客户端初始化完成（${Math.round(performance.now() - t0)} ms）`);
     } catch (err) {
-      log.prettyError("core", "客户端初始化致命错误", err);
-    }
-  }
-
-  /* ---------------------- 关键路径子任务 ---------------------- */
-
-  /**
-   * 初始化语言设置。
-   * - 加载国际化资源（如果存在）。
-   */
-  async initLanguage() {
-    const t0 = performance.now();
-    // 示例：await loadI18n(); // 如果有实际加载逻辑。
-    const t1 = performance.now();
-    log.prettyInfo("i18n", `语言初始化完成（${Math.round(t1 - t0)} ms）`);
-  }
-
-  /**
-   * 初始化用户信息。
-   * - 从存储或 API 获取用户数据。
-   * - 失败时抛出错误（关键路径）。
-   */
-  private async initUser() {
-    const t0 = performance.now();
-    try {
-      await userStore.handleGetUserInfo();
-      log.prettySuccess("user", "用户信息初始化成功");
-    } catch (err) {
-      log.prettyError("user", "用户信息初始化失败", err);
+      this.log.prettyError("core", "客户端初始化致命错误", err);
       throw err;
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("user", `用户信息初始化耗时 ${Math.round(t1 - t0)} ms`);
     }
   }
 
-  /**
-   * 初始化数据库。
-   * - 使用用户 ID 初始化数据库连接。
-   */
-  private async initDatabase() {
-    await initDatabase(userStore.userId);
-  }
-
-  /**
-   * 初始化聊天存储。
-   * - 处理本地聊天会话初始化。
-   */
-  async initChatStore() {
-    const t0 = performance.now();
+  /** 销毁资源 */
+  async destroy(): Promise<void> {
+    this.log.prettyInfo("core", "开始清理资源");
     try {
-      await chatMessageStore.handleInitChat();
-      log.prettySuccess("chat", "本地聊天存储初始化成功");
+      disconnect();
+      this.initialized = false;
+      this.log.prettySuccess("core", "资源清理完成");
     } catch (err) {
-      log.prettyError("chat", "本地聊天存储初始化失败", err);
-      throw err;
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("chat", `聊天存储初始化耗时 ${Math.round(t1 - t0)} ms`);
+      this.log.prettyError("core", "资源清理失败", err);
     }
   }
 
-  /**
-   * 初始化 WebSocket 连接。
-   * - 先注册消息处理回调，再建立连接。
-   * - 添加用户认证参数。
-   */
-  async initWebSocket() {
-    const t0 = performance.now();
-    try {
-      const url = new URL(import.meta.env.VITE_API_SERVER_WS);
-      url.searchParams.append("uid", userStore.userId);
-      url.searchParams.append("token", userStore.token);
+  // ==================== 关键路径初始化 ====================
 
-      onMessage((e: any) => {
-        try {
-          log.prettyInfo("websocket", "收到 WebSocket 消息:", e);
-          this.handleWebSocketMessage(e);
-        } catch (err) {
-          log.prettyError("websocket", "处理 WebSocket 消息异常", err);
-        }
-      });
-
-      connect(url.toString(), {
-        payload: {
-          code: 1000,
-          token: userStore.token,
-          data: "registrar",
-          deviceType: import.meta.env.VITE_DEVICE_TYPE
-        },
-        heartbeat: { code: 1001, token: userStore.token, data: "heartbeat" },
-        interval: import.meta.env.VITE_API_SERVER_HEARTBEAT,
-        protocol: import.meta.env.VITE_API_PROTOCOL_TYPE
-      });
-
-      log.prettySuccess("websocket", "WebSocket 连接成功");
-    } catch (err) {
-      log.prettyError("websocket", "WebSocket 连接失败", err);
-      throw err;
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("websocket", `WebSocket 初始化耗时 ${Math.round(t1 - t0)} ms`);
-    }
-  }
-
-  /**
-   * 初始化事件监听。
-   * - 监听全局事件，如消息撤回。
-   */
-  initEventListeners() {
-    globalEventBus.on("message:recall", payload => {
-      chatMessageStore.handleSendRecallMessage(payload);
+  private initLanguage(): void {
+    // 语言加载（非阻塞）
+    Promise.resolve().then(() => {
+      this.log.prettyInfo("i18n", "语言初始化完成");
     });
   }
 
-  /* ---------------------- 后台任务子任务 ---------------------- */
+  private initUser(): Promise<void> {
+    return withTiming("user", "用户信息初始化", () => this.stores.user.handleGetUserInfo(), this.log);
+  }
+
+  private initDatabase(): Promise<void> {
+    return withTiming("db", "数据库初始化", () => initDatabase(this.stores.user.userId), this.log);
+  }
+
+  private initChatStore(): Promise<void> {
+    return withTiming("chat", "聊天存储初始化", () => this.stores.chat.handleInitChat(), this.log);
+  }
 
   /**
-   * 启动后台初始化任务。
-   * - 使用 requestIdleCallback 或 setTimeout 延迟执行，避免阻塞主线程。
-   * - 任务包括：文件下载目录、用户数据同步、托盘、快捷键。
-   */
-  private async runBackgroundTasks() {
-    if (this.backgroundTasksRunning) return;
-    this.backgroundTasksRunning = true;
+  * 初始化 WebSocket 连接。
+  * - 先注册消息处理回调，再建立连接。
+  * - 添加用户认证参数。
+  */
+  private async initWebSocket(): Promise<void> {
+    return withTiming(
+      "ws",
+      "WebSocket初始化",
+      async () => {
 
-    const executeTasks = async () => {
-      log.prettyInfo("background", "开始后台初始化任务");
+        const { userId, token } = this.stores.user;
+        const url = new URL(import.meta.env.VITE_API_SERVER_WS);
+        url.searchParams.append("uid", userId);
+        url.searchParams.append("token", token);
+
+        onMessage((e: any) => {
+          this.log.prettyInfo("websocket", "收到 WebSocket 消息:", e);
+          this.handleMessage(e);
+        });
+
+        connect(url.toString(), {
+          payload: {
+            code: IMessageType.REGISTER.code,
+            token: token,
+            data: "registrar",
+            deviceType: import.meta.env.VITE_DEVICE_TYPE
+          },
+          heartbeat: { code: IMessageType.HEART_BEAT.code, token: token, data: "heartbeat" },
+          interval: import.meta.env.VITE_API_SERVER_HEARTBEAT,
+          protocol: import.meta.env.VITE_API_PROTOCOL_TYPE
+        });
+      },
+      this.log
+    );
+  }
+
+  private initEventListeners(): void {
+    globalEventBus.on("message:recall", (payload) => {
+      this.stores.chat.handleSendRecallMessage(payload);
+    });
+  }
+
+  // ==================== 后台任务 ====================
+
+  private initBackgroundTasks(): void {
+    scheduleIdleTask(async () => {
+      this.log.prettyInfo("background", "开始后台任务");
 
       const tasks = [
-        this.initFileDownloadPath(),
-        this.syncUserData(),
-        this.initSystemTrayMenu(),
-        this.initGlobalShortcuts()
+        this.initDownloadPath(),
+        this.syncAllData(),
+        this.initSystemTray(),
+        this.initShortcuts(),
       ];
 
       const results = await Promise.allSettled(tasks);
-      results.forEach((result, index) => {
-        if (result.status === "rejected") {
-          log.prettyWarn("background", `后台任务 #${index} 失败（非致命）`, result.reason);
+      results.forEach((r, i) => {
+        if (r.status === "rejected") {
+          this.log.prettyWarn("background", `后台任务 #${i} 失败`, r.reason);
         }
       });
 
-      log.prettySuccess("background", "后台初始化任务完成");
-    };
+      this.log.prettySuccess("background", "后台任务完成");
+    });
+  }
 
-    if (typeof (window as any).requestIdleCallback === "function") {
-      (window as any).requestIdleCallback(executeTasks);
-    } else {
-      setTimeout(executeTasks, 50);
+  private async initDownloadPath(): Promise<void> {
+    if (ObjectUtils.isEmpty(this.stores.setting.file.path)) {
+      this.stores.setting.file.path = await downloadDir();
+      this.log.prettyInfo("file", "下载目录:", this.stores.setting.file.path);
     }
   }
 
-  /**
-   * 初始化文件下载目录。
-   * - 如果未设置，使用系统默认下载目录。
-   */
-  async initFileDownloadPath() {
-    const t0 = performance.now();
-    try {
-      if (ObjectUtils.isEmpty(settingStore.file.path)) {
-        settingStore.file.path = await downloadDir();
-        log.prettyInfo("file", "下载目录初始化为", settingStore.file.path);
-      } else {
-        log.prettyInfo("file", "已存在下载目录设置", settingStore.file.path);
-      }
-    } catch (err) {
-      log.prettyWarn("file", "下载目录初始化失败（使用默认）", err);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("file", `下载目录初始化耗时 ${Math.round(t1 - t0)} ms`);
+  private async syncAllData(): Promise<void> {
+    return withTiming(
+      "sync",
+      "用户数据同步",
+      () =>
+        Promise.all([
+          this.syncOfflineMessages(),
+          this.syncChatSessions(),
+          this.syncFriends(),
+        ]).then(() => { }),
+      this.log
+    );
+  }
+
+  private syncFriends(): void {
+    const { friend } = this.stores;
+    friend.loadNewFriends();
+    friend.loadGroups();
+    friend.loadContacts();
+  }
+
+  private async syncOfflineMessages(): Promise<void> {
+    const { chatsMapper, singleMessageMapper, groupMessageMapper } = this.mappers;
+    const ownerId = storage.get("userId");
+
+    const chats = await chatsMapper.findLastChat();
+    const sequence = chats?.[0]?.sequence || 0;
+    const res: any = await api.GetMessageList({ fromId: ownerId, sequence });
+
+    if (!res) {
+      this.log.prettyInfo("message", "无新离线消息");
+      return;
     }
-  }
 
-  /**
-   * 同步用户数据。
-   * - 并行同步消息、会话和好友数据。
-   */
-  async syncUserData() {
-    const t0 = performance.now();
-    try {
-      await Promise.all([this.syncOfflineMessages(), this.syncChatSessions(), this.syncFriends()]);
+    const insertConfig = { ownerId, messageType: 0 };
 
-      log.prettySuccess("sync", "用户数据同步完成");
-    } catch (err) {
-      log.prettyError("sync", "用户数据同步失败", err);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("sync", `用户数据同步耗时 ${Math.round(t1 - t0)} ms`);
+    // 处理私聊消息
+    const singleMsgs = res[IMessageType.SINGLE_MESSAGE.code];
+    if (singleMsgs) {
+      insertConfig.messageType = IMessageType.SINGLE_MESSAGE.code;
+      await singleMessageMapper.batchInsert(singleMsgs, insertConfig);
+      singleMessageMapper.batchInsertFTS5(singleMsgs, insertConfig, 200, this.exec);
     }
-  }
 
-  /**
-   * 更新好友
-   */
-  syncFriends() {
-    friendStore.loadNewFriends();
-    friendStore.loadGroups();
-    friendStore.loadContacts();
-  }
-
-  /**
-   * 同步离线消息数据。
-   * - 从 API 获取并插入数据库。
-   */
-  async syncOfflineMessages() {
-    const t0 = performance.now();
-    try {
-      const chats = await chatsMapper.findLastChat();
-      const sequence = chats?.[0]?.sequence || 0;
-      const formData = { fromId: storage.get("userId"), sequence };
-      const res: any = await api.GetMessageList(formData);
-
-      if (!res) {
-        log.prettyInfo("message", "无新离线消息");
-        return;
-      }
-
-      if (res[IMessageType.SINGLE_MESSAGE.code]) {
-        await singleMessageMapper.batchInsert(res[IMessageType.SINGLE_MESSAGE.code], {
-          ownerId: storage.get("userId"),
-          messageType: IMessageType.SINGLE_MESSAGE.code
-        });
-        singleMessageMapper.batchInsertFTS5(
-          res[IMessageType.SINGLE_MESSAGE.code],
-          {
-            ownerId: storage.get("userId"),
-            messageType: IMessageType.SINGLE_MESSAGE.code
-          },
-          200,
-          exec
-        );
-      }
-
-      if (res[IMessageType.GROUP_MESSAGE.code]) {
-        await groupMessageMapper.batchInsert(res[IMessageType.GROUP_MESSAGE.code], {
-          ownerId: storage.get("userId"),
-          messageType: IMessageType.GROUP_MESSAGE.code
-        });
-        groupMessageMapper.batchInsertFTS5(
-          res[IMessageType.GROUP_MESSAGE.code],
-          {
-            ownerId: storage.get("userId"),
-            messageType: IMessageType.GROUP_MESSAGE.code
-          },
-          200,
-          exec
-        );
-      }
-
-      log.prettyInfo("message", "离线消息更新成功");
-    } catch (err) {
-      log.prettyError("message", "离线消息更新失败", err);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("message", `离线消息同步耗时 ${Math.round(t1 - t0)} ms`);
+    // 处理群聊消息
+    const groupMsgs = res[IMessageType.GROUP_MESSAGE.code];
+    if (groupMsgs) {
+      insertConfig.messageType = IMessageType.GROUP_MESSAGE.code;
+      await groupMessageMapper.batchInsert(groupMsgs, insertConfig);
+      groupMessageMapper.batchInsertFTS5(groupMsgs, insertConfig, 200, this.exec);
     }
+
+    this.log.prettyInfo("message", "离线消息同步成功");
   }
 
-  /**
-   * 同步聊天会话数据。
-   * - 从 API 获取并更新本地会话列表。
-   */
-  async syncChatSessions() {
-    const t0 = performance.now();
+  private async syncChatSessions(): Promise<void> {
+    const { chatsMapper } = this.mappers;
+    const { chat } = this.stores;
+
     try {
       const lastChats = await chatsMapper.findLastChat();
       const sequence = lastChats?.[0]?.sequence ?? 0;
-      const res: any = await api.GetChatList({
-        fromId: storage.get("userId"),
-        sequence
-      });
+      const res: any = await api.GetChatList({ fromId: storage.get("userId"), sequence });
 
       if (Array.isArray(res) && res.length > 0) {
-        const transformed = res.map((chat: any) => {
-          let parsedMessage: any = chat.message;
+        const transformed = res.map((item: any) => {
+          let parsedMessage = item.message;
           try {
-            if (typeof chat.message === "string" && chat.message.length > 0) {
-              parsedMessage = JSON.parse(chat.message);
+            if (typeof item.message === "string" && item.message) {
+              parsedMessage = JSON.parse(item.message);
             }
           } catch {
-            parsedMessage = chat.message;
+            /* 忽略解析错误 */
           }
-          const message = this.getMessageBodyByType(parsedMessage, chat.messageContentType);
-          const newChat: Record<string, any> = { ...chat, message };
-          delete newChat.messageContentType;
-          return newChat;
+
+          const { messageContentType, ...rest } = item;
+          return { ...rest, message: this.formatMessagePreview(parsedMessage, messageContentType) };
         });
 
         await chatsMapper.batchInsert(transformed);
-        chatsMapper.batchInsertFTS5(transformed, undefined, 200, exec);
-
-        const list: any = await chatsMapper.selectList();
-        chatMessageStore.handleSortChatList(list);
-        log.prettyInfo("chat", "会话数据更新成功");
-      } else {
-        const list: any = await chatsMapper.selectList();
-        chatMessageStore.handleSortChatList(list);
-        log.prettyInfo("chat", "会话无新数据，使用本地列表");
+        chatsMapper.batchInsertFTS5(transformed, undefined, 200, this.exec);
       }
-    } catch (err) {
-      log.prettyError("chat", "会话数据更新失败", err);
+
       const list: any = await chatsMapper.selectList();
-      chatMessageStore.handleSortChatList(list);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("chat", `会话同步耗时 ${Math.round(t1 - t0)} ms`);
+      chat.handleSortChatList(list);
+      this.log.prettyInfo("chat", "会话同步成功");
+    } catch (err) {
+      // 失败时仍加载本地数据
+      const list: any = await chatsMapper.selectList();
+      chat.handleSortChatList(list);
+      throw err;
     }
   }
 
-  /**
-   * 根据消息类型获取消息体文本。
-   * - 用于替换消息内容为可显示的字符串。
-   * @param {any} messageObj 消息对象。
-   * @param {any} messageContentType 消息内容类型。
-   * @returns {string} 替换后的消息体。
-   */
-  getMessageBodyByType(messageObj: any, messageContentType: any): string {
-    const code = parseInt(messageContentType);
-    if (!messageObj || !messageContentType) return "";
+  private async initSystemTray(): Promise<void> {
+    const { user, chat } = this.stores;
 
-    switch (code) {
-      case MessageContentType.TEXT.code:
-        return messageObj.message;
-      case MessageContentType.IMAGE.code:
-        return "[图片]";
-      case MessageContentType.VIDEO.code:
-        return "[视频]";
-      case MessageContentType.AUDIO.code:
-        return "[语音]";
-      case MessageContentType.FILE.code:
-        return "[文件]";
-      case MessageContentType.LOCAL.code:
-        return "[位置]";
-      default:
-        return "未知消息类型";
-    }
-  }
+    await this.tray.initSystemTray({
+      id: "app-tray",
+      tooltip: `${import.meta.env.VITE_APP_NAME}: ${user.name}(${user.userId})`,
+      icon: "icons/32x32.png",
+      empty_icon: "icons/empty.png",
+      flashTime: 500,
+      menuItems: [
+        { id: "open", text: "打开窗口", action: ShowMainWindow },
+        { id: "quit", text: "退出", action: () => exit(0) },
+      ],
+      trayClick: ({ button, buttonState, type }: any) => {
+        if (button === "Left" && buttonState === "Up" && type === "Click") {
+          ShowMainWindow();
+          this.tray.flash(false);
+        }
+      },
+      trayEnter: async ({ position }: any) => {
+        const unreadChats = chat.getHaveMessageChat;
+        if (unreadChats.length === 0) return;
 
-  /**
-   * 初始化系统托盘菜单。
-   * - 配置托盘图标、菜单和事件处理。
-   */
-  async initSystemTrayMenu() {
-    const t0 = performance.now();
-    try {
-      await initSystemTray({
-        id: "app-tray",
-        tooltip: `${import.meta.env.VITE_APP_NAME}: ${userStore.name}(${userStore.userId})`,
-        icon: "icons/32x32.png",
-        empty_icon: "icons/empty.png",
-        flashTime: 500,
-        menuItems: [
-          { id: "open", text: "打开窗口", action: () => ShowMainWindow() },
-          {
-            id: "quit",
-            text: "退出",
-            action: async () => {
-              await exit(0);
+        showOrCreateNotifyWindow(unreadChats.length, position);
+
+        await this.tauriEvent.onceEventDebounced(
+          "notify-win-click",
+          async ({ payload }: any) => {
+            const item = chat.getChatById(payload?.chatId);
+            if (!item) return;
+
+            try {
+              router.push("/message");
+              await Promise.all([chat.handleChangeCurrentChat(item), chat.handleResetMessage()]);
+              await ShowMainWindow();
+              await Promise.all([
+                chat.handleGetMessageList(item),
+                chat.handleUpdateReadStatus(item),
+                hideNotifyWindow(),
+              ]);
+            } catch (e) {
+              this.log.prettyError("tray", "通知点击处理失败", e);
             }
-          }
-        ],
-        trayClick: (event: any) => {
-          const { button, buttonState, type } = event;
-          if (button === "Left" && buttonState === "Up" && type === "Click") {
-            log.prettyInfo("tray", "鼠标左键点击打开主窗口");
-            ShowMainWindow();
-            flash(false);
-          }
-        },
-        trayEnter: async ({ position }) => {
-          const chatCount = chatMessageStore.getHaveMessageChat.length;
-          if (chatCount > 0) {
-            showOrCreateNotifyWindow(chatCount, position);
-            await onceEventDebounced(
-              "notify-win-click",
-              async ({ payload }: any) => {
-                if (!payload?.chatId) return;
-                const item = chatMessageStore.getChatById(payload.chatId);
-                if (!item) return;
-                log.prettyInfo("tray", `通知窗口点击：切换到会话 ${item.chatId}`);
-                try {
-                  router.push("/message");
-                  await Promise.all([chatMessageStore.handleChangeCurrentChat(item), chatMessageStore.handleResetMessage()]);
-                  await ShowMainWindow();
-                  await Promise.all([
-                    chatMessageStore.handleGetMessageList(item),
-                    chatMessageStore.handleUpdateReadStatus(item),
-                    hideNotifyWindow()
-                  ]);
-                } catch (e) {
-                  log.prettyError("tray", "通知点击处理失败", e);
-                }
-              },
-              100
-            );
-          }
-        },
-        trayMove: () => { },
-        trayLeave: (event: any) => {
-          log.prettyInfo("tray", "鼠标移出关闭窗口", event);
-          calculateHideNotifyWindow(event);
-        }
-      });
-      log.prettySuccess("tray", "系统托盘初始化成功");
-    } catch (err) {
-      log.prettyError("tray", "系统托盘初始化失败", err);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("tray", `系统托盘初始化耗时 ${Math.round(t1 - t0)} ms`);
-    }
+          },
+          100
+        );
+      },
+      trayMove: () => { },
+      trayLeave: calculateHideNotifyWindow,
+    });
+
+    this.log.prettySuccess("tray", "系统托盘初始化成功");
   }
 
-  /**
-   * 初始化全局快捷键。
-   * - 注册截图等快捷键。
-   */
-  async initGlobalShortcuts() {
-    const t0 = performance.now();
-    try {
-      useGlobalShortcut([
-        {
-          name: "screenshot",
-          combination: "Ctrl+Shift+M",
-          handler: () => {
-            log.prettyInfo("shortcut", "开启截图");
-            CreateScreenWindow(screen.availWidth, screen.availHeight);
-          }
-        }
-      ]).init();
-      log.prettySuccess("shortcut", "全局快捷键初始化成功");
-    } catch (err) {
-      log.prettyError("shortcut", "全局快捷键初始化失败", err);
-    } finally {
-      const t1 = performance.now();
-      log.prettyInfo("shortcut", `全局快捷键初始化耗时 ${Math.round(t1 - t0)} ms`);
-    }
+  private async initShortcuts(): Promise<void> {
+    useGlobalShortcut([
+      {
+        name: "screenshot",
+        combination: "Ctrl+Shift+M",
+        handler: () => {
+          this.log.prettyInfo("shortcut", "开启截图");
+          CreateScreenWindow(screen.availWidth, screen.availHeight);
+        },
+      },
+    ]).init();
+
+    this.log.prettySuccess("shortcut", "快捷键初始化成功");
   }
 
-  /* ---------------------- WebSocket 消息处理 ---------------------- */
+  // ==================== 消息处理 ====================
 
-  /**
-   * 处理 WebSocket 收到的消息。
-   * - 使用消息队列处理以实现削峰填谷。
-   * @param {any} res 收到的消息数据。
-   */
-  handleWebSocketMessage(res: any) {
-    messageQueue.push(res).then(async item => {
+  private handleMessage(res: any): void {
+    this.messageQueue.push(res).then(async (item) => {
       const { code, data } = item;
 
-      // 处理强制下线
-      if (code === IMessageType.FORCE_LOGOUT.code) {
-        log.prettyWarn("websocket", "收到强制下线通知");
-        await userStore.forceLogout(data?.message || "您的账号在其他设备登录");
+      // 注册相关
+      if (code === IMessageType.REGISTER_SUCCESS.code) {
+        //this.log.prettySuccess("websocket", "注册成功");
+        return;
+      }
+      if (code === IMessageType.REGISTER_FAILED.code) {
+        this.log.prettySuccess("websocket", "注册失败");
         return;
       }
 
-      // 处理登录过期
-      if (code === IMessageType.LOGIN_OVER.code) {
-        log.prettyWarn("websocket", "登录已过期");
-        await userStore.forceLogout("登录已过期，请重新登录");
+      // 心跳相关
+      if (code === IMessageType.HEART_BEAT_SUCCESS.code) {
+        //this.log.prettySuccess("websocket", "心跳成功");
         return;
+      }
+      if (code === IMessageType.HEART_BEAT_FAILED.code) {
+        this.log.prettySuccess("websocket", "心跳失败");
+        return;
+      }
+
+      // 认证相关
+      if (code === IMessageType.FORCE_LOGOUT.code) {
+        return this.stores.user.forceLogout(data?.message || "您的账号在其他设备登录");
+      }
+      if (code === IMessageType.LOGIN_EXPIRED.code) {
+        return this.stores.user.forceLogout("登录已过期，请重新登录");
+      }
+      if (code === IMessageType.REFRESH_TOKEN.code) {
+        return this.stores.user.refreshToken();
       }
 
       if (!data) return;
 
+      // 聊天消息
       if (code === IMessageType.SINGLE_MESSAGE.code || code === IMessageType.GROUP_MESSAGE.code) {
-        if (data?.actionType == 1) {
-          chatMessageStore.handleReCallMessage(data);
-        } else {
-          const message = IMessage.fromPlainByType(data);
-          const id =
-            code === IMessageType.SINGLE_MESSAGE.code
-              ? (message as IMSingleMessage).fromId
-              : (message as IMGroupMessage).groupId;
-
-          if (settingStore.notification.message && message) {
-            if (await appIsMinimizedOrHidden()) {
-              flash(true);
-            }
-          }
-
-          chatMessageStore.handleCreateOrUpdateChat(message, id);
-          chatMessageStore.handleCreateMessage(id, message, code);
-        }
+        await this.handleChatMessage(code, data);
+        return;
       }
 
+      // 视频消息
       if (code === IMessageType.VIDEO_MESSAGE.code) {
-        callStore.handleCallMessage(data);
+        this.stores.call.handleCallMessage(data);
       }
 
-      if (code === IMessageType.REFRESHTOKEN.code) {
-        userStore.refreshToken();
-      }
+
     });
   }
 
-  /* ---------------------- 清理和销毁 ---------------------- */
+  private async handleChatMessage(code: number, data: any): Promise<void> {
+    const { chat, setting } = this.stores;
 
-  /**
-   * 销毁管理器资源。
-   * - 断开 WebSocket 等连接。
-   */
-  async destroy() {
-    log.prettyInfo("core", "开始清理 MainManager 资源");
-    try {
-      disconnect();
-      log.prettySuccess("core", "资源清理完成");
-    } catch (err) {
-      log.prettyError("core", "资源清理失败", err);
+    // 撤回消息
+    if (data?.actionType === 1) {
+      chat.handleReCallMessage(data);
+      return;
     }
+
+    const message = IMessage.fromPlainByType(data);
+    const chatId =
+      code === IMessageType.SINGLE_MESSAGE.code
+        ? (message as IMSingleMessage).fromId
+        : (message as IMGroupMessage).groupId;
+
+    // 新消息通知
+    if (setting.notification.message && message && (await appIsMinimizedOrHidden())) {
+      this.tray.flash(true);
+    }
+
+    chat.handleCreateOrUpdateChat(message, chatId);
+    chat.handleCreateMessage(chatId, message, code);
+  }
+
+  // ==================== 工具方法 ====================
+
+  /** 格式化消息预览文本 */
+  private formatMessagePreview(messageObj: any, contentType: any): string {
+    if (!messageObj || !contentType) return "";
+
+    const code = parseInt(contentType);
+    const formatter = MESSAGE_DISPLAY_MAP[code];
+
+    if (typeof formatter === "function") {
+      return formatter(messageObj);
+    }
+    return formatter ?? "未知消息类型";
   }
 }
 
-/** Hook: 获取 MainManager 实例。 */
-export function useMainManager() {
+// ==================== 导出 ====================
+
+export function useMainManager(): MainManager {
   return MainManager.getInstance();
 }

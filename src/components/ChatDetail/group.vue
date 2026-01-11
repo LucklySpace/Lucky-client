@@ -132,7 +132,7 @@ import Chats from "@/database/entity/Chats";
 import HistoryDialog from "@/components/History/index.vue";
 import Avatar from "@/components/Avatar/index.vue";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { CHAT_CHANGED, GROUP_RENAMED, GROUP_NOTICE_CHANGED } from "@/constants/events";
+import { Events } from "@/constants";
 import { useI18n } from "vue-i18n";
 
 const { t: $t } = useI18n();
@@ -221,15 +221,15 @@ function updateGroupInfoData() {
 
 onMounted(() => {
   updateGroupInfoData();
-  globalEventBus.on(GROUP_RENAMED as any, onBusGroupRenamed as any);
-  globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
-  globalEventBus.on(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+  globalEventBus.on(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.on(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.on(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
 });
 
 onUnmounted(() => {
-  globalEventBus.off(GROUP_RENAMED as any, onBusGroupRenamed as any);
-  globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
-  globalEventBus.off(GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+  globalEventBus.off(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.off(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.off(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
 });
 
 const filteredMembers = computed(() => {
