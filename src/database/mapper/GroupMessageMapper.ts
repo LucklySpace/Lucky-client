@@ -39,8 +39,8 @@ class GroupMessageMapper extends BaseFTS5Mapper<GroupMessage> {
    * @param groupId 群id
    * @returns
    */
-  async findMessageCount(groupId: any): Promise<any> {
-    const res = await this.querySql("findMessageCount", { groupId });
+  async findMessageCount(ownerId: any, groupId: any): Promise<any> {
+    const res = await this.querySql("findMessageCount", { ownerId, groupId });
     return res[0]["count(*)"];
   }
 
@@ -64,18 +64,18 @@ class GroupMessageMapper extends BaseFTS5Mapper<GroupMessage> {
   async clearChatHistory(groupId: string, ownerId: string): Promise<boolean> {
     try {
       // 删除普通表中的聊天记录
-      await this.executeSql("clearChatHistory", { groupId, ownerId});
-      
+      await this.executeSql("clearChatHistory", { groupId, ownerId });
+
       // 删除FTS5虚拟表中的记录
       await this.executeFTS5Sql("clearChatHistoryVirtual", { groupId, ownerId });
-      
+
       return true;
     } catch (error) {
       console.error("清空群聊记录失败:", error);
       return false;
     }
   }
-  
+
   /**
    * 退出群聊（删除当前用户的群聊记录）
    * @param groupId 群ID

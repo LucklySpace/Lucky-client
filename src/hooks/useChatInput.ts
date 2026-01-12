@@ -18,18 +18,18 @@ export function useChatInput() {
 
   /* -------------------- 基础工具函数（高性能实现） -------------------- */
 
-  /**
-   * HTML escape（极简、高性能）
-   */
-  const escapeHtml = (s?: string): string =>
-    s == null
-      ? ""
-      : String(s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+  /** 消息类型码映射到占位符 */
+  const getCodePlaceholder = (code: number): string => {
+    const map: Record<number, string> = {
+      [MessageContentType.IMAGE.code]: t("chat.placeholder.image"),
+      [MessageContentType.VIDEO.code]: t("chat.placeholder.video"),
+      [MessageContentType.AUDIO.code]: t("chat.placeholder.audio"),
+      [MessageContentType.FILE.code]: t("chat.placeholder.file"),
+      [MessageContentType.LOCATION.code]: t("chat.placeholder.location"),
+      [MessageContentType.GROUP_INVITE.code]: t("chat.placeholder.groupInvite")
+    };
+    return map[code] ?? t("chat.placeholder.unknown");
+  };
 
   /**
    * stripHtmlToPlain

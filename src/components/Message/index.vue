@@ -92,6 +92,7 @@ const TextBubble = defineAsyncComponent(() => import("@/components/Bubble/text.v
 const FileBubble = defineAsyncComponent(() => import("@/components/Bubble/file.vue"));
 const AudioBubble = defineAsyncComponent(() => import("@/components/Bubble/audio.vue"));
 const ImageBubble = defineAsyncComponent(() => import("@/components/Bubble/image.vue"));
+const StickerBubble = defineAsyncComponent(() => import("@/components/Bubble/sticker.vue"));
 const SystemBubble = defineAsyncComponent(() => import("@/components/Bubble/system.vue"));
 const GroupInviteBubble = defineAsyncComponent(() => import("@/components/Bubble/groupInvite.vue"));
 const UserPopover = defineAsyncComponent(() => import("@/components/UserPopover/index.vue"));
@@ -133,12 +134,13 @@ const userInfo = ref();
 
 const emit = defineEmits(["handleMoreMessage"]);
 
-const componentMap = {
+const componentMap: any = {
   [MessageContentType.TEXT.code]: TextBubble,
   [MessageContentType.IMAGE.code]: ImageBubble,
   [MessageContentType.AUDIO.code]: AudioBubble,
   [MessageContentType.VIDEO.code]: VideoBubble,
   [MessageContentType.FILE.code]: FileBubble,
+  [MessageContentType.STICKER.code]: StickerBubble,
   [MessageContentType.GROUP_INVITE.code]: GroupInviteBubble,
   [MessageContentType.TIP.code]: SystemBubble
 };

@@ -249,6 +249,7 @@
       "address": "地址",
       "birthday": "生日",
       "remark": "备注",
+      "telephone": "电话",
       "enterAddress": "请输入地址",
       "enterMobile": "请输入手机号",
       "enterNickname": "请输入昵称",

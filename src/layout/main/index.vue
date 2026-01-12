@@ -11,19 +11,19 @@
 </template>
 
 <script lang="ts" setup>
-  import { useMainManager } from "@/core";
+import { useMainManager } from "@/core";
 
-  onMounted(() => {
-    init();
-  });
+onMounted(() => {
+  init();
+});
 
-  const init = async () => {
-    useMainManager().initClient();
-  };
+const init = async () => {
+  useMainManager().initClient();
+};
 </script>
 
 <style lang="scss" scoped>
-  .el-main {
-    background-color: var(--content-bg-color);
-  }
+.el-main {
+  background-color: var(--content-bg-color);
+}
 </style>

@@ -25,7 +25,7 @@
     </SQL>
 
     <SQL name="findMessageCount">
-        SELECT count(*) FROM group_message WHERE groupId = #{groupId}
+        SELECT count(*) FROM group_message WHERE  ownerId = #{ownerId} AND groupId = #{groupId}
     </SQL>
 
     <!-- 清空群聊记录 -->

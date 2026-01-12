@@ -615,10 +615,9 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
     case MessageContentType.GROUP_INVITE.code:
       return new GroupInviteMessageBody(parsedRaw);
     case MessageContentType.GROUP_JOIN_APPROVE.code:
-      // 假设 GroupJoinApproveMessageBody 与 GroupInviteMessageBody 类似
-      // 如果有独立的类，请替换为对应的类
+      // GroupJoinApproveMessageBody 与 GroupInviteMessageBody 类似
       return new GroupInviteMessageBody(parsedRaw);
-    case MessageContentType.LOCAL.code:
+    case MessageContentType.LOCATION.code:
       return new LocationMessageBody(parsedRaw);
     case MessageContentType.COMPLEX.code:
       return new ComplexMessageBody(parsedRaw);

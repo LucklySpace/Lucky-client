@@ -92,7 +92,7 @@ import Chats from '@/database/entity/Chats';
 import Avatar from '@/components/Avatar/index.vue';
 import UserPopover from '@/components/UserPopover/index.vue';
 import { globalEventBus } from '@/hooks/useEventBus';
-import { CHAT_CHANGED, FRIEND_REMARK_UPDATED } from '@/constants/events';
+import { Events } from '@/constants';
 import { MAX_REMARK_LEN } from '@/constants';
 import type { PopoverInstance } from 'element-plus';
 
@@ -216,12 +216,12 @@ const onRemarkUpdated = (payload: any) => {
 
 onMounted(() => {
   loadUserInfo();
-  globalEventBus.on(CHAT_CHANGED as any, onBusChatChanged as any);
-  globalEventBus.on(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+  globalEventBus.on(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.on(Events.FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
 });
 onUnmounted(() => {
-  globalEventBus.off(CHAT_CHANGED as any, onBusChatChanged as any);
-  globalEventBus.off(FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
+  globalEventBus.off(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.off(Events.FRIEND_REMARK_UPDATED as any, onRemarkUpdated as any);
 });
 
 const handleClearFriendMessage = () => {

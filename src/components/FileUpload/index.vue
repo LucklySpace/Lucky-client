@@ -10,68 +10,68 @@
 </template>
 
 <script>
-  export default {
-    data() {
-      return {
-        file: null,
-        fileName: "No file selected"
-      };
+export default {
+  data() {
+    return {
+      file: null,
+      fileName: "No file selected"
+    };
+  },
+  methods: {
+    onFileChange(event) {
+      this.file = event.target.files[0];
+      this.fileName = this.file ? this.file.name : "No file selected";
     },
-    methods: {
-      onFileChange(event) {
-        this.file = event.target.files[0];
-        this.fileName = this.file ? this.file.name : "No file selected";
-      },
-      uploadFile() {
-        // Upload file to server
-      }
+    uploadFile() {
+      // Upload file to server
     }
-  };
+  }
+};
 </script>
 
 <style scoped>
-  .file-upload {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-  }
+.file-upload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
 
-  .file-select {
-    display: flex;
-    align-items: center;
-    flex: 1;
-  }
+.file-select {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
 
-  .file-select-button {
-    font-size: 14px;
-    padding: 5px 10px;
-    color: #fff;
-    background-color: #0088cc;
-    border-radius: 5px;
-    cursor: pointer;
-  }
+.file-select-button {
+  font-size: 14px;
+  padding: 5px 10px;
+  color: #fff;
+  background-color: #0088cc;
+  border-radius: 5px;
+  cursor: pointer;
+}
 
-  .file-select-name {
-    margin-left: 10px;
-    font-size: 14px;
-    color: #555;
-  }
+.file-select-name {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #555;
+}
 
-  .file-upload-button {
-    margin-left: 10px;
-    font-size: 14px;
-    padding: 5px 10px;
-    color: #fff;
-    background-color: #0088cc;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-  }
+.file-upload-button {
+  margin-left: 10px;
+  font-size: 14px;
+  padding: 5px 10px;
+  color: #fff;
+  background-color: #0088cc;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
 
-  .file-upload-button:hover {
-    background-color: #006699;
-  }
+.file-upload-button:hover {
+  background-color: #006699;
+}
 </style>
