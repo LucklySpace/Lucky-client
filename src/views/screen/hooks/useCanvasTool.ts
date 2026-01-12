@@ -50,6 +50,120 @@ export function createUseCanvasTool(
     size: 2
   };
 
+  //text 工具
+  const textState = {
+    inputEl: null as HTMLInputElement | null,
+    editing: false,
+    cssX: 0, //换成css下的坐标
+    cssY: 0
+  };
+
+  function getFontStack(): string {
+    try {
+      const root = getComputedStyle(document.documentElement);
+      const v = root.getPropertyValue("--font-family");
+      return (v && v.trim()) || "system-ui, Arial, sans-serif";
+    } catch {
+      return "system-ui, Arial, sans-serif";
+    }
+  }
+
+  function getTextFontPx(): string {
+    const px = Math.max(12, Math.min(64, styleConfig.size * 2 + 10));
+    return `${px}px ${getFontStack()}`;
+  }
+
+  //挂载输入框
+  function mountTextInput(cssX: number, cssY: number) {
+    const canvas = getCanvas();
+    if (!canvas || textState.editing) return;
+    const host = canvas.parentElement || document.body;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = "";
+    input.placeholder = "";
+    input.style.position = "absolute";
+    input.style.left = `${cssX}px`;
+    input.style.top = `${cssY}px`;
+    input.style.zIndex = "10000";
+    input.style.border = "1px solid #409eff";
+    input.style.padding = "2px 4px";
+    input.style.background = "transparent";
+    input.style.color = resolveColor(styleConfig.color);
+    input.style.font = getTextFontPx();
+    input.style.lineHeight = "1.2";
+    input.style.minWidth = "40px";
+    input.style.outline = "none";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmTextInput();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelTextInput();
+      }
+    };
+    const onBlur = () => confirmTextInput();
+    input.addEventListener("keydown", onKey);
+    input.addEventListener("blur", onBlur);
+    host.appendChild(input);
+    (input as any)._cleanup = () => {
+      input.removeEventListener("keydown", onKey);
+      input.removeEventListener("blur", onBlur);
+    };
+    textState.inputEl = input;
+    textState.editing = true;
+    textState.cssX = cssX;
+    textState.cssY = cssY;
+    try {
+      // blur导致的瞬时删除节点问题
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          input.focus();
+          input.select();
+          input.addEventListener('blur', onBlur); // 第二帧再挂
+        });
+      });
+    } catch {}
+  }
+//删除节点
+  function unmountTextInput() {
+    const el = textState.inputEl;
+    if (!el) return;
+    try {
+      (el as any)._cleanup?.();
+    } catch {}
+    try {
+      el.remove();
+    } catch {}
+    textState.inputEl = null;
+    textState.editing = false;
+  }
+
+  function cancelTextInput() {
+    unmountTextInput();
+  }
+
+  function confirmTextInput() {
+    const el = textState.inputEl;
+    const val = (el?.value || "").trim();
+    unmountTextInput();
+    if (!val) return;
+    const ctx = getDrawCtx();
+    const canvas = getCanvas();
+    if (!ctx || !canvas) return;
+    ctx.save();
+    ctx.font = getTextFontPx();
+    ctx.fillStyle = resolveColor(styleConfig.color);
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+    const pxX = Math.round(textState.cssX * (screenConfig.scaleX || 1));
+    const pxY = Math.round(textState.cssY * (screenConfig.scaleY || 1));
+    ctx.fillText(val, pxX, pxY);
+    ctx.restore();
+    saveAction();
+  }
+
   // 事件处理函数引用（便于 removeEventListener）
   function handleMouseDown(e: MouseEvent) {
     const drawCanvas = getCanvas();
@@ -60,6 +174,7 @@ export function createUseCanvasTool(
     const scale = screenConfig.scaleX || 1;
     const offsetX = Math.min(Math.max(e.offsetX * scale, screenConfig.startX), screenConfig.endX);
     const offsetY = Math.min(Math.max(e.offsetY * scale, screenConfig.startY), screenConfig.endY);
+
 
     isDrawing.value = true;
     // 保存临时画布快照（用于重绘）
@@ -118,10 +233,14 @@ export function createUseCanvasTool(
       case "pen":
         // 调用抽离的 pen 绘制
         strokePen(offsetX, offsetY, ctx);
+        break;
+      case "text":
+        // 文本不在 move 阶段绘制
+        break;
     }
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: MouseEvent) {
     if (!isDrawing.value) return;
     isDrawing.value = false;
     // 将 drawCanvas 的当前像素合并（已经画在 drawCanvas 上）
@@ -134,6 +253,27 @@ export function createUseCanvasTool(
 
     if (tool.value === "pen") {
       endPen(ctx);
+    }
+    //放在up处理函数中, 否则引发失焦函数导致新创建的节点被立即删除
+    // 文本：点击弹出输入框
+    if (tool.value === "text") {
+      const scale = screenConfig.scaleX || 1;
+      const minX = Math.min(screenConfig.startX, screenConfig.endX);
+      const minY = Math.min(screenConfig.startY, screenConfig.endY);
+      const maxX = Math.max(screenConfig.startX, screenConfig.endX);
+      const maxY = Math.max(screenConfig.startY, screenConfig.endY);
+      const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+      const cssMinX = Math.round(minX / scale);
+      const cssMinY = Math.round(minY / scale);
+      const cssMaxX = Math.round(maxX / scale);
+      const cssMaxY = Math.round(maxY / scale);
+      const cssX = clamp(Math.round(e.offsetX), cssMinX, cssMaxX);
+      const cssY = clamp(Math.round(e.offsetY), cssMinY, cssMaxY);
+      if (textState.editing) {
+        confirmTextInput();
+      }
+      mountTextInput(cssX, cssY);
+      return;
     }
 
     saveAction();
@@ -355,6 +495,7 @@ export function createUseCanvasTool(
   // 工具切换
   function setTool(t: ToolType) {
     tool.value = t;
+    if (textState.editing) cancelTextInput();
     startListen();
   }
 
@@ -394,7 +535,7 @@ export function createUseCanvasTool(
 
   function setPenOptions({ color, size }: { color?: ColorType | string; size?: number }) {
     if (color !== undefined) {
-        styleConfig.color = color;
+      styleConfig.color = color;
     }
     if (size !== undefined) {
       // 限定大小范围（比如 1 ~ 50）
@@ -415,6 +556,7 @@ export function createUseCanvasTool(
     undo,
     redo,
     setPenOptions,
-    isDrawing: () => isDrawing.value
+    isDrawing: () => isDrawing.value,
+    commit: saveAction
   };
 }

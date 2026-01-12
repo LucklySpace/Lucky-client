@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ClipboardManager from "@/utils/Clipboard"; // 你已有的剪贴板管理器
 import type { ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
-import { createUseCanvasTool } from "./useCanvasTool"; // 我会在下一节给出文件
+import { createUseCanvasTool } from "./useCanvasTool"; 
 import { ca } from "element-plus/es/locale/index.mjs";
 
 /**
@@ -26,7 +26,6 @@ export function useScreenshot() {
   const magnifier = ref<HTMLElement | null>(null);
   const magnifierCanvas = ref<HTMLCanvasElement | null>(null);
   const buttonGroup = ref<HTMLElement | null>(null);
-
   // canvas context
   const imgCtx = ref<CanvasRenderingContext2D | null>(null);
   const maskCtx = ref<CanvasRenderingContext2D | null>(null);
@@ -62,7 +61,6 @@ export function useScreenshot() {
     size: 150,
     zoom: 3
   };
-
   // 截图原图（Image 元素）
   let screenshotImage: HTMLImageElement | null = null;
   // 图像数据缓存（如果需要快速导出）
@@ -246,9 +244,9 @@ export function useScreenshot() {
     // 鼠标位置（像素级，考虑 scale）
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
-
     // 判断是否在已经选好的矩形内 => 进入移动
-    if (isInSelection(offsetX, offsetY) && !state.isInitial) { //不是初始状态
+    if (isInSelection(offsetX, offsetY) && !state.isInitial) {
+      //不是初始状态
       state.isMoving = true;
       state.showButtonGroup = false;
 
@@ -272,9 +270,9 @@ export function useScreenshot() {
       return;
     }
 
-    if(state.isInitial) {
+    if (state.isInitial) {
       state.isInitial = false; //解除初始锁定
-      drawMask();  //立即蒙版, 消除边框绘制
+      drawMask(); //立即蒙版, 消除边框绘制
     }
 
     state.startX = offsetX;
@@ -376,12 +374,12 @@ export function useScreenshot() {
       }
 
       emitPluginEvent("onEndDraw", state);
-    } else { // 否则为移动选区
+    } else {
+      // 否则为移动选区
       // const edge = hitTestEdge(e.offsetX * state.scaleX, e.offsetY * state.scaleY)
       // if (edge) {
       //   isResizing = true
       //   resizeEdge = edge
-        
       // }
     }
 
@@ -544,6 +542,10 @@ export function useScreenshot() {
     maskCanvas.value?.removeEventListener("mousedown", handleMaskMouseDown);
     maskCanvas.value?.removeEventListener("mousemove", handleMaskMouseMove);
     maskCanvas.value?.removeEventListener("mouseup", handleMaskMouseUp);
+
+    //防止拦截鼠标事件(工具为文字时, 点击会创建新的节点. )
+    if (maskCanvas.value) maskCanvas.value.style.pointerEvents = 'none';
+
     state.currentTool = tool;
     canvasTool.setTool(tool);
   }

@@ -1,5 +1,6 @@
 // src/hooks/types.ts
 
+// 工具类型：新增 'text' 以支持文字功能
 export type ToolType = "rect" | "circle" | "line" | "arrow" | "mosaic" | "text" | "pen";
 
 export interface ScreenshotPluginContext {
