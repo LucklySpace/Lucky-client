@@ -487,7 +487,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   /** 获取消息列表 */
   const handleGetMessageList = async (chat: any) => {
     if (!chat) return;
-    if (messageCount.value === 0) await handleGetMessageCount();
+    if (page.total === 0) await handleGetMessageCount();
 
     const ownId = getOwnerId.value;
     const offset = (page.num - 1) * page.size;

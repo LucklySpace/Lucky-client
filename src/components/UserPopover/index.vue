@@ -28,7 +28,7 @@
       <div class="profile-details">
         <!-- 备注：仅好友显示且可编辑，自己不可编辑 -->
         <div v-if="!isMe && contact?.flag === 1" class="detail-item clickable" @click="handleStartEdit">
-          <span class="label">{{ $t("search.addFriend.remarkLabel") }}</span>
+          <span class="label">{{ $t("profile.remark") }}</span>
           <div class="value">
             <template v-if="!isEditingRemark">
               <span class="text-ellipsis">{{ remark || safeName }}</span>
@@ -51,10 +51,10 @@
       <!-- 底部操作栏：自己不显示操作 -->
       <div v-if="!isMe && contact?.flag === 1" class="profile-actions">
         <el-button type="primary" class="action-btn" @click="handleSend">
-          {{ $t("common.sendMessage") || '发送消息' }}
+          {{ $t("actions.sendMsg") }}
         </el-button>
         <el-button class="action-btn" @click="handleCall">
-          {{ $t("common.voiceCall") || '语音通话' }}
+          {{ $t("actions.videoCall") }}
         </el-button>
       </div>
     </template>
@@ -69,8 +69,9 @@ import { useFriendsStore } from "@/store/modules/friends";
 import { MAX_REMARK_LEN } from "@/constants";
 import Avatar from "@/components/Avatar/index.vue";
 import defaultImg from "@/assets/avatar/default.jpg";
+import { useI18n } from "vue-i18n";
 
-const { t: $t } = useI18n();
+const { t } = useI18n();
 const friendStore = useFriendsStore();
 
 interface Contact {
@@ -80,6 +81,7 @@ interface Contact {
   friendId?: string | null;
   userId?: string | null;
   location?: string | null;
+  telephone?: string | null;
   flag?: number;
   remark?: string | null;
   selfSignature?: string | null;
@@ -125,9 +127,10 @@ const genderClass = computed(() => ({
 
 const displayInfo = computed(() => {
   const list = [
-    { label: "昵称", value: props.contact?.name },
-    { label: "签名", value: props.contact?.selfSignature },
-    { label: "地区", value: props.contact?.location }
+    { label: t("profile.nickname"), value: props.contact?.name },
+    { label: t("profile.telephone"), value: props.contact?.telephone },
+    { label: t("profile.signature"), value: props.contact?.selfSignature },
+    { label: t("profile.address"), value: props.contact?.location },
   ];
   return list.filter(i => !!i.value);
 });
@@ -142,13 +145,13 @@ const saveRemark = async () => {
   if (!isEditingRemark.value) return;
   const next = remark.value.trim();
   if (!next) {
-    ElMessage.warning($t("errors.remark.empty"));
+    ElMessage.warning(t("errors.remark.empty"));
     remark.value = props.contact?.remark ?? props.contact?.name ?? "";
     isEditingRemark.value = false;
     return;
   }
   if (next.length > MAX_REMARK_LEN) {
-    ElMessage.error($t("errors.remark.tooLong", { max: MAX_REMARK_LEN }));
+    ElMessage.error(t("errors.remark.tooLong", { max: MAX_REMARK_LEN }));
     return;
   }
 
@@ -171,7 +174,7 @@ const handleCall = () => emit("call", props.contact!);
 .user-profile-card {
   width: 100%;
   max-width: 280px;
-  background-color: #fff;
+  // background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -202,7 +205,7 @@ const handleCall = () => emit("call", props.contact!);
       .display-name {
         font-size: 16px;
         font-weight: 600;
-        color: #1d2129;
+        color: var(--content-font-color);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -239,11 +242,11 @@ const handleCall = () => emit("call", props.contact!);
 }
 
 .profile-details {
-  padding: 12px;
+  padding: 10px;
 
   .detail-item {
     display: flex;
-    padding: 8px 0;
+    padding: 6px 0;
     font-size: 13px;
     line-height: 1.5;
 
@@ -256,14 +259,14 @@ const handleCall = () => emit("call", props.contact!);
     }
 
     .label {
-      width: 40px;
-      color: #86909c;
+      width: 70px;
+      color: var(--content-font-color);
       flex-shrink: 0;
     }
 
     .value {
       flex: 1;
-      color: #4e5969;
+      color: var(--content-font-color);
       min-width: 0;
       display: flex;
       align-items: center;
@@ -284,7 +287,7 @@ const handleCall = () => emit("call", props.contact!);
 }
 
 .profile-actions {
-  padding: 16px 20px 20px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;

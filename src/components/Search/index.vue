@@ -23,7 +23,7 @@
 
     <el-popover ref="popoverRef" :teleported="true" :virtual-ref="headerInputRef" placement="bottom-start"
       popper-class="modern-search-popover" trigger="focus" virtual-triggering :width="340" @hide="handleClear">
-      <div class="search-results-panel" role="dialog">
+      <div class="search-results-panel no-select" role="dialog">
         <!-- 分类页签 -->
         <div class="search-tabs">
           <div v-for="tab in tabs" :key="tab.value" :class="['tab-item', { active: activeTab === tab.value }]"
@@ -135,13 +135,13 @@
         <el-form-item :label="$t('search.addFriend.verifyLabel')">
           <el-input v-model="verifyMsg" type="textarea" :rows="3" maxlength="100" show-word-limit />
         </el-form-item>
-        <el-form-item :label="$t('search.addFriend.remarkLabel')">
+        <el-form-item :label="$t('profile.remark')">
           <el-input v-model="remark" maxlength="20" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFriendDialogVisible = false">{{ t("common.cancel") }}</el-button>
-        <el-button type="primary" @click="confirmAddFriend">{{ t("common.confirm") }}</el-button>
+        <el-button @click="addFriendDialogVisible = false">{{ t("actions.cancel") }}</el-button>
+        <el-button type="primary" @click="confirmAddFriend">{{ t("actions.confirm") }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -416,7 +416,6 @@ watch(searchStr, v => {
 <style lang="scss" scoped>
 .search-container {
   padding: 12px 8px;
-  background-color: #fff;
 
   .search-bar {
     display: flex;
@@ -472,7 +471,6 @@ watch(searchStr, v => {
   display: flex;
   flex-direction: column;
   max-height: 500px;
-  background-color: #fff;
 
   .search-tabs {
     display: flex;
