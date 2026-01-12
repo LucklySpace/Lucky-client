@@ -2,9 +2,9 @@
   font-family: "iconfont"; /* Project id 4223986 */
   /* Color fonts */
   src: 
-       url('iconfont.woff2?t=1759541059694') format('woff2'),
-       url('iconfont.woff?t=1759541059694') format('woff'),
-       url('iconfont.ttf?t=1759541059694') format('truetype');
+       url('iconfont.woff2?t=1768201243834') format('woff2'),
+       url('iconfont.woff?t=1768201243834') format('woff'),
+       url('iconfont.ttf?t=1768201243834') format('truetype');
 }
 
 .iconfont {
@@ -13,6 +13,10 @@
   font-style: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-wenben1:before {
+  content: "\e628";
 }
 
 .icon-saoma:before {
