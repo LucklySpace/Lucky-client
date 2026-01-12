@@ -100,7 +100,7 @@
           :title="$t('screen.text')"
           @click="handleToolClick('text')"
         >
-          <i class="iconfont icon-wenben"></i>
+          <i class="iconfont icon-wenben1"></i>
         </button>
 
         <!-- 马赛克 -->
