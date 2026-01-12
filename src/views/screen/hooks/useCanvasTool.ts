@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import type { ColorType, PenConfig, ToolType } from "./types";
 import { COLOR_MAP } from "./types";
+import { text } from "stream/consumers";
 
 /**
  * createUseCanvasTool - 绘图工具工厂
@@ -120,7 +121,6 @@ export function createUseCanvasTool(
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           input.focus();
-          input.select();
           input.addEventListener('blur', onBlur); // 第二帧再挂
         });
       });
@@ -545,6 +545,12 @@ export function createUseCanvasTool(
     if (tool.value === "pen") {
       if (color !== undefined) penConfig.color = color as any;
       if (size !== undefined) penConfig.size = styleConfig.size;
+    }
+
+    //修改文字样式
+    if (textState.editing && textState.inputEl) {
+      textState.inputEl.style.color = resolveColor(penConfig.color);
+      textState.inputEl.style.fontSize = `${penConfig.size}px`;
     }
   }
 

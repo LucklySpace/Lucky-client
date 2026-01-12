@@ -9,7 +9,8 @@
     </div>
 
     <div v-show="state.showButtonGroup" :ref="refs.buttonGroup" :style="state.buttonStyle" class="button-group">
-      <div v-if="showPenSettings" class="pen-settings-panel" @mousedown.stop>
+      <!-- 设置面板 -->
+      <div v-if="showPenSettings" class="pen-settings-panel" :style="settingsPanelStyle" @mousedown.stop>
         <div class="sizes">
           <button
             v-for="s in sizes"
@@ -41,42 +42,77 @@
         </div>
       </div>
 
-      <button :class="{ active: state.currentTool === 'pen' }" :title="$t('screen.pen')" @click="togglePenPanel">
+      <!-- 画笔 -->
+      <button
+        :ref="el => setBtnRef('pen', el)"
+        :class="{ active: state.currentTool === 'pen' }"
+        :title="$t('screen.pen')"
+        @click="handleToolClick('pen')"
+      >
         <i class="iconfont icon-24"></i>
       </button>
 
       <div style="display: flex">
-        <button :class="{ active: state.currentTool === 'rect' }" :title="$t('screen.rect')" @click="setTool('rect')">
+        <!-- 矩形 -->
+        <button
+          :ref="el => setBtnRef('rect', el)"
+          :class="{ active: state.currentTool === 'rect' }"
+          :title="$t('screen.rect')"
+          @click="handleToolClick('rect')"
+        >
           <i class="iconfont icon-xingzhuang-juxing"></i>
         </button>
 
+        <!-- 圆形 -->
         <button
+          :ref="el => setBtnRef('circle', el)"
           :class="{ active: state.currentTool === 'circle' }"
           :title="$t('screen.circle')"
-          @click="setTool('circle')"
+          @click="handleToolClick('circle')"
         >
           <i class="iconfont icon-yuanxing"></i>
         </button>
 
+        <!-- 箭头 -->
         <button
+          :ref="el => setBtnRef('arrow', el)"
           :class="{ active: state.currentTool === 'arrow' }"
           :title="$t('screen.arrow')"
-          @click="setTool('arrow')"
+          @click="handleToolClick('arrow')"
         >
           <i class="iconfont icon-righttop"></i>
         </button>
 
-        <button :class="{ active: state.currentTool === 'line' }" :title="$t('screen.line')" @click="setTool('line')">
+        <!-- 直线 -->
+        <button
+          :ref="el => setBtnRef('line', el)"
+          :class="{ active: state.currentTool === 'line' }"
+          :title="$t('screen.line')"
+          @click="handleToolClick('line')"
+        >
           <i class="iconfont icon-jurassic_line"></i>
         </button>
 
+        <!-- 文本 -->
         <button
+          :ref="el => setBtnRef('text', el)"
+          :class="{ active: state.currentTool === 'text' }"
+          :title="$t('screen.text')"
+          @click="handleToolClick('text')"
+        >
+          <i class="iconfont icon-wenben"></i>
+        </button>
+
+        <!-- 马赛克 -->
+        <button
+          :ref="el => setBtnRef('mosaic', el)"
           :class="{ active: state.currentTool === 'mosaic' }"
           :title="$t('screen.mosaic')"
-          @click="setTool('mosaic')"
+          @click="handleToolClick('mosaic')"
         >
           <i class="iconfont icon-masaike"></i>
         </button>
+
         <button :title="$t('screen.undo')" @click="undo">
           <i class="iconfont icon-chexiao"></i>
         </button>
@@ -95,7 +131,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, onBeforeUnmount } from "vue";
+  import { onMounted, onBeforeUnmount, reactive, ref, nextTick, watch } from "vue";
   import { useScreenshot } from "./hooks/useScreenshot";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -103,50 +139,82 @@
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
   const { addShortcut } = useGlobalShortcut();
-
   const { refs, state, start, confirmSelection, cancelSelection, setTool, undo, redo, setPenOptions } = useScreenshot();
 
   const showPenSettings = ref(false);
 
-  // 可配置的调色板与尺寸（你可以把这两个放到外部 config）
+  // 存储所有工具按钮的 DOM 引用
+  const toolBtnRefs = ref<Record<string, HTMLElement>>({});
+
+  // 收集 Ref 的辅助函数
+  const setBtnRef = (toolName: string, el: any) => {
+    if (el) toolBtnRefs.value[toolName] = el as HTMLElement;
+  };
+
+  // 面板位置样式
+  const settingsPanelStyle = reactive({
+    left: "0px",
+    top: "100%",
+    marginTop: "8px"
+  });
+
   const palette = ref<string[]>(["#ff0000", "#ffff00", "#0000ff", "#ffffff", "#000000", "#00ff00"]);
-
-  const sizes = ref<number[]>([4, 8, 12]); // 三档圆点
-
-  // 当前显示状态（从 hook 或局部 state 获取均可）
+  const sizes = ref<number[]>([4, 8, 12]);
   const currentColor = ref<string>("red");
   const currentSize = ref(8);
 
   let unlistenDispose: (() => void) | null = null;
 
-  // 切换面板逻辑
-  function togglePenPanel() {
-    if (state.currentTool !== "pen") {
-      // 如果当前不是画笔，先切到画笔，并打开面板
-      setTool("pen");
-      showPenSettings.value = true;
-    } else {
-      // 如果已经是画笔，则切换面板显隐
+  // 统一处理工具点击
+  function handleToolClick(toolName: string) {
+    if (state.currentTool === toolName) {
+      // 如果点击的是当前已激活的工具，切换面板显隐
       showPenSettings.value = !showPenSettings.value;
+    } else {
+      // 如果点击的是新工具，激活它并强制显示面板
+      setTool(toolName as any);
+      showPenSettings.value = true;
     }
+    // 计算位置
+    updatePanelPosition(toolName);
   }
-  // 监听工具变化，如果用户点击了矩形、圆形等其他工具，自动关闭画笔面板
+
+  // 5. 计算面板位置
+  function updatePanelPosition(toolName: string) {
+    nextTick(() => {
+      const btn = toolBtnRefs.value[toolName];
+      if (btn) {
+        //动态计算面板位置
+        const leftPos = btn.offsetLeft - 4;
+        settingsPanelStyle.left = `${leftPos}px`;
+      }
+    });
+  }
+
+  // 监听工具变化
   watch(
     () => state.currentTool,
     newTool => {
-      if (newTool !== "pen") {
+      // 定义哪些工具需要显示配置面板
+      const toolsWithSettings = ["pen", "rect", "circle", "arrow", "line", "text", "mosaic"];
+
+      if (toolsWithSettings.includes(newTool)) {
+        //只要切换到这些工具，就更新位置
+        updatePanelPosition(newTool);
+      } else {
+        // 切换到非绘图工具（如无操作状态）时关闭面板
         showPenSettings.value = false;
       }
     }
   );
 
   function onSelectColor(c: string) {
+    // 选中颜色时保持面板打开
     showPenSettings.value = true;
     setPenOptions({ color: c });
     currentColor.value = c;
   }
 
-  // 原生颜色选择器回调
   function onNativeColorChange(e: Event) {
     const target = e.target as HTMLInputElement;
     const val = target.value;
@@ -157,23 +225,25 @@
   function onSelectSize(s: number) {
     setPenOptions?.({ size: s } as any);
     if (currentSize) currentSize.value = s;
-    setTool?.("pen");
   }
 
-  // 早期渲染时将组件 ref 绑定到 hook 的 refs 对象上
   onMounted(async () => {
     await start();
+
+    // 初始化位置（假设默认为 pen）
+    if (state.currentTool === "pen") {
+      updatePanelPosition("pen");
+    }
+
     addShortcut({
       name: "esc",
       combination: "Esc",
       handler: () => {
-        if (useWindowFocus()) {
-          getCurrentWindow().close();
-          console.log("关闭预览弹窗");
-        }
+        getCurrentWindow().close();
       }
     });
   });
+
   onMounted(async () => {
     unlistenDispose = await listen("screen:dispose", async () => {
       try {
@@ -181,6 +251,7 @@
       } catch {}
     });
   });
+
   onBeforeUnmount(() => {
     try {
       unlistenDispose?.();
@@ -189,7 +260,6 @@
 </script>
 
 <style lang="scss" scoped>
-  /* 保持原有的 Canvas 样式不变 ... */
   body .canvasbox {
     width: 100vw;
     height: 100vh;
@@ -229,15 +299,15 @@
     z-index: 2;
   }
 
-  /* 工具栏样式优化 */
+  /* 工具栏样式 */
   .button-group {
     position: absolute;
     display: flex;
-    gap: 8px; /* 间距微调 */
+    gap: 8px;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 6px;
     padding: 8px;
-    z-index: 9999; /* 确保层级非常高 */
+    z-index: 9999;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(8px);
 
@@ -260,7 +330,7 @@
       }
 
       &.active {
-        background: #e1f0fa; /* 这里的蓝色更柔和 */
+        background: #e1f0fa;
         color: #0078d4;
       }
 
@@ -270,12 +340,13 @@
     }
   }
 
-  /* --- 新增：自定义设置面板样式 --- */
+  /* 设置面板样式 */
   .pen-settings-panel {
     position: absolute;
-    top: 100%; /* 显示在工具栏上方 */
-    left: 0;
-    margin-top: 8px; /* 留一点间距 */
+    top: 100%;
+    /* left 由 JS 动态控制 */
+
+    margin-top: 8px;
     background: white;
     padding: 8px 12px;
     border-radius: 6px;
@@ -285,18 +356,20 @@
     gap: 12px;
     white-space: nowrap;
 
-    // 如果你想让它显示在下方，把 bottom: 100% 改为 top: 100%，margin-bottom 改为 margin-top
+    transition: left 0.2s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.2s;
 
-    // 添加一个小箭头指向工具栏（可选）
+    /* 小箭头 */
     &::after {
       content: "";
       position: absolute;
       top: -6px;
-      left: 20px; // 对齐画笔图标的位置
+      left: 20px;
       width: 10px;
       height: 10px;
       background: white;
       transform: rotate(-45deg);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      border-right: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .divider {
@@ -312,13 +385,17 @@
       gap: 6px;
     }
 
-    /* 尺寸按钮 */
     .size-btn {
       width: 24px;
       height: 24px;
       padding: 0;
       background: transparent;
       border: 1px solid transparent;
+      border-radius: 4px; /* 增加圆角 */
+      display: flex; /* 确保点居中 */
+      align-items: center;
+      justify-content: center;
+
       &:hover {
         background: #f0f0f0;
       }
@@ -334,7 +411,6 @@
       }
     }
 
-    /* 颜色块 */
     .color-swatch {
       width: 24px;
       height: 24px;
@@ -348,6 +424,7 @@
         height: 100%;
         border-radius: 2px;
         border: 1px solid rgba(0, 0, 0, 0.1);
+        display: block; /* 修复显示 */
       }
 
       &:hover {
@@ -360,7 +437,6 @@
       }
     }
 
-    /* --- 自定义原生颜色选择器 --- */
     .custom-color-picker {
       position: relative;
       width: 24px;
@@ -375,7 +451,6 @@
         transform: scale(1.1);
       }
 
-      /* 彩虹背景作为图标 */
       .rainbow {
         width: 100%;
         height: 100%;
@@ -383,18 +458,17 @@
         background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
       }
 
-      /* 真正的 input，完全透明并覆盖在上方 */
       input[type="color"] {
         position: absolute;
         top: 0;
         left: 0;
         width: 200%;
-        height: 200%; /* 放大以确保点击区域覆盖 */
+        height: 200%;
         padding: 0;
         margin: 0;
-        opacity: 0; /* 隐身 */
+        opacity: 0;
         cursor: pointer;
-        transform: translate(-25%, -25%); /* 修正位置 */
+        transform: translate(-25%, -25%);
       }
     }
   }
