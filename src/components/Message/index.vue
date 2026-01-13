@@ -87,11 +87,12 @@
 </template>
 
 <script lang="ts" setup>
-const VideoBubble = defineAsyncComponent(() => import("@/components/Bubble/video.vue"));
-const TextBubble = defineAsyncComponent(() => import("@/components/Bubble/text.vue"));
+
+import TextBubble from "@/components/Bubble/text.vue";
+import ImageBubble from "@/components/Bubble/image.vue";
+import VideoBubble from "@/components/Bubble/video.vue";
 const FileBubble = defineAsyncComponent(() => import("@/components/Bubble/file.vue"));
 const AudioBubble = defineAsyncComponent(() => import("@/components/Bubble/audio.vue"));
-const ImageBubble = defineAsyncComponent(() => import("@/components/Bubble/image.vue"));
 const StickerBubble = defineAsyncComponent(() => import("@/components/Bubble/sticker.vue"));
 const SystemBubble = defineAsyncComponent(() => import("@/components/Bubble/system.vue"));
 const GroupInviteBubble = defineAsyncComponent(() => import("@/components/Bubble/groupInvite.vue"));

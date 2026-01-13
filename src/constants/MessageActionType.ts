@@ -1,6 +1,6 @@
 /**
  * IM 操作类型枚举
- * 对应后端 IMActionType.java
+ * 对应后端 ActionType.java
  *
  * 设计原则：
  * - 使用固定编号区间便于分组
@@ -12,7 +12,7 @@
  * - 900-999: 系统/管理
  */
 
-export interface IIMActionTypeItem {
+export interface ActionTypeItem {
   code: number;
   desc: string;
 }
@@ -20,7 +20,7 @@ export interface IIMActionTypeItem {
 /**
  * IM 操作类型枚举对象
  */
-export const IMActionType = {
+export const ActionType = {
   // ========== 消息相关（1 - 99）==========
   /** 发送消息 */
   SEND_MESSAGE: { code: 1, desc: "发送消息" },
@@ -125,14 +125,14 @@ export const IMActionType = {
 } as const;
 
 /** IM 操作类型 code 类型 */
-export type IMActionTypeCode = typeof IMActionType[keyof typeof IMActionType]["code"];
+export type ActionTypeCode = typeof ActionType[keyof typeof ActionType]["code"];
 
 /** IM 操作类型 key 类型 */
-export type IMActionTypeKey = keyof typeof IMActionType;
+export type ActionTypeKey = keyof typeof ActionType;
 
 // 构建 code -> 枚举项 的映射
-const actionTypeByCode = new Map<number, IIMActionTypeItem & { key: string }>();
-for (const [key, value] of Object.entries(IMActionType)) {
+const actionTypeByCode = new Map<number, ActionTypeItem & { key: string }>();
+for (const [key, value] of Object.entries(ActionType)) {
   actionTypeByCode.set(value.code, { ...value, key });
 }
 
@@ -141,7 +141,7 @@ for (const [key, value] of Object.entries(IMActionType)) {
  * @param code IM 操作类型 code
  * @returns IM 操作类型对象，找不到返回 undefined
  */
-export function getIMActionTypeByCode(code: number): (IIMActionTypeItem & { key: string }) | undefined {
+export function getIMActionTypeByCode(code: number): (ActionTypeItem & { key: string }) | undefined {
   return actionTypeByCode.get(code);
 }
 
@@ -150,10 +150,10 @@ export function getIMActionTypeByCode(code: number): (IIMActionTypeItem & { key:
  * @param code IM 操作类型 code
  * @throws Error 找不到时抛出异常
  */
-export function getIMActionTypeByCodeOrThrow(code: number): IIMActionTypeItem & { key: string } {
+export function getIMActionTypeByCodeOrThrow(code: number): ActionTypeItem & { key: string } {
   const result = actionTypeByCode.get(code);
   if (!result) {
-    throw new Error(`Unknown IMActionType code: ${code}`);
+    throw new Error(`Unknown ActionType code: ${code}`);
   }
   return result;
 }

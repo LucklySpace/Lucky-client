@@ -1,215 +1,247 @@
 <template>
-  <div ref="messageRecordsRef" aria-label="消息记录" class="message-records" role="region">
-    <DynamicScroller ref="scrollerRef" :items="data" :min-item-size="64" class="message-records__message-list"
-      key-field="messageId" @scroll="handleScroll">
+  <div aria-label="消息记录" class="message-records" role="region">
+    <DynamicScroller v-if="validMessages.length > 0" ref="scrollerRef" :items="validMessages" :min-item-size="64"
+      :buffer="200" class="message-records__list" key-field="messageId" @scroll="handleScroll">
       <template #default="{ item, index, active }">
-        <DynamicScrollerItem :active="active" :index="index" :item="item">
-          <Message :message="item" :more="shouldDisplayMore(index) && active" :time="shouldDisplayTime(index)"
-            @handleMoreMessage="handleMoreMessage" />
+        <DynamicScrollerItem :active="active" :index="index" :item="item" :size-dependencies="[item.messageBody]">
+          <Message :message="item" :more="isFirstItem(index) && active && hasMoreMessages"
+            :time="shouldDisplayTime(index)" @handleMoreMessage="loadMoreMessages" />
         </DynamicScrollerItem>
       </template>
     </DynamicScroller>
 
-    <!-- 新消息提示按钮（已注释，如需启用请取消注释） -->
-    <!-- <div v-if="showNewMessageTip" class="message-records__new-message-tip" @click="scrollToBottom">
-      有 {{ newMessageCount }} 条新消息，点击查看
-    </div> -->
+    <!-- 空消息列表 -->
+    <div v-else class="message-records__empty" />
 
     <el-drawer v-model="chatStore.isShowDetail" :destroy-on-close="true" :title="chatStore.getCurrentName" size="32%"
       style="position: absolute" @close="chatStore.handleChatDetail">
-      <GroupDetail v-if="isGroupMessage" @handleClearGroupMessage="handleClearMessage"
-        @handleQuitGroup="handleDelete" />
-      <SingleDetail v-if="isSingleMessage" @handleClearFriendMessage="handleClearMessage"
+      <component :is="detailComponent" @handleClearGroupMessage="handleClearMessage"
+        @handleClearFriendMessage="handleClearMessage" @handleQuitGroup="handleDelete"
         @handleDeleteContact="handleDelete" />
     </el-drawer>
   </div>
 </template>
 
 <script lang="ts" setup>
-import type { PropType } from "vue";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { useDebounceFn } from "@vueuse/core";
+import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
 import GroupDetail from "@/components/ChatDetail/group.vue";
 import SingleDetail from "@/components/ChatDetail/single.vue";
-import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
-import { IMessageType } from "@/constants";
-import { useDebounceFn } from "@vueuse/core";
+import { MessageType } from "@/constants";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
 
-// ------------------------- Props & Emits -------------------------
-const props = defineProps({
-  data: {
-    type: Array as PropType<any[]>,
-    required: true,
-    default: () => []
-  },
-  count: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  chat: {
-    type: Object as PropType<Record<string, any>>,
-    required: true,
-    default: () => ({})
-  }
-});
+// ========================= 类型定义 =========================
+interface MessageItem {
+  messageId: string;
+  messageTime: number;
+  isOwner?: boolean;
+  [key: string]: unknown;
+}
 
-// ------------------------- Stores / Computed -------------------------
+interface ScrollerInstance {
+  $el: HTMLElement;
+  update?: () => void;
+  scrollToItem?: (index: number) => void;
+  scrollToBottom?: (options?: { behavior: ScrollBehavior }) => void;
+}
+
+const props = defineProps<{
+  data: MessageItem[];
+  count: number;
+  chat: Record<string, unknown>;
+}>();
+
+const TIME_GAP_THRESHOLD = 5 * 60 * 1000; // 5分钟
+const SCROLL_BOTTOM_THRESHOLD = 10;
+
 const chatStore = useChatStore();
 const friendStore = useFriendsStore();
-const isGroupMessage = computed(() => chatStore.getCurrentType === IMessageType.GROUP_MESSAGE.code);
-const isSingleMessage = computed(() => chatStore.getCurrentType === IMessageType.SINGLE_MESSAGE.code);
 
-// ------------------------- Refs & Internal State -------------------------
-const scrollerRef = ref<InstanceType<typeof DynamicScroller> | null>(null);
-const messageRecordsRef = ref<HTMLElement | null>(null);
+const scrollerRef = ref<ScrollerInstance | null>(null);
 
-const previousScrollHeight = ref(0);
-const previousScrollTop = ref(0);
-const isLoadingMore = ref(false);
+// 滚动状态
+const scrollState = ref({
+  previousHeight: 0,
+  previousTop: 0,
+  isLoadingMore: false,
+  isAtBottom: true,
+});
 
-// 新消息提示与“是否在底部”状态
-const newMessageCount = ref(0);
-const isAtBottom = ref(true);
-// const showNewMessageTip = computed(() => newMessageCount.value > 0 && !isAtBottom.value);
+// 过滤有效消息（确保每条消息都有有效的 messageId）
+const validMessages = computed(() => {
+  if (!Array.isArray(props.data)) return [];
 
-// ------------------------- Methods -------------------------
-function handleMoreMessage() {
-  const el = scrollerRef.value?.$el as HTMLElement | undefined;
-  if (el) {
-    previousScrollHeight.value = el.scrollHeight;
-    previousScrollTop.value = el.scrollTop;
-    isLoadingMore.value = true;
-  }
-  chatStore.handleMoreMessage();
-}
+  const seen = new Set<string>();
+  return props.data.filter((item) => {
+    // 确保有有效的 messageId
+    if (!item?.messageId) return false;
 
-// 删除会话对象
-async function handleDelete() {
-  if (chatStore.currentChat) {
-    await friendStore.handleDeleteContact(chatStore.currentChat);
-  }
-}
+    const id = String(item.messageId);
 
-// 清空会话消息
-async function handleClearMessage() {
-  if (chatStore.currentChat) {
-    await chatStore.handleClearMessage(chatStore.currentChat);
-  }
-}
+    // 去重
+    if (seen.has(id)) return false;
+    seen.add(id);
 
-function shouldDisplayMore(index: number) {
-  return typeof index === "number" && index === 0 && props.count > 0;
-}
-
-function shouldDisplayTime(index: number): boolean {
-  if (!Array.isArray(props.data)) return false;
-  if (index === 0) return true;
-  const curr = props.data[index];
-  const prev = props.data[index - 1];
-  if (!curr || !prev) return false;
-  return curr.messageTime - prev.messageTime >= 5 * 60 * 1000;
-}
-
-/**
- * 尝试平滑滚动到底部
- */
-async function scrollToBottom({ behavior = "smooth" } = { behavior: "smooth" }) {
-  await nextTick();
-  requestAnimationFrame(async () => {
-    const scroller = scrollerRef.value;
-    const el = scroller?.$el as HTMLElement | undefined;
-    try {
-      // 先强制更新一次虚拟列表的尺寸/位置，避免高度未计算完成导致的未到底部问题
-      try {
-        (scroller as any)?.update?.();
-      } catch { }
-      const length = props.data.length;
-      (scroller as any).scrollToItem(length - 1 > 0 ? length - 1 : 0);
-      await nextTick();
-      // 某些版本无 scrollToBottom 方法， fallback 到 DOM 滚动
-      if ((scroller as any)?.scrollToBottom) {
-        (scroller as any).scrollToBottom({ behavior });
-      } else if (el) {
-        el.scrollTo({ top: el.scrollHeight });
-      }
-    } catch (e) {
-      // 兜底DOM操作
-      if (el) el.scrollTop = el.scrollHeight;
-    } finally {
-      newMessageCount.value = 0;
-      isAtBottom.value = true;
-      await nextTick();
-      if ((scroller as any)?.scrollToBottom) {
-        (scroller as any).scrollToBottom({ behavior });
-      } else if (el) {
-        el.scrollTo({ top: el.scrollHeight });
-      }
-    }
+    return true;
   });
-}
+});
 
-/**
- * 处理滚动事件（debounced）
- */
-const handleScrollInner = () => {
-  const el = scrollerRef.value?.$el as HTMLElement | undefined;
-  if (!el) return;
-  const { scrollTop, scrollHeight, offsetHeight } = el;
-  const threshold = 10; // 允许小阈值认为在底部
-  const atBottomNow = Math.ceil(scrollTop + offsetHeight) >= scrollHeight - threshold;
-  isAtBottom.value = atBottomNow;
-  if (atBottomNow) {
-    newMessageCount.value = 0;
+// 是否是群聊
+const isGroupMessage = computed(
+  () => chatStore.getCurrentType === MessageType.GROUP_MESSAGE.code
+);
+
+// 详情组件
+const detailComponent = computed(() =>
+  isGroupMessage.value ? GroupDetail : SingleDetail
+);
+
+// 是否有更多消息
+const hasMoreMessages = computed(() => props.count > 0);
+
+// 获取滚动元素
+const getScrollerEl = (): HTMLElement | null => scrollerRef.value?.$el ?? null;
+
+// 更新滚动元素
+const updateScroller = () => {
+  scrollerRef.value?.update?.();
+};
+
+// 滚动到元素底部
+const scrollToEnd = (el: HTMLElement, behavior: ScrollBehavior = "smooth") => {
+  const scroller = scrollerRef.value;
+  if (scroller?.scrollToBottom) {
+    scroller.scrollToBottom({ behavior });
+  } else {
+    el.scrollTo({ top: el.scrollHeight, behavior });
   }
 };
 
-const handleScroll = useDebounceFn(handleScrollInner, 100); // 略微增加debounce时间以优化性能
+// 是否是第一条消息
+const isFirstItem = (index: number): boolean => index === 0;
 
-// ------------------------- Watchers & Lifecycle -------------------------
-onMounted(async () => {
+// 是否显示时间
+const shouldDisplayTime = (index: number): boolean => {
+  if (index === 0) return true;
+  const messages = validMessages.value;
+  const curr = messages[index];
+  const prev = messages[index - 1];
+  if (!curr || !prev) return false;
+  return curr.messageTime - prev.messageTime >= TIME_GAP_THRESHOLD;
+};
+
+// 加载更多消息
+const loadMoreMessages = () => {
+  const el = getScrollerEl();
+  if (el) {
+    scrollState.value = {
+      ...scrollState.value,
+      previousHeight: el.scrollHeight,
+      previousTop: el.scrollTop,
+      isLoadingMore: true,
+    };
+  }
+  chatStore.handleMoreMessage();
+};
+
+// 删除会话对象
+const handleDelete = async () => {
+  if (chatStore.currentChat) {
+    await friendStore.handleDeleteContact(chatStore.currentChat);
+  }
+};
+
+// 清空会话消息
+const handleClearMessage = async () => {
+  if (chatStore.currentChat) {
+    await chatStore.handleClearMessage(chatStore.currentChat);
+  }
+};
+
+// 滚动到元素底部
+const scrollToBottom = async (behavior: ScrollBehavior = "smooth") => {
   await nextTick();
-  // 进入页面时立即滚到底部（auto行为避免闪烁）
-  scrollToBottom({ behavior: "auto" });
-});
 
-onBeforeUnmount(() => {
-  // 清理资源（如有）
-});
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(async () => {
+      const el = getScrollerEl();
+      if (!el) return resolve();
 
-// 监视 data 长度变化：处理加载更多 & 新消息
+      try {
+        updateScroller();
+        const lastIndex = Math.max(0, validMessages.value.length - 1);
+        scrollerRef.value?.scrollToItem?.(lastIndex);
+        await nextTick();
+        scrollToEnd(el, behavior);
+      } catch {
+        // 兜底 DOM 操作
+        el.scrollTop = el.scrollHeight;
+      } finally {
+        scrollState.value.isAtBottom = true;
+        resolve();
+      }
+    });
+  });
+};
+
+// 检查滚动位置
+const checkScrollPosition = () => {
+  const el = getScrollerEl();
+  if (!el) return;
+
+  const { scrollTop, scrollHeight, offsetHeight } = el;
+  const isAtBottom =
+    Math.ceil(scrollTop + offsetHeight) >= scrollHeight - SCROLL_BOTTOM_THRESHOLD;
+
+  scrollState.value.isAtBottom = isAtBottom;
+};
+
+// 处理滚动事件
+const handleScroll = useDebounceFn(checkScrollPosition, 100);
+
+// 加载更多消息完成
+const handleLoadMoreComplete = (el: HTMLElement) => {
+  const { previousHeight, previousTop } = scrollState.value;
+  const delta = el.scrollHeight - previousHeight;
+  el.scrollTop = previousTop + delta;
+  scrollState.value.isLoadingMore = false;
+};
+
+// 处理新消息
+const handleNewMessages = async (newLen: number, oldLen: number) => {
+  const deltaCount = newLen - oldLen;
+  if (deltaCount <= 0) return;
+
+  const messages = validMessages.value;
+  const lastMessage = messages[messages.length - 1];
+  const isOwnMessage = lastMessage?.isOwner;
+
+  // 自己发送的消息或已在底部时，自动滚动
+  if (isOwnMessage || scrollState.value.isAtBottom) {
+    await scrollToBottom("smooth");
+  }
+};
+
+onMounted(() => scrollToBottom("auto"));
+
+// 监听有效消息列表变化
 watch(
-  () => props.data.length,
-  async (newLen, oldLen) => {
+  () => validMessages.value.length,
+  async (newLen, oldLen = 0) => {
     await nextTick();
-    const el = scrollerRef.value?.$el as HTMLElement | undefined;
+    const el = getScrollerEl();
     if (!el) return;
-    // 每次数据量变化尽量让虚拟列表先完成一次重算
-    try {
-      (scrollerRef.value as any)?.update?.();
-    } catch { }
 
-    // 加载更多场景
-    if (isLoadingMore.value) {
-      const delta = el.scrollHeight - previousScrollHeight.value;
-      el.scrollTop = previousScrollTop.value + delta;
-      isLoadingMore.value = false;
+    updateScroller();
+
+    if (scrollState.value.isLoadingMore) {
+      handleLoadMoreComplete(el);
       return;
     }
 
-    // 新消息到来
-    const deltaCount = Math.max(0, newLen - (oldLen || 0));
-    if (deltaCount > 0) {
-      // 如果是自己发出的消息，则无论是否在底部都滚到底部（与主流 IM 一致）
-      const last = props.data[newLen - 1];
-      const fromSelf = !!last?.isOwner;
-      if (fromSelf || isAtBottom.value) {
-        await scrollToBottom({ behavior: "smooth" });
-      } else {
-        newMessageCount.value += deltaCount;
-      }
-    }
+    await handleNewMessages(newLen, oldLen);
   }
 );
 </script>
@@ -240,43 +272,18 @@ watch(
   width: 100%;
   position: relative;
 
-  .message-records__message-list {
+  &__list {
     height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
     overflow-anchor: none;
     @include scroll-bar();
-
-    // 隐藏滚动条（非hover时）
-    // &::-webkit-scrollbar-thumb {
-    //   background-color: transparent;
-    // }
   }
 
-  .message-records__new-message-tip {
-    position: absolute;
-    bottom: 20px;
-    right: 6%;
-    background: #409eff;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 10;
-  }
-
-  /* Transition 动画（BEM风格） */
-  .message-records__fade-enter-active,
-  .message-records__fade-leave-active {
-    transition: opacity 0.3s ease;
-  }
-
-  .message-records__fade-enter-from,
-  .message-records__fade-leave-to {
-    opacity: 0;
+  &__empty {
+    height: 100%;
+    width: 100%;
   }
 }
 </style>

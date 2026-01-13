@@ -12,7 +12,7 @@
  * - 400+: 其它/保留
  */
 
-export interface IMessageContentTypeItem {
+export interface MessageContentTypeItem {
   code: number;
   desc: string;
 }
@@ -65,7 +65,7 @@ export type MessageContentTypeCode = typeof MessageContentType[keyof typeof Mess
 export type MessageContentTypeKey = keyof typeof MessageContentType;
 
 // 构建 code -> 枚举项 的映射
-const contentTypeByCode = new Map<number, IMessageContentTypeItem & { key: string }>();
+const contentTypeByCode = new Map<number, MessageContentTypeItem & { key: string }>();
 for (const [key, value] of Object.entries(MessageContentType)) {
   contentTypeByCode.set(value.code, { ...value, key });
 }
@@ -75,7 +75,7 @@ for (const [key, value] of Object.entries(MessageContentType)) {
  * @param code 消息内容类型 code
  * @returns 消息内容类型对象，找不到返回 undefined
  */
-export function getMessageContentTypeByCode(code: number): (IMessageContentTypeItem & { key: string }) | undefined {
+export function getMessageContentTypeByCode(code: number): (MessageContentTypeItem & { key: string }) | undefined {
   return contentTypeByCode.get(code);
 }
 
@@ -84,7 +84,7 @@ export function getMessageContentTypeByCode(code: number): (IMessageContentTypeI
  * @param code 消息内容类型 code
  * @returns 消息内容类型对象
  */
-export function getMessageContentTypeByCodeOrDefault(code: number): IMessageContentTypeItem & { key: string } {
+export function getMessageContentTypeByCodeOrDefault(code: number): MessageContentTypeItem & { key: string } {
   return contentTypeByCode.get(code) ?? { ...MessageContentType.UNKNOWN, key: "UNKNOWN" };
 }
 

@@ -15,6 +15,15 @@ export const Events = {
 
 
 /**
+ * 好友请求状态枚举
+ */
+export const FriendRequestStatus = {
+  PENDING: { code: 0, type: "待处理" },
+  ACCEPTED: { code: 1, type: "已接受" },
+  REJECTED: { code: 2, type: "已拒绝" }
+} as const;
+
+/**
  * 状态枚举
  */
 export const MessageSendCode = {

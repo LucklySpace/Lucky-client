@@ -1,4 +1,4 @@
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import { Column, Entity, FTS5, PrimaryKey } from "../orm/annotation/Decorators";
 import BaseEntity from "../orm/BaseEntity";
 
@@ -46,7 +46,7 @@ export default class GroupMessage extends BaseEntity {
 
   /** 消息类型（业务侧分类，如 "chat"、"notification"） */
   @Column("messageType", "INTEGER")
-  messageType: number = IMessageType.GROUP_MESSAGE.code;
+  messageType: number = MessageType.GROUP_MESSAGE.code;
 
   /** 阅读状态（0 未读，1 已读） */
   @Column("readStatus", "INTEGER")

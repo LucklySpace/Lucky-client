@@ -1,4 +1,4 @@
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import { Column, Entity, FTS5, PrimaryKey } from "../orm/annotation/Decorators";
 import BaseEntity from "../orm/BaseEntity";
 
@@ -47,7 +47,7 @@ export default class SingleMessage extends BaseEntity {
 
   /** 应用层消息类型（如 chat/notification） */
   @Column("messageType", "INTEGER")
-  messageType: number = IMessageType.SINGLE_MESSAGE.code;
+  messageType: number = MessageType.SINGLE_MESSAGE.code;
 
   /** 阅读状态：0 未读，1 已读 */
   @Column("readStatus", "INTEGER")

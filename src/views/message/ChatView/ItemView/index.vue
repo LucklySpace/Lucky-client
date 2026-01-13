@@ -65,7 +65,7 @@
 
   import { computed } from "vue";
   import { useTimeFormat } from "@/hooks/useTimeFormat";
-  import { IMessageType } from "@/constants";
+  import { MessageType } from "@/constants";
   import Avatar from "@/components/Avatar/index.vue";
 
   const { useFriendlyTime } = useTimeFormat();
@@ -106,7 +106,7 @@
   );
 
   // 是否群聊（用于统一群聊头像占位色）
-  const isGroup = computed(() => (props.data as any)?.chatType === IMessageType.GROUP_MESSAGE.code || !!(props.data as any)?.groupName);
+  const isGroup = computed(() => (props.data as any)?.chatType === MessageType.GROUP_MESSAGE.code || !!(props.data as any)?.groupName);
 
   // 将 message 转为纯文本（用于 title / aria）
   const plainTextMessage = computed(() => {

@@ -62,7 +62,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import System from "@/components/System/index.vue";
 import Avatar from "@/components/Avatar/index.vue";
-import { ConnectionStatus, StoresEnum, IMActionType, IMessageType } from "@/constants";
+import { ConnectionStatus, StoresEnum, ActionType, MessageType } from "@/constants";
 import { emit, listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import WebRTC from "@/views/call/services/WebRTC";
@@ -204,7 +204,7 @@ async function call() {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
     url: WebRTCPublishParam.httpPublish,
-    type: IMessageType.RTC_START_VIDEO_CALL.code
+    type: MessageType.RTC_START_VIDEO_CALL.code
   };
   await sendCallMessage(payload);
 }
@@ -215,7 +215,7 @@ async function accept() {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
     url: WebRTCPublishParam.httpPublish,
-    type: IMessageType.RTC_ACCEPT.code
+    type: MessageType.RTC_ACCEPT.code
   };
   await sendCallMessage(payload);
 }
@@ -225,7 +225,7 @@ async function replyReject() {
   const payload = {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
-    type: IMessageType.RTC_REJECT.code
+    type: MessageType.RTC_REJECT.code
   };
   await sendCallMessage(payload);
 }
@@ -234,13 +234,13 @@ async function replyFailed() {
   const payload = {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
-    type: IMessageType.RTC_FAILED.code
+    type: MessageType.RTC_FAILED.code
   };
   await sendCallMessage(payload);
 }
 
 async function replyCancelOrHangUp(isHangup = false) {
-  const type = isHangup ? IMessageType.RTC_HANDUP.code : IMessageType.RTC_CANCEL.code;
+  const type = isHangup ? MessageType.RTC_HANDUP.code : MessageType.RTC_CANCEL.code;
   const payload = {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
@@ -295,7 +295,7 @@ async function failed() {
 async function handleMessage(videoMessage: any) {
   if (!videoMessage || typeof videoMessage.type !== "number") return;
   switch (videoMessage.type) {
-    case IMessageType.RTC_START_VIDEO_CALL.code: {
+    case MessageType.RTC_START_VIDEO_CALL.code: {
       // B 收到 A 的通话请求
       callStore.friendInfo.id = videoMessage.data.fromId ?? callStore.friendInfo.id;
 
@@ -332,7 +332,7 @@ async function handleMessage(videoMessage: any) {
       break;
     }
 
-    case IMessageType.RTC_ACCEPT.code: {
+    case MessageType.RTC_ACCEPT.code: {
       // A 收到 B 的接受，开始拉取 B 的流
       callStore.friendInfo.id = videoMessage.data.fromId ?? callStore.friendInfo.id;
 
@@ -364,25 +364,25 @@ async function handleMessage(videoMessage: any) {
       break;
     }
 
-    case IMessageType.RTC_REJECT.code: {
+    case MessageType.RTC_REJECT.code: {
       callStore.state = ConnectionStatus.CONNECTION_REFUSED.code;
       await rejectCall();
       break;
     }
 
-    case IMessageType.RTC_FAILED.code: {
+    case MessageType.RTC_FAILED.code: {
       callStore.state = ConnectionStatus.ERROR.code;
       await failed();
       break;
     }
 
-    case IMessageType.RTC_CANCEL.code: {
+    case MessageType.RTC_CANCEL.code: {
       callStore.state = ConnectionStatus.CANCELLED.code;
       await closeCallWindow();
       break;
     }
 
-    case IMessageType.RTC_HANDUP.code: {
+    case MessageType.RTC_HANDUP.code: {
       callStore.state = ConnectionStatus.CONNECTION_LOST.code;
       await closeCallWindow();
       break;
