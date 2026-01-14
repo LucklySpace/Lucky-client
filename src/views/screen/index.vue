@@ -12,12 +12,8 @@
       <!-- 设置面板 -->
       <div v-if="showPenSettings" class="pen-settings-panel" :style="settingsPanelStyle" @mousedown.stop>
         <div class="sizes">
-          <button
-            v-for="s in sizes"
-            :key="s"
-            :class="['size-btn', { active: s === currentSize }]"
-            @click="onSelectSize(s)"
-          >
+          <button v-for="s in sizes" :key="s" :class="['size-btn', { active: s === currentSize }]"
+            @click="onSelectSize(s)">
             <span :style="{ width: s + 'px', height: s + 'px' }" class="dot"></span>
           </button>
         </div>
@@ -25,13 +21,8 @@
         <div class="divider"></div>
 
         <div class="colors">
-          <button
-            v-for="c in palette"
-            :key="c"
-            :aria-label="c"
-            :class="['color-swatch', { active: c === currentColor }]"
-            @click="onSelectColor(c)"
-          >
+          <button v-for="c in palette" :key="c" :aria-label="c"
+            :class="['color-swatch', { active: c === currentColor }]" @click="onSelectColor(c)">
             <span :style="{ backgroundColor: c }" class="color-dot"></span>
           </button>
 
@@ -43,73 +34,45 @@
       </div>
 
       <!-- 画笔 -->
-      <button
-        :ref="el => setBtnRef('pen', el)"
-        :class="{ active: state.currentTool === 'pen' }"
-        :title="$t('screen.pen')"
-        @click="handleToolClick('pen')"
-      >
+      <button :ref="el => setBtnRef('pen', el)" :class="{ active: state.currentTool === 'pen' }"
+        :title="$t('screen.pen')" @click="handleToolClick('pen')">
         <i class="iconfont icon-24"></i>
       </button>
 
       <div style="display: flex">
         <!-- 矩形 -->
-        <button
-          :ref="el => setBtnRef('rect', el)"
-          :class="{ active: state.currentTool === 'rect' }"
-          :title="$t('screen.rect')"
-          @click="handleToolClick('rect')"
-        >
+        <button :ref="el => setBtnRef('rect', el)" :class="{ active: state.currentTool === 'rect' }"
+          :title="$t('screen.rect')" @click="handleToolClick('rect')">
           <i class="iconfont icon-xingzhuang-juxing"></i>
         </button>
 
         <!-- 圆形 -->
-        <button
-          :ref="el => setBtnRef('circle', el)"
-          :class="{ active: state.currentTool === 'circle' }"
-          :title="$t('screen.circle')"
-          @click="handleToolClick('circle')"
-        >
+        <button :ref="el => setBtnRef('circle', el)" :class="{ active: state.currentTool === 'circle' }"
+          :title="$t('screen.circle')" @click="handleToolClick('circle')">
           <i class="iconfont icon-yuanxing"></i>
         </button>
 
         <!-- 箭头 -->
-        <button
-          :ref="el => setBtnRef('arrow', el)"
-          :class="{ active: state.currentTool === 'arrow' }"
-          :title="$t('screen.arrow')"
-          @click="handleToolClick('arrow')"
-        >
+        <button :ref="el => setBtnRef('arrow', el)" :class="{ active: state.currentTool === 'arrow' }"
+          :title="$t('screen.arrow')" @click="handleToolClick('arrow')">
           <i class="iconfont icon-righttop"></i>
         </button>
 
         <!-- 直线 -->
-        <button
-          :ref="el => setBtnRef('line', el)"
-          :class="{ active: state.currentTool === 'line' }"
-          :title="$t('screen.line')"
-          @click="handleToolClick('line')"
-        >
+        <button :ref="el => setBtnRef('line', el)" :class="{ active: state.currentTool === 'line' }"
+          :title="$t('screen.line')" @click="handleToolClick('line')">
           <i class="iconfont icon-jurassic_line"></i>
         </button>
 
         <!-- 文本 -->
-        <button
-          :ref="el => setBtnRef('text', el)"
-          :class="{ active: state.currentTool === 'text' }"
-          :title="$t('screen.text')"
-          @click="handleToolClick('text')"
-        >
+        <button :ref="el => setBtnRef('text', el)" :class="{ active: state.currentTool === 'text' }"
+          :title="$t('screen.text')" @click="handleToolClick('text')">
           <i class="iconfont icon-wenben1"></i>
         </button>
 
         <!-- 马赛克 -->
-        <button
-          :ref="el => setBtnRef('mosaic', el)"
-          :class="{ active: state.currentTool === 'mosaic' }"
-          :title="$t('screen.mosaic')"
-          @click="handleToolClick('mosaic')"
-        >
+        <button :ref="el => setBtnRef('mosaic', el)" :class="{ active: state.currentTool === 'mosaic' }"
+          :title="$t('screen.mosaic')" @click="handleToolClick('mosaic')">
           <i class="iconfont icon-masaike"></i>
         </button>
 
@@ -260,216 +223,226 @@
 </script>
 
 <style lang="scss" scoped>
-  body .canvasbox {
-    width: 100vw;
-    height: 100vh;
-    position: relative;
-    background-color: transparent !important;
-  }
-  canvas {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .img-canvas {
-    z-index: 0;
-  }
-  .mask-canvas {
-    z-index: 1;
-  }
-  .draw-canvas {
-    z-index: 1;
-    pointer-events: none;
-  }
-  .magnifier {
-    position: absolute;
-    pointer-events: none;
-    width: 150px;
-    height: 150px;
-    border: 2px solid #ccc;
-    border-radius: 50%;
-    overflow: hidden;
-    display: none;
-    z-index: 999;
-  }
-  .magnifier canvas {
-    display: block;
-    z-index: 2;
-  }
+body .canvasbox {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background-color: transparent !important;
+}
 
-  /* 工具栏样式 */
-  .button-group {
-    position: absolute;
-    display: flex;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 6px;
-    padding: 8px;
-    z-index: 9999;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(8px);
+canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 
-    button {
-      width: 32px;
-      height: 32px;
-      border: none;
-      background: transparent;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #555;
-      cursor: pointer;
-      transition: all 0.2s;
+.img-canvas {
+  z-index: 0;
+}
 
-      &:hover {
-        background: rgba(0, 0, 0, 0.06);
-        color: #0078d4;
-      }
+.mask-canvas {
+  z-index: 1;
+}
 
-      &.active {
-        background: #e1f0fa;
-        color: #0078d4;
-      }
+.draw-canvas {
+  z-index: 1;
+  pointer-events: none;
+}
 
-      .iconfont {
-        font-size: 20px;
-      }
-    }
-  }
+.magnifier {
+  position: absolute;
+  pointer-events: none;
+  width: 150px;
+  height: 150px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  overflow: hidden;
+  display: none;
+  z-index: 999;
+}
 
-  /* 设置面板样式 */
-  .pen-settings-panel {
-    position: absolute;
-    top: 100%;
-    /* left 由 JS 动态控制 */
+.magnifier canvas {
+  display: block;
+  z-index: 2;
+}
 
-    margin-top: 8px;
-    background: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+/* 工具栏样式 */
+.button-group {
+  position: absolute;
+  display: flex;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  padding: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+
+  button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    white-space: nowrap;
+    justify-content: center;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
 
-    transition: left 0.2s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.2s;
-
-    /* 小箭头 */
-    &::after {
-      content: "";
-      position: absolute;
-      top: -6px;
-      left: 20px;
-      width: 10px;
-      height: 10px;
-      background: white;
-      transform: rotate(-45deg);
-      border-top: 1px solid rgba(0, 0, 0, 0.05);
-      border-right: 1px solid rgba(0, 0, 0, 0.05);
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: #0078d4;
     }
 
-    .divider {
-      width: 1px;
-      height: 20px;
-      background: #eee;
+    &.active {
+      background: #e1f0fa;
+      color: #0078d4;
     }
 
-    .sizes,
-    .colors {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .size-btn {
-      width: 24px;
-      height: 24px;
-      padding: 0;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 4px; /* 增加圆角 */
-      display: flex; /* 确保点居中 */
-      align-items: center;
-      justify-content: center;
-
-      &:hover {
-        background: #f0f0f0;
-      }
-      &.active {
-        background: #e1f0fa;
-        border-color: #b3d7f3;
-      }
-
-      .dot {
-        background: #333;
-        border-radius: 50%;
-        display: block;
-      }
-    }
-
-    .color-swatch {
-      width: 24px;
-      height: 24px;
-      padding: 2px;
-      border: 1px solid transparent;
-      background: transparent;
-      border-radius: 4px;
-
-      .color-dot {
-        width: 100%;
-        height: 100%;
-        border-radius: 2px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        display: block; /* 修复显示 */
-      }
-
-      &:hover {
-        transform: scale(1.1);
-      }
-      &.active {
-        border-color: #0078d4;
-        background: #fff;
-        transform: scale(1.1);
-      }
-    }
-
-    .custom-color-picker {
-      position: relative;
-      width: 24px;
-      height: 24px;
-      overflow: hidden;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: transform 0.2s;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-
-      &:hover {
-        transform: scale(1.1);
-      }
-
-      .rainbow {
-        width: 100%;
-        height: 100%;
-        display: block;
-        background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
-      }
-
-      input[type="color"] {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 200%;
-        height: 200%;
-        padding: 0;
-        margin: 0;
-        opacity: 0;
-        cursor: pointer;
-        transform: translate(-25%, -25%);
-      }
+    .iconfont {
+      font-size: 24px;
     }
   }
+}
+
+/* 设置面板样式 */
+.pen-settings-panel {
+  position: absolute;
+  top: 100%;
+  /* left 由 JS 动态控制 */
+
+  margin-top: 8px;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+
+  transition: left 0.2s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.2s;
+
+  /* 小箭头 */
+  &::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 20px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    transform: rotate(-45deg);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .divider {
+    width: 1px;
+    height: 20px;
+    background: #eee;
+  }
+
+  .sizes,
+  .colors {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .size-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    /* 增加圆角 */
+    display: flex;
+    /* 确保点居中 */
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: #f0f0f0;
+    }
+
+    &.active {
+      background: #e1f0fa;
+      border-color: #b3d7f3;
+    }
+
+    .dot {
+      background: #333;
+      border-radius: 50%;
+      display: block;
+    }
+  }
+
+  .color-swatch {
+    width: 24px;
+    height: 24px;
+    padding: 2px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 4px;
+
+    .color-dot {
+      width: 100%;
+      height: 100%;
+      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      display: block;
+      /* 修复显示 */
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &.active {
+      border-color: #0078d4;
+      background: #fff;
+      transform: scale(1.1);
+    }
+  }
+
+  .custom-color-picker {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    overflow: hidden;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    .rainbow {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: linear-gradient(135deg, red, orange, yellow, green, blue, purple);
+    }
+
+    input[type="color"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      padding: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+      transform: translate(-25%, -25%);
+    }
+  }
+}
 </style>
