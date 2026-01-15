@@ -72,7 +72,7 @@
               :class="['result-item', { focused: isFocused(flatIndex('message', idx)) }]"
               @click="selectResult('message', m)" @mousemove="setHover(flatIndex('message', idx))">
               <Avatar :avatar="m.avatar || ''" :name="m.name" :width="40" :borderRadius="6"
-                :backgroundColor="m.chatType === IMessageType.GROUP_MESSAGE.code ? '#ffb36b' : undefined" />
+                :backgroundColor="m.chatType === MessageType.GROUP_MESSAGE.code ? '#ffb36b' : undefined" />
               <div class="item-info">
                 <div class="item-row">
                   <span class="name">{{ m.name || "未知" }}</span>
@@ -154,7 +154,7 @@ import SelectContact from "../SelectContact/index.vue";
 import { useSearchStore } from "@/store/modules/search";
 import { useFriendsStore } from "@/store/modules/friends";
 import Avatar from "@/components/Avatar/index.vue";
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import { ElMessage } from "element-plus";
 import { escapeHtml } from "@/utils/Strings";
 import { useTimeFormat } from "@/hooks/useTimeFormat";

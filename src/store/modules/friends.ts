@@ -1,4 +1,4 @@
-import { IMessageType, StoresEnum, MAX_REMARK_LEN } from "@/constants";
+import { MessageType, StoresEnum, MAX_REMARK_LEN } from "@/constants";
 import api from "@/api/index";
 import { useMappers } from "@/database";
 import { storage } from "@/utils/Storage";
@@ -109,7 +109,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
       logger.info("开始删除联系人", { chatId: chat.chatId, chatType: chat.chatType });
 
       // 当前会话为单聊
-      if (chat.chatType === IMessageType.SINGLE_MESSAGE.code) {
+      if (chat.chatType === MessageType.SINGLE_MESSAGE.code) {
         await api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId });
 
         // 删除聊天记录
@@ -312,7 +312,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
 
     try {
       const idx = chatMessageStore.chatList.findIndex(
-        (c: any) => c?.chatType === IMessageType.SINGLE_MESSAGE.code && String(c?.toId) === String(friendId)
+        (c: any) => c?.chatType === MessageType.SINGLE_MESSAGE.code && String(c?.toId) === String(friendId)
       );
       if (idx !== -1) {
         const chat = chatMessageStore.chatList[idx];
@@ -322,7 +322,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
       }
       if (
         chatMessageStore.currentChat &&
-        chatMessageStore.currentChat.chatType === IMessageType.SINGLE_MESSAGE.code &&
+        chatMessageStore.currentChat.chatType === MessageType.SINGLE_MESSAGE.code &&
         String(chatMessageStore.currentChat.toId) === String(friendId)
       ) {
         (chatMessageStore.currentChat as any).name = next;

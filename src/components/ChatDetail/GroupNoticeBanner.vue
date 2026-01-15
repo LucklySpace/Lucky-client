@@ -20,7 +20,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from "vue";
 import { useChatStore } from "@/store/modules/chat";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { Events } from "@/constants";
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import { useI18n } from "vue-i18n";
 
 type NoticePayload = {
@@ -39,7 +39,7 @@ const readFlag = ref(false);
 
 const isGroupChat = computed(() => {
   const cc = chatStore.currentChat;
-  return !!cc && cc.chatType === IMessageType.GROUP_MESSAGE.code;
+  return !!cc && cc.chatType === MessageType.GROUP_MESSAGE.code;
 });
 
 const chatId = computed(() => chatStore.currentChat?.chatId || chatStore.currentChat?.id);

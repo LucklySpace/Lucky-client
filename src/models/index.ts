@@ -1,5 +1,5 @@
 // src/models/message.ts
-import { IMessageType, MessageContentType } from "@/constants";
+import { MessageType, MessageContentType } from "@/constants";
 
 
 /** 表情条目请求/响应对象  */
@@ -336,9 +336,9 @@ class IMessage<T extends MessageBody = MessageBody> {
 
   static fromPlainByType<T extends MessageBody = MessageBody>(obj: any): IMSingleMessage<T> | IMGroupMessage<T> {
     if (!obj) throw new Error("empty object");
-    if (obj.messageType === IMessageType.SINGLE_MESSAGE.code) {
+    if (obj.messageType === MessageType.SINGLE_MESSAGE.code) {
       return IMSingleMessage.fromPlain(obj);
-    } else if (obj.messageType === IMessageType.GROUP_MESSAGE.code) {
+    } else if (obj.messageType === MessageType.GROUP_MESSAGE.code) {
       return IMGroupMessage.fromPlain(obj);
     } else {
       throw new Error(`Unknown messageType: ${obj.messageType}`);
@@ -419,7 +419,7 @@ class IMSingleMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
       mentionAll: init.mentionAll
     });
     this.toId = init.toId;
-    this.messageType = typeof init.messageType === "number" ? init.messageType : IMessageType.SINGLE_MESSAGE.code;
+    this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.SINGLE_MESSAGE.code;
   }
 
   static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMSingleMessage<T> {
@@ -440,7 +440,7 @@ class IMSingleMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
       mentionedUserIds: obj.mentionedUserIds,
       mentionAll: obj.mentionAll,
       toId: obj.toId,
-      messageType: obj.messageType ?? IMessageType.SINGLE_MESSAGE
+      messageType: obj.messageType ?? MessageType.SINGLE_MESSAGE
     });
   }
 
@@ -492,7 +492,7 @@ class IMGroupMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
     });
     this.groupId = init.groupId;
     this.toList = init.toList;
-    this.messageType = typeof init.messageType === "number" ? init.messageType : IMessageType.GROUP_MESSAGE.code;
+    this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.GROUP_MESSAGE.code;
   }
 
   static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMGroupMessage<T> {
@@ -514,7 +514,7 @@ class IMGroupMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
       replyMessage: obj.replyMessage,
       mentionedUserIds: obj.mentionedUserIds,
       mentionAll: obj.mentionAll,
-      messageType: obj.messageType ?? IMessageType.GROUP_MESSAGE
+      messageType: obj.messageType ?? MessageType.GROUP_MESSAGE
     });
   }
 
@@ -555,7 +555,7 @@ export class IMVideoMessageModel implements IMVideoMessage {
       fromId: obj.fromId,
       toId: obj.toId,
       url: obj.url,
-      type: obj.type ?? IMessageType.VIDEO_MESSAGE.code
+      type: obj.type ?? MessageType.VIDEO_MESSAGE.code
     });
   }
 

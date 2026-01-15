@@ -1,5 +1,5 @@
 // 常量定义
-import { IMessageType, MessageContentType } from "@/constants";
+import { MessageType, MessageContentType } from "@/constants";
 // 本地工具和存储
 import { storage } from "@/utils/Storage";
 import { useTauriEvent } from "@/hooks/useTauriEvent";
@@ -20,6 +20,7 @@ import { appIsMinimizedOrHidden, ShowMainWindow } from "@/windows/main";
 import api from "@/api/index";
 // 配置和初始化
 import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
+import { useGlobalScheduler } from "@/hooks/useScheduler";
 // 状态管理和数据存储
 import { useChatStore } from "@/store/modules/chat";
 import { useUserStore } from "@/store/modules/user";
@@ -29,7 +30,7 @@ import { useFriendsStore } from "@/store/modules/friends";
 // 数据库实体
 import { initDatabase, useMappers } from "@/database";
 import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
-import { MessageQueue } from "./utils/MessageQueue";
+import { MessageQueue, Priority } from "@/utils/MessageQueue";
 
 // ==================== 工具函数 ====================
 
@@ -88,7 +89,13 @@ class MainManager {
   // 延迟初始化的依赖
   private readonly log = useLogger();
   private readonly exec = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
-  private readonly messageQueue = new MessageQueue<any>();
+  private readonly messageQueue = new MessageQueue<any>({
+    maxFrameTime: 8,           // 每帧最多 8ms，保证 60fps
+    initialBatchSize: 20,      // 初始批大小
+    maxBatchSize: 200,         // 高峰期最大批量
+    backpressureThreshold: 500, // 背压阈值
+    enablePriority: true,      // 启用优先级
+  });
   private readonly tray = useTray();
   private readonly tauriEvent = useTauriEvent();
 
@@ -130,13 +137,17 @@ class MainManager {
       // 3. 并行执行：聊天存储 + WebSocket（无依赖）
       await Promise.all([this.initChatStore()]);
 
+      // 4. WebSocket
       this.initWebSocket();
 
-      // 4. 事件监听
+      // 5. 事件监听
       this.initEventListeners();
 
-      // 5. 后台任务（非阻塞）
+      // 6. 后台任务（非阻塞）
       this.initBackgroundTasks();
+
+      // 7. 定时任务
+      //this.initScheduler();
 
       this.initialized = true;
 
@@ -180,6 +191,22 @@ class MainManager {
     return withTiming("chat", "聊天存储初始化", () => this.stores.chat.handleInitChat(), this.log);
   }
 
+  private initScheduler() {
+    return withTiming("scheduler", "定时任务初始化", () => Promise.resolve().then(() => {
+      const scheduler = useGlobalScheduler({
+        onTick: ({ taskId, runCount }) => {
+          if (taskId === "refresh") {
+            this.syncFriends();
+          }
+        },
+        onCompleted: (taskId) => {}
+      });
+
+      // 定时刷新任务：每 30 秒执行
+      scheduler.startInterval("refresh", 30000, { immediate: true });
+    }), this.log);
+  }
+
   /**
   * 初始化 WebSocket 连接。
   * - 先注册消息处理回调，再建立连接。
@@ -203,12 +230,12 @@ class MainManager {
 
         connect(url.toString(), {
           payload: {
-            code: IMessageType.REGISTER.code,
+            code: MessageType.REGISTER.code,
             token: token,
             data: "registrar",
             deviceType: import.meta.env.VITE_DEVICE_TYPE
           },
-          heartbeat: { code: IMessageType.HEART_BEAT.code, token: token, data: "heartbeat" },
+          heartbeat: { code: MessageType.HEART_BEAT.code, token: token, data: "heartbeat" },
           interval: import.meta.env.VITE_API_SERVER_HEARTBEAT,
           protocol: import.meta.env.VITE_API_PROTOCOL_TYPE
         });
@@ -291,17 +318,17 @@ class MainManager {
     const insertConfig = { ownerId, messageType: 0 };
 
     // 处理私聊消息
-    const singleMsgs = res[IMessageType.SINGLE_MESSAGE.code];
+    const singleMsgs = res[MessageType.SINGLE_MESSAGE.code];
     if (singleMsgs) {
-      insertConfig.messageType = IMessageType.SINGLE_MESSAGE.code;
+      insertConfig.messageType = MessageType.SINGLE_MESSAGE.code;
       await singleMessageMapper.batchInsert(singleMsgs, insertConfig);
       singleMessageMapper.batchInsertFTS5(singleMsgs, insertConfig, 200, this.exec);
     }
 
     // 处理群聊消息
-    const groupMsgs = res[IMessageType.GROUP_MESSAGE.code];
+    const groupMsgs = res[MessageType.GROUP_MESSAGE.code];
     if (groupMsgs) {
-      insertConfig.messageType = IMessageType.GROUP_MESSAGE.code;
+      insertConfig.messageType = MessageType.GROUP_MESSAGE.code;
       await groupMessageMapper.batchInsert(groupMsgs, insertConfig);
       groupMessageMapper.batchInsertFTS5(groupMsgs, insertConfig, 200, this.exec);
     }
@@ -420,55 +447,69 @@ class MainManager {
   // ==================== 消息处理 ====================
 
   private handleMessage(res: any): void {
-    this.messageQueue.push(res).then(async (item) => {
+    // 根据消息类型确定优先级
+    const priority = this.getMessagePriority(res.code);
+
+    this.messageQueue.push(res, priority).then(async (item) => {
       const { code, data } = item;
 
-      // 注册相关
-      if (code === IMessageType.REGISTER_SUCCESS.code) {
-        //this.log.prettySuccess("websocket", "注册成功");
-        return;
-      }
-      if (code === IMessageType.REGISTER_FAILED.code) {
-        this.log.prettySuccess("websocket", "注册失败");
+      // 注册相关（静默处理）
+      if (code === MessageType.REGISTER_SUCCESS.code || code === MessageType.HEART_BEAT_SUCCESS.code) {
         return;
       }
 
-      // 心跳相关
-      if (code === IMessageType.HEART_BEAT_SUCCESS.code) {
-        //this.log.prettySuccess("websocket", "心跳成功");
-        return;
-      }
-      if (code === IMessageType.HEART_BEAT_FAILED.code) {
-        this.log.prettySuccess("websocket", "心跳失败");
+      if (code === MessageType.REGISTER_FAILED.code) {
+        this.log.prettyError("websocket", "注册失败");
         return;
       }
 
-      // 认证相关
-      if (code === IMessageType.FORCE_LOGOUT.code) {
+      if (code === MessageType.HEART_BEAT_FAILED.code) {
+        this.log.prettyWarn("websocket", "心跳失败");
+        return;
+      }
+
+      // 认证相关（高优先级已处理）
+      if (code === MessageType.FORCE_LOGOUT.code) {
         return this.stores.user.forceLogout(data?.message || "您的账号在其他设备登录");
       }
-      if (code === IMessageType.LOGIN_EXPIRED.code) {
+      if (code === MessageType.LOGIN_EXPIRED.code) {
         return this.stores.user.forceLogout("登录已过期，请重新登录");
       }
-      if (code === IMessageType.REFRESH_TOKEN.code) {
+      if (code === MessageType.REFRESH_TOKEN.code) {
         return this.stores.user.refreshToken();
       }
 
       if (!data) return;
 
       // 聊天消息
-      if (code === IMessageType.SINGLE_MESSAGE.code || code === IMessageType.GROUP_MESSAGE.code) {
+      if (code === MessageType.SINGLE_MESSAGE.code || code === MessageType.GROUP_MESSAGE.code) {
         await this.handleChatMessage(code, data);
         return;
       }
 
       // 视频消息
-      if (code === IMessageType.VIDEO_MESSAGE.code) {
+      if (code === MessageType.VIDEO_MESSAGE.code) {
         this.stores.call.handleCallMessage(data);
       }
-
-
     });
+  }
+
+  /** 根据消息类型获取优先级 */
+  private getMessagePriority(code: number): number {
+    // 紧急：强制登出、登录过期
+    if (code === MessageType.FORCE_LOGOUT.code || code === MessageType.LOGIN_EXPIRED.code) {
+      return Priority.URGENT;
+    }
+    // 高优先级：视频通话
+    if (code === MessageType.VIDEO_MESSAGE.code) {
+      return Priority.HIGH;
+    }
+    // 低优先级：心跳、注册响应
+    if (code === MessageType.HEART_BEAT_SUCCESS.code || code === MessageType.REGISTER_SUCCESS.code) {
+      return Priority.LOW;
+    }
+    // 普通：聊天消息等
+    return Priority.NORMAL;
   }
 
   private async handleChatMessage(code: number, data: any): Promise<void> {
@@ -482,7 +523,7 @@ class MainManager {
 
     const message = IMessage.fromPlainByType(data);
     const chatId =
-      code === IMessageType.SINGLE_MESSAGE.code
+      code === MessageType.SINGLE_MESSAGE.code
         ? (message as IMSingleMessage).fromId
         : (message as IMGroupMessage).groupId;
 

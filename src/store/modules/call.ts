@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ElMessage } from "element-plus";
-import { IMessageType, StoresEnum } from "@/constants";
+import { MessageType, StoresEnum } from "@/constants";
 import { emitTo } from "@tauri-apps/api/event";
 import {
   CloseCallAcceptWindow,
@@ -55,7 +55,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
       if (!current) return;
 
       // 单聊
-      if (current.chatType === IMessageType.SINGLE_MESSAGE.code) {
+      if (current.chatType === MessageType.SINGLE_MESSAGE.code) {
         this.friendInfo = current;
         try {
           const online = await api.GetOnline({ userId: this.friendInfo.id });
@@ -71,7 +71,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
           }
 
           // 告知子窗口初始加载类型
-          await this._emitSafe(CALL_LOADEDS_EVENT, { type: IMessageType.RTC_START_VIDEO_CALL.code, data: "" });
+          await this._emitSafe(CALL_LOADEDS_EVENT, { type: MessageType.RTC_START_VIDEO_CALL.code, data: "" });
         } catch (err) {
           logger.error("Error checking online status:", err);
           ElMessage.error("无法检查在线状态");
@@ -80,7 +80,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
       }
 
       // 群聊
-      if (current.chatType === IMessageType.GROUP_MESSAGE.code) {
+      if (current.chatType === MessageType.GROUP_MESSAGE.code) {
         this.roomId = current.chatId;
         // group call: 隐藏/传参按需要
         const ok = await this._createAndReadyWindow(
@@ -104,7 +104,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
       if (!data || typeof data.type !== "number") return;
 
       // 仅处理 RTC 相关类型
-      if (data.type < IMessageType.RTC_START_VIDEO_CALL.code || data.type > IMessageType.RTC_CANDIDATE.code) {
+      if (data.type < MessageType.RTC_START_VIDEO_CALL.code || data.type > MessageType.RTC_CANDIDATE.code) {
         return;
       }
 
@@ -113,7 +113,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
       // 映射事件处理器（将逻辑拆成小函数，便于维护）
       const handlers = new Map<number, () => Promise<void>>();
 
-      handlers.set(IMessageType.RTC_START_VIDEO_CALL.code, async () => {
+      handlers.set(MessageType.RTC_START_VIDEO_CALL.code, async () => {
         // 收到通话请求：准备 main call window（隐藏） + 弹出 accept 窗口
         this.friendInfo = chatStore.handleGetChat(data.fromId) || {};
         // const mainOk = await this._createAndReadyWindow("正在通话中", "/singlecall", { show: false });
@@ -127,33 +127,33 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
         }
       });
 
-      handlers.set(IMessageType.RTC_ACCEPT.code, async () => {
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_ACCEPT.code, data });
+      handlers.set(MessageType.RTC_ACCEPT.code, async () => {
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_ACCEPT.code, data });
       });
 
-      handlers.set(IMessageType.RTC_REJECT.code, async () => {
+      handlers.set(MessageType.RTC_REJECT.code, async () => {
         ElMessage.error("对方已拒绝");
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_REJECT.code, data });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_REJECT.code, data });
       });
 
-      handlers.set(IMessageType.RTC_FAILED.code, async () => {
+      handlers.set(MessageType.RTC_FAILED.code, async () => {
         ElMessage.error("通话失败");
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_FAILED.code, data });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_FAILED.code, data });
       });
 
-      handlers.set(IMessageType.RTC_HANDUP.code, async () => {
+      handlers.set(MessageType.RTC_HANDUP.code, async () => {
         ElMessage.error("对方已挂断");
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_HANDUP.code, data });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_HANDUP.code, data });
       });
 
-      handlers.set(IMessageType.RTC_CANCEL.code, async () => {
+      handlers.set(MessageType.RTC_CANCEL.code, async () => {
         ElMessage.error("对方已取消");
         try {
           await CloseCallAcceptWindow();
         } catch (err) {
           logger.warn("CloseCallAcceptWindow failed:", err);
         }
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_CANCEL.code, data });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_CANCEL.code, data });
       });
 
       const h = handlers.get(data.type);
@@ -176,7 +176,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
           ElMessage.error("创建通话窗口失败");
           return;
         }
-        await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_START_VIDEO_CALL.code, data: this.calldata });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_START_VIDEO_CALL.code, data: this.calldata });
         await CloseCallAcceptWindow();
       } catch (err) {
         logger.error("handleShowCallWindow failed:", err);
@@ -190,7 +190,7 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
       } catch (err) {
         logger.warn("CloseCallAcceptWindow failed:", err);
       }
-      await this._emitSafe(CALL_LOADED_EVENT, { type: IMessageType.RTC_REJECT.code, data: this.calldata });
+      await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_REJECT.code, data: this.calldata });
     },
 
     /* ---------- helper: 创建并等待通话窗口准备就绪 ---------- */

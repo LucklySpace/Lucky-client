@@ -686,7 +686,7 @@ IM Client 使用 WebSocket 实现实时消息推送和通信，使用谷歌Proto
 ### 消息类型枚举
 
 ```typescript
-const IMessageType = {
+const MessageType = {
   ERROR: { code: -1, description: "信息异常" },
   LOGIN_OVER: { code: 900, description: "登录过期" },
   REFRESHTOKEN: { code: 999, description: "刷新token" },

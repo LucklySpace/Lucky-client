@@ -1,4 +1,4 @@
-export const IMessageType = {
+export const MessageType = {
     ERROR: { code: -1, description: "协议错误/非法数据包" },
     SUCCESS: { code: 0, description: "成功响应" },
 

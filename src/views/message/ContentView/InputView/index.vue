@@ -67,7 +67,7 @@
     </div>
 
     <!-- 输入框：contenteditable -->
-    <div ref="editorRef" :data-placeholder="chatStore.getCurrentType === IMessageType.GROUP_MESSAGE.code
+    <div ref="editorRef" :data-placeholder="chatStore.getCurrentType === MessageType.GROUP_MESSAGE.code
       ? $t('chat.input.mentionHint', { at: '@' })
       : $t('chat.input.placeholder')
       " class="chat-container-input" contenteditable="true" spellcheck="false" @click="handleInteraction"
@@ -110,7 +110,7 @@ import { useCallStore } from "@/store/modules/call";
 import { storage } from "@/utils/Storage";
 import onPaste from "@/utils/Paste";
 import { useLogger } from "@/hooks/useLogger";
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { useInputEditor } from "@/hooks/useInputEditor";
 import { useAtMention } from "@/hooks/useAtMention";

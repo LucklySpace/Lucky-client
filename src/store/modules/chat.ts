@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { reactive } from "vue";
-import { IMActionType, IMessageType, MessageContentType, StoresEnum, Events } from "@/constants";
+import { ActionType, MessageType, MessageContentType, StoresEnum, Events } from "@/constants";
 import api from "@/api/index";
 import Chats from "@/database/entity/Chats";
 import { QueryBuilder, FTSQueryBuilder, useMappers, PageResult, Segmenter } from "@/database";
@@ -80,7 +80,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   /** 获取是否有消息的会话 */
   const getHaveMessageChat = computed(() => state.chatList.filter(c => c.unread > 0));
   /** 获取当前会话是否为群聊 */
-  const getChatIsGroup = computed(() => state.currentChat?.chatType === IMessageType.GROUP_MESSAGE.code);
+  const getChatIsGroup = computed(() => state.currentChat?.chatType === MessageType.GROUP_MESSAGE.code);
   /** 获取剩余消息数量 */
   const remainingQuantity = computed(() => Math.max(0, page.total - page.num * page.size));
   /** 获取当前会话成员列表（排除自己） */
@@ -553,7 +553,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       messageId: String(message.messageId),
       messageContentType: Number(message.messageContentType ?? MessageContentType.TEXT.code),
       messageTime: message.messageTime ?? Date.now(),
-      messageType: Number(message.messageType ?? IMessageType.SINGLE_MESSAGE.code),
+      messageType: Number(message.messageType ?? MessageType.SINGLE_MESSAGE.code),
       messageBody: {}
     };
 
@@ -570,7 +570,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (!data?.messageId) return setError("invalid recall payload");
 
     const messageId = String(data.messageId);
-    const messageType = Number(data.messageType ?? IMessageType.SINGLE_MESSAGE.code);
+    const messageType = Number(data.messageType ?? MessageType.SINGLE_MESSAGE.code);
     const mapper = getMapper(messageType);
 
     const recallPayload = {
@@ -777,7 +777,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       groupId: state.currentChat?.toId ?? "",
       userId: storage.get("userId") || "",
       memberIds: membersList,
-      type: isInvite ? IMActionType.INVITE_TO_GROUP.code : IMActionType.CREATE_GROUP.code
+      type: isInvite ? ActionType.INVITE_TO_GROUP.code : ActionType.CREATE_GROUP.code
     }), { operation: "addGroupMember" });
   };
 
@@ -875,7 +875,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
   const chooseByIMessageType = (messageType: number) => ({
     mapper: getMapper(messageType),
-    isSingle: messageType === IMessageType.SINGLE_MESSAGE.code
+    isSingle: messageType === MessageType.SINGLE_MESSAGE.code
   });
 
 
@@ -889,8 +889,8 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
   // ==================== 辅助工具 ====================
 
-  const isSingleChat = (chat: any): boolean => chat?.chatType === IMessageType.SINGLE_MESSAGE.code;
-  const getMapper = (type: number) => type === IMessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
+  const isSingleChat = (chat: any): boolean => chat?.chatType === MessageType.SINGLE_MESSAGE.code;
+  const getMapper = (type: number) => type === MessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
   const getSendApi = (chat: any) => isSingleChat(chat) ? api.SendSingleMessage : api.SendGroupMessage;
 
   const findChat = (id: any): number => findChatIndex(state.chatList, id);

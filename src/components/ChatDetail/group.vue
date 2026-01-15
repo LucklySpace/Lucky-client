@@ -127,7 +127,7 @@ import SelectContact from "@/components/SelectContact/index.vue";
 import { reactive, computed, onMounted, onUnmounted, nextTick, ref } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { useChatStore } from "@/store/modules/chat";
-import { IMessageType } from "@/constants";
+import { MessageType } from "@/constants";
 import Chats from "@/database/entity/Chats";
 import HistoryDialog from "@/components/History/index.vue";
 import Avatar from "@/components/Avatar/index.vue";
@@ -213,7 +213,7 @@ const onBusGroupNoticeChanged = (payload: any) => {
 
 function updateGroupInfoData() {
   const currentChat = chatStore.currentChat;
-  if (currentChat && currentChat.chatType == IMessageType.GROUP_MESSAGE.code) {
+  if (currentChat && currentChat.chatType == MessageType.GROUP_MESSAGE.code) {
     groupInfoData.name = currentChat.name ?? "";
     groupInfoData.notification = (currentChat as any).notification || "";
   }
