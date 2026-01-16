@@ -153,10 +153,10 @@ const handleApprove = async (req: FriendRequest, status: typeof ACCEPTED.code | 
     z-index: 10;
   }
 
-  &__title {
-    font-size: 18px;
-    font-weight: 700;
-  }
+    &__title {
+      font-size: 18px;
+      font-weight: 700;
+    }
 
   &__subtitle {
     flex: 1;
@@ -170,44 +170,44 @@ const handleApprove = async (req: FriendRequest, status: typeof ACCEPTED.code | 
     padding: 16px;
   }
 
-  &__empty {
-    text-align: center;
-    padding: 48px;
-    color: #8b8b8b;
-  }
+    &__empty {
+      text-align: center;
+      padding: 48px;
+      color: #8b8b8b;
+    }
 
-  &__list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
+    &__list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
 
-  &__item {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    padding: 12px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
-  }
+    &__item {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      padding: 12px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+    }
 
   &__info {
     flex: 1;
     min-width: 0;
   }
 
-  &__name {
-    font-weight: 600;
-    font-size: 15px;
-    color: #0f1724;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+    &__name {
+      font-weight: 600;
+      font-size: 15px;
+      color: #0f1724;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
   &__message {
     margin-top: 6px;
@@ -234,11 +234,11 @@ const handleApprove = async (req: FriendRequest, status: typeof ACCEPTED.code | 
     color: var(--content-font-color);
   }
 
-  @media (max-width: 640px) {
-    &__item {
-      padding: 10px;
-      gap: 10px;
-    }
+    @media (max-width: 640px) {
+      &__item {
+        padding: 10px;
+        gap: 10px;
+      }
 
     &__actions {
       min-width: 140px;
