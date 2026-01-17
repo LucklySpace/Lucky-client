@@ -131,7 +131,7 @@ export class DatabaseManager {
   /** 懒加载并返回 Database 连接 */
   private async getConnection(): Promise<Database> {
     if (this.conn) return this.conn;
-    
+
     // 获取原始配置路径
     let dbPath =
       this.opts.customPath ??
@@ -153,21 +153,22 @@ export class DatabaseManager {
 
       // 构造用户专属路径: users/{userId}/{fileName}
       const userDir = `users/${DatabaseManager.userId}`;
-      
+
       // 确保目录存在
       try {
         const baseDir = await appDataDir();
         const fullUserDir = await join(baseDir, userDir);
         const dirExists = await exists(fullUserDir);
         if (!dirExists) {
-            await mkdir(fullUserDir, { recursive: true });
+          await mkdir(fullUserDir, { recursive: true });
         }
+        // Use absolute path instead
+        dbPath = `${prefix}${fullUserDir}/${fileName}`
       } catch (e) {
         console.error("Failed to create user database directory", e);
       }
 
-      // 更新连接路径
-      dbPath = `${prefix}${userDir}/${fileName}`;
+      console.log('dbPath', dbPath);
     }
 
     this.connPath = `${dbPath}`;
