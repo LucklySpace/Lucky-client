@@ -1,105 +1,82 @@
 <template>
-  <el-image :src="safeAvatar" :alt="(name || 'avatar') + ''" :class="['chat-item__avatar-img', 'lazy-img']" :style="{
-    width: width + 'px',
-    height: width + 'px',
-    borderRadius: borderRadius + 'px'
-  }" fit="cover" loading="lazy">
+  <el-image :src="avatarSrc" :alt="name || 'avatar'" class="avatar" :style="avatarStyle" fit="cover" loading="lazy"
+    @load="onAvatarLoad">
     <template #placeholder>
-      <span class="default" :style="{
-        width: width + 'px',
-        height: width + 'px',
-        color: color,
-        backgroundColor: backgroundColor,
-        borderRadius: borderRadius + 'px',
-        fontSize: (width * 0.4) + 'px'
-      }">
-        {{ defaultName(name || '未') }}
-      </span>
+      <span class="avatar__fallback" :style="fallbackStyle">{{ initial }}</span>
     </template>
     <template #error>
-      <span class="default" :style="{
-        width: width + 'px',
-        height: width + 'px',
-        color: color,
-        backgroundColor: backgroundColor,
-        borderRadius: borderRadius + 'px',
-        fontSize: (width * 0.4) + 'px'
-      }">
-        {{ defaultName(name || '未') }}
-      </span>
+      <span class="avatar__fallback" :style="fallbackStyle">{{ initial }}</span>
     </template>
   </el-image>
 </template>
 
 <script lang="ts" setup>
+import { computed } from "vue";
+import { useAvatar } from "@/hooks/useImageCache";
 
-const props = withDefaults(defineProps<{
-  avatar?: string,
-  name?: string,
-  width?: number,
-  borderRadius?: number,
-  color?: string,
-  backgroundColor?: string,
-}>(), {
-  width: 36,
-  borderRadius: 3,
-  color: 'white',
-  backgroundColor: '#409eff'
-});
-const safeAvatar = computed(() => (props.avatar || '').trim());
+const props = withDefaults(
+  defineProps<{
+    avatar?: string;
+    name?: string;
+    width?: number;
+    borderRadius?: number;
+    color?: string;
+    backgroundColor?: string;
+  }>(),
+  {
+    width: 36,
+    borderRadius: 3,
+    color: "white",
+    backgroundColor: "#409eff"
+  }
+);
 
-const defaultName = (name: string) => {
-  if (!name) return '无'
-  const n = name?.trim() ?? "";
+// 头像缓存
+const { avatarSrc, onAvatarLoad } = useAvatar(() => props.avatar);
+
+// 首字母
+const initial = computed(() => {
+  const n = props.name?.trim();
   if (!n) return "?";
   const first = n[0];
   return /[A-Za-z]/.test(first) ? first.toUpperCase() : first;
-}
+});
 
+// 样式
+const avatarStyle = computed(() => ({
+  width: `${props.width}px`,
+  height: `${props.width}px`,
+  borderRadius: `${props.borderRadius}px`
+}));
 
+const fallbackStyle = computed(() => ({
+  ...avatarStyle.value,
+  color: props.color,
+  backgroundColor: props.backgroundColor,
+  fontSize: `${props.width * 0.4}px`
+}));
 </script>
 
 <style lang="scss" scoped>
-/* 不需要在这里定义未使用的变量，保持整洁 */
-
-.chat-item__avatar-img {
-  /* 1. 关键修复：防止边框撑大尺寸 */
-  box-sizing: border-box;
-
-  /* 2. 布局修复 */
+.avatar {
   display: block;
-  /* 消除 inline 元素的间隙 */
-  width: 100%;
-  height: 100%;
-
-  /* 3. 视觉样式 */
+  box-sizing: border-box;
   object-fit: cover;
   background-color: #e6e6e6;
   border: 1px solid rgba(0, 0, 0, 0.05);
-  /* 稍微加深一点边框可见度 */
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-
-  /* 4. 防止被挤压 */
   flex-shrink: 0;
-}
 
-.default {
-  /* 确保占位符填满容器 */
-  width: 100%;
-  height: 100%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  /* 5. 字体对齐修复 */
-  line-height: 1;
-  /* 防止文字受行高影响偏移 */
-  font-weight: 500;
-  // cursor: default;
-  user-select: none;
-
-  /* 确保占位符也有盒模型保护 */
-  box-sizing: border-box;
+  &__fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    font-weight: 500;
+    user-select: none;
+    box-sizing: border-box;
+  }
 }
 </style>

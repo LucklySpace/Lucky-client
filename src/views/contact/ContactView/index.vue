@@ -96,14 +96,14 @@ let observer: IntersectionObserver | null = null;
 
 // ========================= Computed =========================
 const sectionTitles = computed(() => ({
-  newFriends: t("contacts.newFriends"),
-  groups: t("contacts.groupChat"),
+    newFriends: t("contacts.newFriends"),
+    groups: t("contacts.groupChat"),
   contacts: t("contacts.contacts"),
 }));
 
 const sectionCounts = computed(() => ({
-  newFriends: store.getTotalNewFriends ?? 0,
-  groups: store.groups?.length ?? 0,
+    newFriends: store.getTotalNewFriends ?? 0,
+    groups: store.groups?.length ?? 0,
   contacts: store.contacts?.length ?? 0,
 }));
 
@@ -171,7 +171,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   observer?.disconnect();
-  observer = null;
+    observer = null;
 });
 
 // ========================= 内嵌虚拟列表组件 =========================
@@ -320,29 +320,29 @@ const VirtualList = defineComponent({
     position: relative;
 
     & + & {
-      margin-top: 6px;
-    }
-  }
+  margin-top: 6px;
+}
+}
 
   &__sentinel {
-    height: 1px;
-  }
+  height: 1px;
+}
 
   &__title {
-    display: flex;
-    align-items: center;
-    font-size: 14px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
     padding: 0 6px;
-    cursor: pointer;
-    user-select: none;
-    height: 36px;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: #ffffff;
+  cursor: pointer;
+  user-select: none;
+  height: 36px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #ffffff;
 
     &.stuck {
-      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
     }
   }
 
@@ -367,45 +367,45 @@ const VirtualList = defineComponent({
     &--new {
       background: var(--main-red-color);
       color: #fff;
-    }
   }
+}
 
   &__item {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 8px 6px;
-    margin-left: 10px;
-    border-radius: 6px;
-    width: 100%;
-    cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 6px;
+  margin-left: 10px;
+  border-radius: 6px;
+  width: 100%;
+  cursor: pointer;
     list-style: none;
 
     &:hover {
-      background: #f7f7f7;
-    }
+  background: #f7f7f7;
+}
   }
 
   &__item-content {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    width: 100%;
-  }
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
 
   &__name {
-    font-size: 14px;
-    flex: 1 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+  font-size: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
   &__message,
   &__sub {
-    font-size: 12px;
-    color: #888;
-  }
+  font-size: 12px;
+  color: #888;
+}
 }
 </style>

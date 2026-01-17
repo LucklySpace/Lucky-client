@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "vue.volar",
+    "vue.vscode-typescript-vue-plugin",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "tauri-apps.tauri-vscode",
+    "rust-lang.rust-analyzer",
+    "redhat.vscode-xml",
+    "bradlc.vscode-tailwindcss",
+    "mikestead.dotenv",
+    "github.copilot"
+  ]
+}

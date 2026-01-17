@@ -1,5 +1,0 @@
-<SQLStore className="User">
-    <SQL name="getUserById">
-        SELECT * FROM users where id=#{id} and name=#{name}
-    </SQL>
-</SQLStore>

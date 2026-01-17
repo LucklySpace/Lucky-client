@@ -49,12 +49,15 @@ export const MessageContentType = {
   POLL: { code: 330, desc: "投票 / 问卷" },
   FORWARD: { code: 340, desc: "转发内容（封装）" },
 
-  GROUP_INVITE: { code: 350, desc: "群聊邀请" },
-  GROUP_JOIN_APPROVE: { code: 351, desc: "群聊加入审批通过" },
-
+  // ========== 群组（400+）==========
+  GROUP_INVITE: { code: 400, desc: "群组邀请" },
+  GROUP_APPROVE: { code: 401, desc: "群组审批" },
 
   // ========== 其它 / 保留 ==========
-  COMPLEX: { code: 400, desc: "混合消息（多类型组合）" },
+  COMPLEX: { code: 500, desc: "混合消息（多类型组合）" },
+  RECALL: { code: 501, desc: "撤回消息" },
+  EDIT: { code: 502, desc: "编辑消息" },
+
   UNKNOWN: { code: 999, desc: "未知类型（保底）" },
 } as const;
 

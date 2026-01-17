@@ -1,0 +1,63 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/release/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/types/**",
+    "**/vite-env.d.ts"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeNotDocumented": false,
+  "hideGenerator": true,
+  "kindSortOrder": [
+    "Document",
+    "Reference",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Method",
+    "Function",
+    "Variable"
+  ],
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Utils",
+    "Hooks",
+    "Store",
+    "Components",
+    "Views",
+    "Database",
+    "API",
+    "Types",
+    "Constants",
+    "Other"
+  ],
+  "readme": "README.md",
+  "includeVersion": true,
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-plugin-mermaid"
+  ],
+  "theme": "markdown",
+  "gitRevision": "main",
+  "sourceLinkExternal": true,
+  "hostedBaseUrl": "https://github.com/your-org/Lucky-client/blob/main"
+}

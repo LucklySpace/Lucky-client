@@ -933,34 +933,68 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     return payload;
   };
 
+  const normalizeBodyToObject = (raw: unknown): Record<string, any> => {
+    if (raw == null) return {};
+    if (typeof raw === "object") return Array.isArray(raw) ? { parts: raw } : (raw as Record<string, any>);
+    if (typeof raw !== "string") return { text: String(raw) };
+
+    const s = raw.trim();
+    if (!s) return {};
+
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed == null) return {};
+      if (typeof parsed === "object") return Array.isArray(parsed) ? { parts: parsed } : (parsed as Record<string, any>);
+      return { text: String(parsed) };
+    } catch {
+      return { text: s };
+    }
+  };
+
+  const normalizeBodyToDbString = (raw: unknown): string => {
+    if (raw == null) return JSON.stringify({});
+    if (typeof raw === "string") {
+      const s = raw.trim();
+      if (!s) return JSON.stringify({});
+      try {
+        const parsed = JSON.parse(s);
+        if (parsed != null && typeof parsed === "object") return s;
+      } catch {
+        // ignore
+      }
+      return JSON.stringify({ text: s });
+    }
+    if (typeof raw === "object") return JSON.stringify(raw);
+    return JSON.stringify({ text: String(raw) });
+  };
+
   const toDbRecord = (msg: any) => {
-    const record = { ...msg, ownerId: getOwnerId.value, messageBody: JSON.stringify(msg.messageBody) };
+    const record = { ...msg, ownerId: getOwnerId.value, messageBody: normalizeBodyToDbString(msg?.messageBody) };
     delete record.messageTempId;
     return record;
   };
 
   /** 消息处理 获取用户信息 */
   const normalizeMessage = (msg: any, ownId: string, userInfo: any, chat: any) => {
-    try {
-      const body = typeof msg.messageBody === "string" ? JSON.parse(msg.messageBody) : msg.messageBody;
-      const isOwner = ownId === msg.fromId;
-      const member = state.groupMembers[msg.fromId];
-      if (msg.messageContentType === MessageContentType.TIP.code) return {
-        ...msg,
-        messageBody: body
-      };
-      // 忽略非单聊群聊消息类型
-      return {
-        ...msg,
-        messageBody: body,
-        name: isOwner ? userInfo.name : member.name || chat.name,
-        avatar: isOwner ? userInfo.avatar : member.avatar || chat.avatar,
-        isOwner
-      };
-    } catch {
-      /* 忽略解析错误 */
+    const messageBody = normalizeBodyToObject(msg?.messageBody);
+    const fromId = msg?.fromId ?? msg?.userId ?? msg?.senderId;
+    const isOwner = fromId != null && String(ownId) === String(fromId);
+
+    const member = !isOwner && fromId != null ? state.groupMembers?.[String(fromId)] : undefined;
+    const fallbackName = chat?.name ?? msg?.name ?? "";
+    const fallbackAvatar = chat?.avatar ?? msg?.avatar ?? "";
+
+    if (Number(msg?.messageContentType) === MessageContentType.TIP.code) {
+      return { ...msg, messageBody };
     }
-    return msg;
+
+    return {
+      ...msg,
+      messageBody,
+      name: isOwner ? (userInfo?.name ?? fallbackName) : (member?.name ?? fallbackName),
+      avatar: isOwner ? (userInfo?.avatar ?? fallbackAvatar) : (member?.avatar ?? fallbackAvatar),
+      isOwner
+    };
   };
 
   const buildPreview = (message?: IMessage, asHtml = true) => {

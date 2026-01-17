@@ -34,13 +34,15 @@ export function urlToLink(str: string): string {
   if (!str || typeof str !== "string") return "";
 
   return str.replace(URL_REGEX, (match) => {
-    // 验证匹配是否为有效 URL
-    if (!isValidUrl(match)) return match;
+    const rawUrl = unescapeHtml(match);
+    // 验证匹配是否为有效 URL（按还原后的 URL 校验）
+    if (!isValidUrl(rawUrl)) return match;
 
-    // 转义 URL 中的特殊字符用于 href 属性
-    const safeHref = encodeURI(match.includes("://") ? match : `https://${match}`);
+    // 转义 URL 中的特殊字符用于 href 属性（encodeURI 可能抛错，需兜底）
+    const urlWithScheme = rawUrl.includes("://") ? rawUrl : `https://${rawUrl}`;
+    const safeHref = safeEncodeURI(urlWithScheme);
 
-    return `<a href="${safeHref}" data-url="${escapeHtml(match)}" class="text-link" target="_blank" rel="noopener noreferrer">${match}</a>`;
+    return `<a href="${safeHref}" data-url="${escapeHtml(rawUrl)}" class="text-link" target="_blank" rel="noopener noreferrer">${match}</a>`;
   });
 }
 
@@ -235,7 +237,7 @@ export function extractMessageText(payload: unknown, fieldPath: string | null = 
 /**
  * 尝试将输入解析为 JS 对象
  */
-function tryParseJson(input: unknown): unknown {
+export function tryParseJson(input: unknown): unknown {
   if (input == null) return null;
   if (typeof input === "object") return input;
   if (typeof input !== "string") return input;
@@ -249,6 +251,30 @@ function tryParseJson(input: unknown): unknown {
     }
   }
   return s;
+}
+
+/**
+ * 安全 encodeURI：遇到非法 URI 片段时回退为原始输入
+ */
+function safeEncodeURI(input: string): string {
+  try {
+    return encodeURI(input);
+  } catch {
+    return input;
+  }
+}
+
+/**
+ * 反转义 HTML 实体（用于从已转义文本中还原 URL）
+ */
+function unescapeHtml(s: string): string {
+  if (!s || typeof s !== "string") return "";
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }
 
 /**

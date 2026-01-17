@@ -46,7 +46,7 @@
       <div class="group-detail__actions">
         <el-button type="primary" @click="handleEnterGroup">
           {{ $t("group.enterGroup") }}
-        </el-button>
+          </el-button>
       </div>
     </el-card>
 
@@ -143,9 +143,9 @@ const handleEnterGroup = async () => {
   box-sizing: border-box;
 
   &__card {
-    width: 600px;
-    max-width: calc(100% - 32px);
-    border-radius: 5px;
+  width: 600px;
+  max-width: calc(100% - 32px);
+  border-radius: 5px;
     transition: box-shadow 0.18s ease;
 
     &:hover {
@@ -190,18 +190,18 @@ const handleEnterGroup = async () => {
   }
 
   &__row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 8px;
 
-    strong {
-      color: #6b6b6b;
-      min-width: 84px;
+      strong {
+        color: #6b6b6b;
+        min-width: 84px;
+      }
     }
-  }
 
   &__actions {
     display: flex;
@@ -218,7 +218,7 @@ const handleEnterGroup = async () => {
     font-size: 14px;
     text-align: center;
     padding: 18px;
-  }
+}
 }
 
 @media (max-width: 520px) {

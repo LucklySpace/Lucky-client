@@ -5,19 +5,19 @@
       <!-- 头部：头像 + 基本信息 -->
       <el-row align="middle" class="contact-detail__header">
         <el-col :span="6" class="no-select">
-          <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
+            <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
         </el-col>
 
         <el-col :span="18" class="contact-detail__meta">
           <div class="contact-detail__name-row">
             <span class="contact-detail__name">{{ friendInfo.name }}</span>
             <svg v-if="friendInfo.gender === 1" aria-hidden="true" class="contact-detail__gender no-select">
-              <use xlink:href="#icon-nanxing" />
-            </svg>
+                <use xlink:href="#icon-nanxing" />
+              </svg>
             <svg v-else-if="friendInfo.gender === 0" aria-hidden="true" class="contact-detail__gender no-select">
-              <use xlink:href="#icon-nvxing" />
-            </svg>
-          </div>
+                <use xlink:href="#icon-nvxing" />
+              </svg>
+            </div>
           <div v-if="friendInfo.friendId" class="contact-detail__id">
             {{ $t("contacts.idLabel") }} {{ friendInfo.friendId }}
           </div>
@@ -62,10 +62,10 @@
       <div class="contact-detail__actions">
         <el-button type="primary" @click="handleSendMessage">
           {{ $t("actions.sendMsg") }}
-        </el-button>
+          </el-button>
         <el-button @click="handleCall">
           {{ $t("actions.videoCall") }}
-        </el-button>
+          </el-button>
       </div>
     </el-card>
 
@@ -191,13 +191,13 @@ const handleCall = async () => {
   box-sizing: border-box;
 
   &__card {
-    width: 600px;
-    max-width: calc(100% - 32px);
-    border-radius: 5px;
+  width: 600px;
+  max-width: calc(100% - 32px);
+  border-radius: 5px;
     transition: box-shadow 0.18s ease;
 
-    &:hover {
-      box-shadow: 0 12px 36px rgba(16, 24, 40, 0.08);
+  &:hover {
+    box-shadow: 0 12px 36px rgba(16, 24, 40, 0.08);
     }
   }
 
@@ -242,37 +242,37 @@ const handleCall = async () => {
   }
 
   &__row {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 8px;
 
-    strong {
-      color: #6b6b6b;
-      min-width: 84px;
+      strong {
+        color: #6b6b6b;
+        min-width: 84px;
+      }
     }
-  }
 
   &__remark {
-    cursor: pointer;
-    color: var(--main-text-color);
-  }
+      cursor: pointer;
+      color: var(--main-text-color);
+    }
 
   &__edit-icon {
-    font-size: 12px;
-    color: #6b6b6b;
-    margin-left: 4px;
-  }
+      font-size: 12px;
+      color: #6b6b6b;
+      margin-left: 4px;
+    }
 
   &__remark-input {
-    max-width: 220px;
-  }
+      max-width: 220px;
+    }
 
   &__signature {
-    color: #495057;
-    font-style: italic;
+      color: #495057;
+      font-style: italic;
   }
 
   &__actions {
@@ -291,7 +291,7 @@ const handleCall = async () => {
     font-size: 14px;
     text-align: center;
     padding: 18px;
-  }
+}
 }
 
 @media (max-width: 520px) {

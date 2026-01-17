@@ -1,44 +1,44 @@
 <template>
-  <div :id="`message-invite-${message.messageId}`" v-memo="[message, message.isOwner]" :aria-label="`${$t('invite.ariaLabelPrefix')}: ${parsedBody?.groupName || ''} ${$t('invite.ariaLabelFrom')} ${parsedBody?.inviterName || ''
-    }`" :class="['bubble', { owner: message.isOwner }]" class="invite-bubble" role="group">
-    <!-- 气泡主体 -->
-    <div class="invite-bubble__inner" role="button" tabindex="0">
-      <!-- 左侧：群头像（可选） -->
-      <div v-if="parsedBody?.groupAvatar" class="invite-bubble__left">
-        <Avatar :avatar="parsedBody.groupAvatar" :name="parsedBody.groupName" :width="56" :borderRadius="8"
-          class="invite-bubble__avatar" />
+  <div :id="`message-invite-${message.messageId}`"
+    v-memo="[message.messageId, message.isOwner, parsedBody?.approveStatus]"
+    :class="['invite-bubble', { 'invite-bubble--owner': message.isOwner }]">
+    <div class="invite-bubble__card" role="article">
+      <!-- 群信息主体 -->
+      <div class="invite-bubble__main">
+        <Avatar v-if="parsedBody?.groupAvatar" :avatar="parsedBody.groupAvatar" :border-radius="8"
+          :name="parsedBody.groupName" :width="48" class="invite-bubble__avatar" />
+        <div class="invite-bubble__info">
+          <h3 class="invite-bubble__name" v-text="parsedBody?.groupName || $t('invite.unknownGroup')" />
+        </div>
       </div>
 
-      <!-- 主体信息 -->
-      <div class="invite-bubble__content">
-        <div class="invite-bubble__header">
-          <div class="invite-bubble__title" v-html="highlight(parsedBody?.groupName)"></div>
-        </div>
-
-        <!-- 操作区域：根据状态显示 -->
-        <div role="toolbar">
-          <div v-if="parsedBody?.approveStatus === 0" class="invite-bubble__actions">
-            <div v-if="parsedBody?.userId == messageStore.getOwnerId">
-              <el-button :aria-label="$t('invite.accept')" class="invite-bubble__action-btn" size="small" type="primary"
-                @click.stop="handleApprove(true)">
-                {{ $t("invite.accept") }}
-              </el-button>
-              <el-button :aria-label="$t('invite.decline')" class="invite-bubble__action-btn" size="small"
-                @click.stop="handleApprove(false)">
-                {{ $t("invite.decline") }}
-              </el-button>
-            </div>
-
-            <span v-else class="invite-bubble__actions--pending">{{ $t("invite.status.pending") }}</span>
+      <!-- 操作区 -->
+      <div class="invite-bubble__footer">
+        <!-- 待处理：仅被邀请人可见按钮 -->
+        <template v-if="isPending">
+          <div v-if="isInvitee" class="invite-bubble__actions">
+            <el-button class="invite-bubble__btn invite-bubble__btn--primary" size="small" type="primary"
+              @click.stop="handleApprove(true)">
+              {{ $t("invite.accept") }}
+            </el-button>
+            <el-button class="invite-bubble__btn" size="small" @click.stop="handleApprove(false)">
+              {{ $t("invite.decline") }}
+            </el-button>
           </div>
-          <div v-else class="invite-bubble__status">
-            <span v-if="parsedBody?.approveStatus === 1" class="invite-bubble__status--accepted">{{
-              $t("invite.status.accepted")
-            }}</span>
-            <span v-else-if="parsedBody?.approveStatus === 2" class="invite-bubble__status--declined">{{
-              $t("invite.status.declined")
-            }}</span>
-          </div>
+          <span v-else class="invite-bubble__status invite-bubble__status--pending">
+            {{ $t("invite.status.pending") }}
+          </span>
+        </template>
+
+        <!-- 已处理状态 -->
+        <div v-else class="invite-bubble__status" :class="statusClass">
+          <el-icon v-if="isAccepted">
+            <CircleCheck />
+          </el-icon>
+          <el-icon v-else>
+            <CircleClose />
+          </el-icon>
+          <span>{{ statusText }}</span>
         </div>
       </div>
     </div>
@@ -46,233 +46,223 @@
 </template>
 
 <script lang="ts" setup>
-import { useChatStore } from "@/store/modules/chat";
-import { ElMessage } from "element-plus";
 import { computed } from "vue";
-import { escapeHtml } from "@/utils/Strings";
 import { useI18n } from "vue-i18n";
+import { ElMessage } from "element-plus";
+import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
+import { useChatStore } from "@/store/modules/chat";
+import { FriendRequestStatus } from "@/constants";
 import Avatar from "@/components/Avatar/index.vue";
 
-const props = defineProps({
-  message: {
-    type: Object,
-    required: true
+// ===================== 类型定义 =====================
+
+interface GroupInviteBody {
+  groupId: string;
+  groupName?: string;
+  groupAvatar?: string;
+  inviterId?: string;
+  inviterName?: string;
+  userId?: string; // 被邀请人 ID
+  approveStatus?: number; // 0: 待处理, 1: 已接受, 2: 已拒绝
+}
+
+interface Message {
+  messageId: string;
+  messageBody: string | GroupInviteBody;
+  isOwner?: boolean;
+}
+
+// ===================== Props & Emits =====================
+
+const props = defineProps<{
+  message: Message;
+}>();
+
+// ===================== 状态管理 =====================
+
+const { t } = useI18n();
+const chatStore = useChatStore();
+const { PENDING, ACCEPTED, REJECTED } = FriendRequestStatus;
+
+// ===================== 计算属性 =====================
+
+/** 解析消息体 */
+const parsedBody = computed<GroupInviteBody | null>(() => {
+  const raw = props.message.messageBody;
+  if (!raw) return null;
+
+  try {
+    const body = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return {
+      ...body,
+      approveStatus: body.approveStatus ?? PENDING.code
+    };
+  } catch {
+    return null;
   }
 });
 
-const { t } = useI18n();
-const messageStore = useChatStore();
+/** 状态判断 */
+const isPending = computed(() => parsedBody.value?.approveStatus === PENDING.code);
+const isAccepted = computed(() => parsedBody.value?.approveStatus === ACCEPTED.code);
+const isDeclined = computed(() => parsedBody.value?.approveStatus === REJECTED.code);
 
-// parsedBody：计算属性，解析后返回对象
-const parsedBody = computed(() => parseBody(props.message.messageBody));
+/** 是否为当前用户被邀请 */
+const isInvitee = computed(() => {
+  const currentUserId = chatStore.getOwnerId;
+  return String(parsedBody.value?.userId) === String(currentUserId);
+});
 
-// 接受或拒绝邀请
-async function handleApprove(flag: boolean = true) {
+/** 状态样式类 */
+const statusClass = computed(() => ({
+  "invite-bubble__status--accepted": isAccepted.value,
+  "invite-bubble__status--declined": isDeclined.value,
+}));
+
+/** 状态文本 */
+const statusText = computed(() => {
+  if (isAccepted.value) return t("invite.status.accepted");
+  if (isDeclined.value) return t("invite.status.declined");
+  return t("invite.status.pending");
+});
+
+// ===================== 方法 =====================
+
+/**
+ * 接受或拒绝邀请
+ */
+async function handleApprove(accept: boolean) {
+  const body = parsedBody.value;
+  if (!body || !isPending.value) return;
+
   try {
-    const bodyUpdate = {
-      ...parseBody(props.message.messageBody),
-      approveStatus: flag ? 1 : 2
-    };
-    await messageStore.handleApproveGroupInvite(bodyUpdate);
-    ElMessage.success(
-      flag
-        ? t("invite.msg.joined", { name: bodyUpdate.groupName || bodyUpdate.groupId || "" })
-        : t("invite.msg.declined")
-    );
-    messageStore.handleUpdateMessage(props.message, {
+    const status = accept ? ACCEPTED.code : REJECTED.code;
+    const bodyUpdate = { ...body, approveStatus: status };
+
+    // 调用 store 处理
+    await chatStore.handleApproveGroupInvite(bodyUpdate);
+
+    // 提示语
+    const successMsg = accept
+      ? t("invite.msg.joined", { name: body.groupName || body.groupId })
+      : t("invite.msg.declined");
+    ElMessage.success(successMsg);
+
+    // 更新本地消息显示
+    chatStore.handleUpdateMessage(props.message, {
       messageBody: JSON.stringify(bodyUpdate)
     });
   } catch (err) {
-    console.error("failed", err);
-    ElMessage.error(flag ? t("invite.err.accept") : t("invite.err.decline"));
-  }
-}
-
-// 解析 messageBody（兼容 string 或 object）
-function parseBody(raw: any) {
-  if (!raw) return null;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return { ...parsed, approveStatus: parsed.approveStatus ?? 0 }; // 默认待处理状态
-    } catch {
-      return { approveStatus: 1 };
-    }
-  }
-  return { ...raw, approveStatus: raw.approveStatus ?? 0 }; // 确保 status 默认值
-}
-
-// 高亮函数：简单安全的关键字高亮
-function highlight(text?: string) {
-  if (!text) return "";
-  return escapeHtml(String(text));
-}
-
-// 更新消息状态
-function patchMessageLocalStatus(approveStatus: "accepted" | "declined") {
-  try {
-  } catch (e) {
-    console.warn("patchMessageLocalStatus failed", e);
+    console.error("Group invite approval failed:", err);
+    ElMessage.error(accept ? t("invite.err.accept") : t("invite.err.decline"));
   }
 }
 </script>
 
 <style lang="scss" scoped>
-$bubble-bg: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-$bubble-border: rgba(20, 33, 64, 0.06);
-$text-primary: #0f1724;
-$text-muted: #6b7280;
-$primary-color: #409eff;
-$success-color: #2ecc71;
-$danger-color: #e74c3c;
-$pending-color: #999;
-$bubble-width: 280px;
-
 .invite-bubble {
-  max-width: $bubble-width;
-  margin: 5px 0;
   display: flex;
-  align-items: flex-start;
+  margin: 8px 0;
+  width: 100%;
 
-  &.owner {
+  &--owner {
     justify-content: flex-end;
   }
 
-  &__inner {
-    display: flex;
-    gap: 12px;
-    background: $bubble-bg;
-    border: 1px solid $bubble-border;
-    box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
-    padding: 10px;
+  &__card {
+    width: 260px;
+    background: var(--header-bg-color, #ffffff);
+    border: 1px solid var(--main-border-color, rgba(0, 0, 0, 0.08));
     border-radius: 12px;
-    cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-    width: $bubble-width;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
   }
 
-  &__left {
-    flex: 0 0 56px;
+  &__main {
+    display: flex;
+    padding: 12px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--header-font-color, #1a1a1a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__desc {
+    margin: 0;
+    font-size: 12px;
+    color: var(--content-message-font-color, #999);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__footer {
+    padding: 8px 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__btn {
+    flex: 1;
+    height: 28px;
+    font-size: 12px;
+    border-radius: 6px;
+
+    &--primary {
+      background-color: var(--side-bg-color, #409eff);
+      border-color: var(--side-bg-color, #409eff);
+    }
+  }
+
+  &__status {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    height: 28px;
 
-    .invite-bubble__avatar {
-      width: 56px;
-      height: 56px;
-      border-radius: 8px;
-      object-fit: cover;
-      border: 1px solid rgba(0, 0, 0, 0.04);
-      box-shadow: 0 4px 10px rgba(11, 22, 39, 0.04);
-    }
-  }
-
-  &__content {
-    flex: 1 1 auto;
-    min-width: 0;
-
-    .invite-bubble__header {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    &--pending {
+      color: var(--content-message-font-color, #999);
     }
 
-    .invite-bubble__title {
+    &--accepted {
+      color: var(--success-color, #67c23a);
+    }
+
+    &--declined {
+      color: var(--main-red-color, #f56c6c);
+    }
+
+    .el-icon {
       font-size: 16px;
-      font-weight: 600;
-      color: $text-primary;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .invite-bubble__actions {
-      margin-top: 10px;
-      display: flex;
-      gap: 2px;
-      align-items: center;
-
-      &--pending {
-        margin-top: 6px;
-        color: $pending-color;
-        font-size: 13px;
-        font-weight: 500;
-      }
-    }
-
-    .invite-bubble__action-btn {
-      padding: 6px 10px;
-      height: 30px;
-      font-size: 13px;
-      border-radius: 8px;
-      transition: background-color 0.2s ease;
-
-      &.el-button--primary {
-        background-color: $primary-color;
-        border-color: $primary-color;
-
-        &:hover {
-          background-color: #66b1ff;
-        }
-      }
-
-      &:not(.el-button--primary) {
-        background-color: transparent;
-        border-color: #dcdcdc;
-        color: $text-muted;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-      }
-    }
-
-    .invite-bubble__status {
-      margin-top: 16px;
-      font-size: 13px;
-
-      &--accepted {
-        color: $success-color;
-        font-weight: 500;
-      }
-
-      &--declined {
-        color: $danger-color;
-        font-weight: 500;
-      }
-    }
-  }
-
-  &:hover .invite-bubble__inner {
-    //   transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(16, 24, 40, 0.08);
-  }
-
-  @media (max-width: 480px) {
-    &__left {
-      flex: 0 0 48px;
-
-      .invite-bubble__avatar {
-        width: 48px;
-        height: 48px;
-      }
-    }
-
-    &__inner {
-      padding: 12px;
-    }
-
-    &__title {
-      font-size: 15px;
-    }
-
-    &__action-btn {
-      padding: 5px 10px;
-      font-size: 12px;
-    }
-
-    &__status {
-      font-size: 12px;
     }
   }
 }

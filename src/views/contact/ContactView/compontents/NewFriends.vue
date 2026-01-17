@@ -1,248 +1,323 @@
 <template>
   <div :aria-label="$t('friends.requestsList')" class="friend-requests no-select" role="region">
-    <!-- 头部 -->
+    <!-- 头部区域 -->
     <header class="friend-requests__header">
-      <div class="friend-requests__title">{{ $t("contacts.friendRequests") }}</div>
-      <div class="friend-requests__subtitle">{{ $t("contacts.pendingRequests", { count: pendingCount }) }}</div>
-      <el-button size="small" type="text" @click="refresh">
-        <i class="iconfont icon-refresh" /> {{ $t("contacts.refresh") }}
+      <div class="friend-requests__header-left">
+        <h2 class="friend-requests__title">{{ $t("contacts.friendRequests") }}</h2>
+        <el-tag v-if="pendingCount > 0" class="friend-requests__count" round size="small">
+          {{ pendingCount }}
+        </el-tag>
+      </div>
+      <el-button :loading="isRefreshing" circle size="small" @click="refresh">
+        <el-icon>
+          <Refresh />
+        </el-icon>
       </el-button>
     </header>
 
-    <!-- 主体 -->
+    <!-- 列表主体 -->
     <main class="friend-requests__body">
-      <div v-if="!hasRequests" class="friend-requests__empty">{{ $t("contacts.noRequests") }}</div>
+      <el-scrollbar>
+        <div v-if="!hasRequests" class="friend-requests__empty">
+          <el-empty :description="$t('contacts.noRequests')" />
+        </div>
 
-      <ul v-else class="friend-requests__list">
-        <li v-for="req in requests" :key="req.id" class="friend-requests__item">
-          <!-- 头像 -->
-          <Avatar :avatar="req.avatar || ' '" :name="req.name" :width="64" :borderRadius="6" />
+        <transition-group v-else class="friend-requests__list" name="list" tag="ul">
+          <li v-for="req in requests" :key="req.id" class="friend-requests__item">
+            <!-- 用户头像 -->
+            <Avatar :avatar="req.avatar || ''" :name="req.name" :width="48" />
 
-          <!-- 信息 -->
-          <div class="friend-requests__info">
-            <div class="friend-requests__name">{{ req.name }}</div>
-            <div class="friend-requests__message" :class="{ 'friend-requests__message--muted': !req.message }">
-              {{ req.message || $t("contacts.defaultRequestMsg") }}
+            <!-- 请求信息 -->
+            <div class="friend-requests__info">
+              <div class="friend-requests__name">{{ req.name || $t("contacts.unknownUser") }}</div>
+              <div class="friend-requests__message" :class="{ 'friend-requests__message--empty': !req.message }">
+                {{ req.message || $t("contacts.defaultRequestMsg") }}
+              </div>
             </div>
-          </div>
 
-          <!-- 操作 -->
-          <div class="friend-requests__actions">
-            <template v-if="isPending(req)">
-              <el-button :loading="isLoading(req.id, 'accept')" size="small" type="primary"
-                @click="handleApprove(req, ACCEPTED.code)">
-                {{ $t("contacts.accept") }}
-              </el-button>
-              <el-button :loading="isLoading(req.id, 'reject')" size="small" @click="handleApprove(req, REJECTED.code)">
-                {{ $t("contacts.reject") }}
-              </el-button>
-            </template>
+            <!-- 操作区域 -->
+            <div class="friend-requests__actions">
+              <template v-if="isPending(req)">
+                <el-button :loading="isLoading(req.id, 'accept')" size="small" type="primary"
+                  @click="handleApprove(req, ACCEPTED.code)">
+                  <el-icon :size="16">
+                    <Check />
+                  </el-icon>
+                </el-button>
+                <el-button :loading="isLoading(req.id, 'reject')" size="small"
+                  @click="handleApprove(req, REJECTED.code)">
+                  <el-icon :size="16">
+                    <Close />
+                  </el-icon>
+                </el-button>
+              </template>
 
-            <span v-else class="friend-requests__badge" :class="getStatusClass(req)">
-              {{ isAccepted(req) ? $t("contacts.accepted") : $t("contacts.rejected") }}
-            </span>
-          </div>
-        </li>
-      </ul>
+              <div v-else class="friend-requests__status" :class="getStatusClass(req)">
+                <el-icon v-if="isAccepted(req)">
+                  <CircleCheck />
+                </el-icon>
+                <el-icon v-else>
+                  <CircleClose />
+                </el-icon>
+                <span>{{ isAccepted(req) ? $t("contacts.accepted") : $t("contacts.rejected") }}</span>
+              </div>
+            </div>
+          </li>
+        </transition-group>
+      </el-scrollbar>
     </main>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive } from "vue";
+import { computed, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import { useI18n } from "vue-i18n";
+import { Refresh, Check, Close, CircleCheck, CircleClose } from "@element-plus/icons-vue";
 import { useFriendsStore } from "@/store/modules/friends";
 import { FriendRequestStatus } from "@/constants";
 import Avatar from "@/components/Avatar/index.vue";
+
+// ===================== 类型定义 =====================
 
 interface FriendRequest {
   id: string;
   name?: string;
   avatar?: string;
   message?: string;
-  approveStatus?: number; // 0: 待处理, 1: 已接受, 2: 已拒绝
+  approveStatus?: number;
 }
 
-type LoadingAction = "accept" | "reject";
+type ActionType = "accept" | "reject";
 
+// ===================== 常量 & Store =====================
+
+const { t } = useI18n();
 const { PENDING, ACCEPTED, REJECTED } = FriendRequestStatus;
-
 const friendStore = useFriendsStore();
-const loadingMap = reactive<Record<string, Record<LoadingAction, boolean>>>({});
 
-const requests = computed<FriendRequest[]>(() =>
-  (friendStore as any).newFriends ?? (friendStore as any).requests ?? []
-);
+// ===================== 状态变量 =====================
 
+const isRefreshing = ref(false);
+const loadingMap = reactive<Record<string, Partial<Record<ActionType, boolean>>>>({});
+
+// ===================== 计算属性 =====================
+
+/** 请求列表 */
+const requests = computed<FriendRequest[]>(() => friendStore.newFriends || []);
+
+/** 是否有请求 */
 const hasRequests = computed(() => requests.value.length > 0);
 
-const pendingCount = computed(() =>
-  requests.value.filter((req) => isPending(req)).length
-);
+/** 待处理计数 */
+const pendingCount = computed(() => requests.value.filter(isPending).length);
 
-// 状态判断
+// ===================== 辅助函数 =====================
+
 const isPending = (req: FriendRequest) => req.approveStatus === PENDING.code;
 const isAccepted = (req: FriendRequest) => req.approveStatus === ACCEPTED.code;
 
 const getStatusClass = (req: FriendRequest): string =>
-  isAccepted(req) ? "friend-requests__badge--accepted" : "friend-requests__badge--rejected";
+  isAccepted(req) ? "friend-requests__status--accepted" : "friend-requests__status--rejected";
 
-// Loading 状态
-const isLoading = (id: string | undefined, action: LoadingAction): boolean => {
-  if (!id) return false;
-  return loadingMap[id]?.[action] ?? false;
-};
+const isLoading = (id: string, action: ActionType): boolean => loadingMap[id]?.[action] ?? false;
 
-const setLoading = (id: string, action: LoadingAction, value: boolean) => {
-  if (!loadingMap[id]) {
-    loadingMap[id] = { accept: false, reject: false };
-  }
-  loadingMap[id][action] = value;
-};
+// ===================== 核心操作 =====================
 
-// 操作
-const refresh = () => {
+/** 刷新列表 */
+const refresh = async () => {
+  if (isRefreshing.value) return;
+  isRefreshing.value = true;
   try {
-    (friendStore as any).loadNewFriends?.();
-    ElMessage.info("刷新中…");
+    await friendStore.loadNewFriends();
+    ElMessage.success(t("contacts.syncSuccess", "同步成功"));
   } catch {
-    ElMessage.error("刷新失败");
+    ElMessage.error(t("contacts.syncFailed", "同步失败"));
+  } finally {
+    isRefreshing.value = false;
   }
 };
 
-// 处理好友请求
-const handleApprove = async (req: FriendRequest, status: typeof ACCEPTED.code | typeof REJECTED.code) => {
+/** 处理审批 */
+const handleApprove = async (req: FriendRequest, status: number) => {
   if (!req?.id || !isPending(req)) return;
 
   const isAccept = status === ACCEPTED.code;
-  const action: LoadingAction = isAccept ? "accept" : "reject";
-  setLoading(req.id, action, true);
+  const action: ActionType = isAccept ? "accept" : "reject";
+
+  if (!loadingMap[req.id]) loadingMap[req.id] = {};
+  loadingMap[req.id]![action] = true;
 
   try {
-    await (friendStore as any).handleApproveContact?.(req, status);
-    if(isAccept){
-      friendStore.loadContacts?.();
+    await friendStore.handleApproveContact(req, status);
+
+    if (isAccept) {
+      // 同意后刷新联系人列表
+      await friendStore.loadContacts();
     }
+
     ElMessage.success(isAccept ? ACCEPTED.type : REJECTED.type);
-  } catch {
-    ElMessage.error("操作失败，请稍后重试");
+  } catch (err) {
+    console.error("Approve contact error:", err);
+    ElMessage.error(t("contacts.actionFailed", "操作失败"));
   } finally {
-    setLoading(req.id, action, false);
+    if (loadingMap[req.id]) loadingMap[req.id]![action] = false;
   }
 };
 </script>
 
 <style lang="scss" scoped>
 .friend-requests {
-  height: calc(100vh - 65px);
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--side-bg, #f5f7fa);
-  color: #111827;
+  background: var(--content-bg-color, #f9fafb);
+  overflow: hidden;
 
   &__header {
-    position: sticky;
-    top: 0;
+    flex-shrink: 0;
     display: flex;
-    gap: 12px;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: #fff;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    padding: 16px 20px;
+    background: var(--header-bg-color, #ffffff);
+    border-bottom: 1px solid var(--main-border-color, #e5e7eb);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     z-index: 10;
+
+    &-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
   }
 
-    &__title {
-      font-size: 18px;
-      font-weight: 700;
-    }
+  &__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--header-font-color, #111827);
+  }
 
-  &__subtitle {
-    flex: 1;
-    color: #6b6b6b;
-    font-size: 13px;
+  &__count {
+    height: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   &__body {
     flex: 1;
-    overflow: auto;
-    padding: 16px;
+    min-height: 0;
   }
 
-    &__empty {
-      text-align: center;
-      padding: 48px;
-      color: #8b8b8b;
-    }
+  &__empty {
+    padding-top: 60px;
+  }
 
-    &__list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+    margin: 0;
+    list-style: none;
+  }
 
-    &__item {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      padding: 12px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background: var(--header-bg-color, #ffffff);
+    border: 1px solid var(--main-border-color, #f0f2f5);
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+
+    &:hover {
+      border-color: var(--side-active-bg-color, #409eff);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      transform: translateY(-1px);
     }
+  }
 
   &__info {
     flex: 1;
     min-width: 0;
   }
 
-    &__name {
-      font-weight: 600;
-      font-size: 15px;
-      color: #0f1724;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--header-font-color, #1a1a1a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   &__message {
-    margin-top: 6px;
+    margin-top: 4px;
     font-size: 13px;
-    color: #6b6b6b;
+    color: var(--content-message-font-color, #6b7280);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 
-    &--muted {
-      color: #9aa0a6;
+    &--empty {
+      color: var(--content-message-font-color, #9ca3af);
+      font-style: italic;
     }
   }
 
   &__actions {
     display: flex;
-    gap: 8px;
     align-items: center;
-    justify-content: flex-end;
-    min-width: 180px;
+    gap: 5px;
+    flex-shrink: 0;
   }
 
-  &__badge {
-    padding: 6px 12px;
-    border-radius: 999px;
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 13px;
-    color: var(--content-font-color);
-  }
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
 
-    @media (max-width: 640px) {
-      &__item {
-        padding: 10px;
-        gap: 10px;
-      }
+    &--accepted {
+      // color: var(--success-color);
+      // background: rgba(16, 185, 129, 0.08);
+    }
 
-    &__actions {
-      min-width: 140px;
+    &--rejected {
+      // color: var(--main-red-color, #ef4444);
+      // background: rgba(239, 68, 68, 0.08);
+    }
+
+    .el-icon {
+      font-size: 16px;
     }
   }
+}
+
+// 列表动画
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.4s ease;
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.list-move {
+  transition: transform 0.4s ease;
 }
 </style>

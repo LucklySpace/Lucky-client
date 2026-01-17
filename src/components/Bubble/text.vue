@@ -1,19 +1,14 @@
 <template>
-  <div
-    :id="`message-${message.messageId}`"
-    v-context-menu="menuConfig"
-    v-memo="[message.messageId, message.isOwner, message.messageTime]"
-    :class="bubbleClass"
-    class="message-bubble"
-    @click="handleLinkClick"
-  >
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
+    v-memo="[message.messageId, message.isOwner, message.messageTime]" :class="bubbleClass" class="message-bubble"
+    @click="handleLinkClick">
     <div v-dompurify="processedText" class="message-bubble__text" translate="yes" />
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed } from "vue";
-import { urlToLink, escapeHtml } from "@/utils/Strings";
+import { urlToLink, escapeHtml, extractMessageText } from "@/utils/Strings";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import ClipboardManager from "@/utils/Clipboard";
 import { globalEventBus } from "@/hooks/useEventBus";
@@ -68,11 +63,9 @@ const bubbleClass = computed(() => [
 
 /** 处理后的消息文本 */
 const processedText = computed(() => {
-  const raw = props.message.messageBody?.text;
-  // 空值保护：避免解析 null/undefined
-  if (!raw || typeof raw !== "string") return "";
-  // 先转义 HTML，再转换链接
-  return urlToLink(escapeHtml(raw));
+  const rawText = extractMessageText(props.message.messageBody, "text");
+  if (!rawText) return "";
+  return urlToLink(escapeHtml(rawText));
 });
 
 /** 是否为消息所有者 */
@@ -144,7 +137,7 @@ async function handleCopy(msg: Message): Promise<void> {
   await ClipboardManager.clear();
 
   if (msg.messageContentType === MessageContentType.TEXT.code) {
-    const text = msg.messageBody?.text ?? "";
+    const text = extractMessageText(msg.messageBody, "text");
     await ClipboardManager.writeText(text);
     useLogger().prettySuccess("copy text success", text);
   }
@@ -246,6 +239,10 @@ async function openSafeUrl(raw: string): Promise<void> {
   // 自己的消息
   &.owner &__text {
     background-color: #dcf8c6;
+  }
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   }
 }
 </style>

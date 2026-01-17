@@ -11,7 +11,7 @@
   <div class="login-control no-select">
     <div class="login-control-form">
       <div v-show="loginType != 'scan'" class="login-control-avatar">
-        <Avatar :avatar="defaultImg" :name="$t('login.label')" :width="64" :borderRadius="6" class="avatar" />
+        <img :src="defaultImg" class="avatar" />
       </div>
 
       <!-- 用户名登录表单 -->
@@ -229,7 +229,7 @@ const login = async () => {
       return;
     }
   }
-  
+
   const password = rsa.rsaPublicData(loginForm.value.credentials.trim());
   if (!password) {
     // 加密失败，重新获取公钥

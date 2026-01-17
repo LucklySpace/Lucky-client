@@ -10,6 +10,8 @@ import { useTray } from "@/hooks/useTray";
 import { exit } from "@tauri-apps/plugin-process";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { globalEventBus } from "@/hooks/useEventBus";
+import { initAllCache } from "@/hooks/useImageCache"
+
 // 路由
 import router from "@/router";
 // 窗口操作
@@ -149,6 +151,9 @@ class MainManager {
       // 7. 定时任务
       //this.initScheduler();
 
+      // 8. 图片缓存初始化
+      this.initImageCache();
+
       this.initialized = true;
 
       this.log.prettySuccess("core", `客户端初始化完成（${Math.round(performance.now() - t0)} ms）`);
@@ -157,6 +162,7 @@ class MainManager {
       throw err;
     }
   }
+
 
   /** 销毁资源 */
   async destroy(): Promise<void> {
@@ -199,12 +205,16 @@ class MainManager {
             this.syncFriends();
           }
         },
-        onCompleted: (taskId) => {}
+        onCompleted: (taskId) => { }
       });
 
       // 定时刷新任务：每 30 秒执行
       scheduler.startInterval("refresh", 30000, { immediate: true });
     }), this.log);
+  }
+
+  initImageCache() {
+    return withTiming("image", "图片缓存初始化", () => initAllCache(this.stores.user.userId), this.log);
   }
 
   /**
