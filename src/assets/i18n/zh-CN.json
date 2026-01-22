@@ -292,6 +292,7 @@
     },
     "selectContact": {
       "selected": "已选择的联系人 ({count})",
+      "clearSelected": "清空",
       "selecte": "选择联系人",
       "list": "联系人列表"
     },
