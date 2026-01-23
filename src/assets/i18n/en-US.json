@@ -71,7 +71,6 @@
       "rejected": "Rejected",
       "delete": "Delete Contact",
       "deleteGroup": "Delete Group"
-
     },
     "group": {
       "memberLabel": "Members:",
@@ -293,6 +292,7 @@
     },
     "selectContact": {
       "selected": "Selected Contacts ({count})",
+      "clearSelected": "Clear",
       "selecte": "Selecte Contact",
       "list": "Contacts"
     },
