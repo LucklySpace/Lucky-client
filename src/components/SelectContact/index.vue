@@ -19,7 +19,7 @@
               <!-- 根据选中状态动态生成类名 -->
               <div
                 v-for="(row, idx) in visibleRows"
-                :key="row.friendId"
+                :key="row.friendId + '_' + idx"
                 :style="{
                   height: rowHeight + 'px',
                   position: 'absolute',
@@ -62,7 +62,7 @@
       <el-col :span="12">
         <div class="selected-list">
           {{ $t("selectContact.selected", { count: selectItem.length }) }}
-          <el-button type="danger" text bg :style="{ 'font-weight': 600 }" @click="clearSelected">
+          <el-button type="danger" link :style="{ 'font-weight': 600, 'margin-left': '5px' }" @click="clearSelected">
             {{ $t("selectContact.clearSelected") }}
           </el-button>
           <div ref="selectionRef" class="selection-item-container">
@@ -380,6 +380,7 @@
     overflow-x: hidden;
     height: 250px;
     width: 100%;
+    margin-top: 5px;
     @include scroll-bar();
   }
 
