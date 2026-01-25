@@ -434,7 +434,9 @@
           "refresh": "Refresh requests list",
           "noRequests": "No friend requests",
           "from": "Request from {name}",
-          "defaultMessage": "wants to add you as a friend"
+          "defaultMessage": "wants to add you as a friend",
+          "syncSuccess": "Synchronization succeeded",
+          "syncFailed": "Synchronization failed"
         },
         "status": {
           "accepted": "Accepted",

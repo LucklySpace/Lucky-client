@@ -143,8 +143,8 @@
           }
         },
         "mention": {
-         "you": "[有人{'@'}你]",
-         "all": "[{'@'}所有人]"
+          "you": "[有人{'@'}你]",
+          "all": "[{'@'}所有人]"
         },
         "draft": "[草稿]",
         "preview": {
@@ -434,7 +434,9 @@
           "refresh": "刷新申请列表",
           "noRequests": "暂无好友申请",
           "from": "来自 {name} 的申请",
-          "defaultMessage": "请求添加你为好友"
+          "defaultMessage": "请求添加你为好友",
+          "syncSuccess": "同步成功",
+          "syncFailed": "同步失败"
         },
         "status": {
           "accepted": "已同意",
