@@ -370,8 +370,16 @@
 
       "selectContact": {
         "title": "Select Contact",
-        "list": "Contacts",
-        "selected": "Selected Contacts ({count})"
+        "list": {
+          "title": "Contacts"
+        },
+        "actions": {
+          "select": "Select Contact"
+        },
+        "selected": {
+          "count": "Selected Contacts ({count})",
+          "clear": "Clear"
+        }
       },
 
       "bubble": {

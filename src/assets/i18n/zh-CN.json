@@ -370,8 +370,16 @@
 
       "selectContact": {
         "title": "选择联系人",
-        "list": "联系人列表",
-        "selected": "已选择的联系人 ({count})"
+        "list": {
+          "title": "联系人列表"
+        },
+        "actions": {
+          "select": "选择联系人"
+        },
+        "selected": {
+          "count": "已选择的联系人 ({count})",
+          "clear": "清空"
+        }
       },
 
       "bubble": {

@@ -6,14 +6,14 @@
           <!-- 搜索框（防抖） -->
           <el-input
             v-model="rawSearchText"
-            :placeholder="$t('actions.search')"
+            :placeholder="$t('common.actions.search')"
             clearable
             style="width: 200px; margin-bottom: 8px"
           >
           </el-input>
 
           <!-- 虚拟列表容器 -->
-          <div ref="boxRef" :aria-label="$t('selectContact.list')" class="vl-box" tabindex="0">
+          <div ref="boxRef" :aria-label="$t('components.selectContact.list.title')" class="vl-box" tabindex="0">
             <!-- 总高度占位 -->
             <div :style="{ height: totalHeight + 'px', position: 'relative' }">
               <!-- 根据选中状态动态生成类名 -->
@@ -37,7 +37,7 @@
                       <!-- 使用 Element Plus 的复选框（受控） -->
                       <!-- @click.stop阻止复选框点击事件冒泡 避免重复触发 -->
                       <el-checkbox
-                        :aria-label="$t('selectContact.selecte')"
+                        :aria-label="$t('components.selectContact.actions.select')"
                         :model-value="!!selectedContacts[row.friendId]"
                         @change="val => onCheckboxToggle(row, val)"
                         @click.stop
@@ -61,9 +61,9 @@
 
       <el-col :span="12">
         <div class="selected-list">
-          {{ $t("selectContact.selected", { count: selectItem.length }) }}
+          {{ $t("components.selectContact.selected.count", { count: selectItem.length }) }}
           <el-button type="danger" link :style="{ 'font-weight': 600, 'margin-left': '5px' }" @click="clearSelected">
-            {{ $t("selectContact.clearSelected") }}
+            {{ $t("components.selectContact.selected.clear") }}
           </el-button>
           <div ref="selectionRef" class="selection-item-container">
             <el-row :gutter="20">
@@ -88,8 +88,8 @@
             </el-row>
           </div>
           <div style="margin-top: 5px">
-            <el-button type="primary" @click="handleComplete">{{ $t("actions.complete") }}</el-button>
-            <el-button @click="handleCancel">{{ $t("actions.cancel") }}</el-button>
+            <el-button type="primary" @click="handleComplete">{{ $t("common.actions.complete") }}</el-button>
+            <el-button @click="handleCancel">{{ $t("common.actions.cancel") }}</el-button>
           </div>
         </div>
       </el-col>
@@ -99,9 +99,9 @@
 
 <script lang="ts" setup>
   import Avatar from "@/components/Avatar/index.vue";
-  import { useFriendsStore } from "@/store/modules/friends";
-  import { useDebounceFn } from "@vueuse/core";
-  import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useFriendsStore } from "@/store/modules/friends";
+import { useDebounceFn } from "@vueuse/core";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
   const emit = defineEmits<{
     (e: "handleAddGroupMember", payload: string[]): void;
