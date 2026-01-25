@@ -35,58 +35,58 @@
 
       <!-- 画笔 -->
       <button :ref="el => setBtnRef('pen', el)" :class="{ active: state.currentTool === 'pen' }"
-        :title="$t('screen.pen')" @click="handleToolClick('pen')">
+        :title="$t('components.screen.tools.pen')" @click="handleToolClick('pen')">
         <i class="iconfont icon-24"></i>
       </button>
 
       <div style="display: flex">
         <!-- 矩形 -->
         <button :ref="el => setBtnRef('rect', el)" :class="{ active: state.currentTool === 'rect' }"
-          :title="$t('screen.rect')" @click="handleToolClick('rect')">
+          :title="$t('components.screen.tools.rect')" @click="handleToolClick('rect')">
           <i class="iconfont icon-xingzhuang-juxing"></i>
         </button>
 
         <!-- 圆形 -->
         <button :ref="el => setBtnRef('circle', el)" :class="{ active: state.currentTool === 'circle' }"
-          :title="$t('screen.circle')" @click="handleToolClick('circle')">
+          :title="$t('components.screen.tools.circle')" @click="handleToolClick('circle')">
           <i class="iconfont icon-yuanxing"></i>
         </button>
 
         <!-- 箭头 -->
         <button :ref="el => setBtnRef('arrow', el)" :class="{ active: state.currentTool === 'arrow' }"
-          :title="$t('screen.arrow')" @click="handleToolClick('arrow')">
+          :title="$t('components.screen.tools.arrow')" @click="handleToolClick('arrow')">
           <i class="iconfont icon-righttop"></i>
         </button>
 
         <!-- 直线 -->
         <button :ref="el => setBtnRef('line', el)" :class="{ active: state.currentTool === 'line' }"
-          :title="$t('screen.line')" @click="handleToolClick('line')">
+          :title="$t('components.screen.tools.line')" @click="handleToolClick('line')">
           <i class="iconfont icon-jurassic_line"></i>
         </button>
 
         <!-- 文本 -->
         <button :ref="el => setBtnRef('text', el)" :class="{ active: state.currentTool === 'text' }"
-          :title="$t('screen.text')" @click="handleToolClick('text')">
+          :title="$t('components.screen.tools.text')" @click="handleToolClick('text')">
           <i class="iconfont icon-wenben1"></i>
         </button>
 
         <!-- 马赛克 -->
         <button :ref="el => setBtnRef('mosaic', el)" :class="{ active: state.currentTool === 'mosaic' }"
-          :title="$t('screen.mosaic')" @click="handleToolClick('mosaic')">
+          :title="$t('components.screen.tools.mosaic')" @click="handleToolClick('mosaic')">
           <i class="iconfont icon-masaike"></i>
         </button>
 
-        <button :title="$t('screen.undo')" @click="undo">
+        <button :title="$t('components.screen.actions.undo')" @click="undo">
           <i class="iconfont icon-chexiao"></i>
         </button>
-        <button :title="$t('screen.redo')" @click="redo">
+        <button :title="$t('components.screen.actions.redo')" @click="redo">
           <i class="iconfont icon-chexiao" style="transform: scaleX(-1)"></i>
         </button>
-        <button :title="$t('actions.cancel')" @click="cancelSelection">
-          <i class="iconfont icon-quxiao"></i>
+        <button :title="$t('common.actions.cancel')" @click="cancelSelection">
+          <i style="color: #ff4d4f;" class="iconfont icon-quxiao"></i>
         </button>
-        <button :title="$t('actions.complete')" @click="confirmSelection">
-          <i class="iconfont icon-wanchengqueding"></i>
+        <button :title="$t('common.actions.complete')" @click="confirmSelection">
+          <i  style="color: #67c23a;" class="iconfont icon-wanchengqueding"></i>
         </button>
       </div>
     </div>
@@ -94,12 +94,12 @@
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, onBeforeUnmount, reactive, ref, nextTick, watch } from "vue";
-  import { useScreenshot } from "./hooks/useScreenshot";
-  import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { listen } from "@tauri-apps/api/event";
-  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { useScreenshot } from "./hooks/useScreenshot";
 
   const { addShortcut } = useGlobalShortcut();
   const { refs, state, start, confirmSelection, cancelSelection, setTool, undo, redo, setPenOptions } = useScreenshot();
@@ -288,6 +288,7 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-right: 4px;
     color: #555;
     cursor: pointer;
     transition: all 0.2s;
@@ -303,7 +304,7 @@ canvas {
     }
 
     .iconfont {
-      font-size: 24px;
+      font-size: 22px;
     }
   }
 }

@@ -1,341 +1,327 @@
-import { defineStore } from "pinia";
-import { reactive } from "vue";
-import { ActionType, MessageType, MessageContentType, StoresEnum, Events } from "@/constants";
 import api from "@/api/index";
+import { ActionType, Events, MessageContentType, MessageType, StoresEnum } from "@/constants";
+import { FTSQueryBuilder, PageResult, QueryBuilder, Segmenter, useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
-import { QueryBuilder, FTSQueryBuilder, useMappers, PageResult, Segmenter } from "@/database";
-import { useUserStore } from "./user";
-import { useFriendsStore } from "./friends";
-import { ShowMainWindow } from "@/windows/main";
-import { storage } from "@/utils/Storage";
-import { useChatInput } from "@/hooks/useChatInput";
-import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
-import { IMessage, IMessagePart } from "@/models";
-import { useSettingStore } from "./setting";
 import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
-import { CreateScreenWindow } from "@/windows/screen";
-import { CreateRecordWindow } from "@/windows/record";
-import { highlightTextByTokens } from "@/utils/Strings";
-import { globalEventBus } from "@/hooks/useEventBus";
+import { useChatInput } from "@/hooks/useChatInput";
 import useCrypo from "@/hooks/useCrypo";
-import { ExceptionHandler, safeExecute } from "@/utils/ExceptionHandler";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { draftManager } from "@/hooks/useInputEditor";
+import { IMessage, IMessagePart } from "@/models";
+import { safeExecute } from "@/utils/ExceptionHandler";
+import { storage } from "@/utils/Storage";
+import { highlightTextByTokens } from "@/utils/Strings";
+import { ShowMainWindow } from "@/windows/main";
+import { CreateRecordWindow } from "@/windows/record";
+import { CreateScreenWindow } from "@/windows/screen";
+import { defineStore } from "pinia";
+import { computed, reactive } from "vue";
+import { useFriendsStore } from "./friends";
+import { useSettingStore } from "./setting";
+import { useUserStore } from "./user";
 
 // ==================== 类型定义 ====================
 
-type Member = { userId: string; name: string; avatar: string | null };
-type ChatOrId = Chats | string | number;
+interface Member { userId: string; name: string; avatar: string | null }
+interface ChatState {
+  chatList: Chats[];
+  messageList: IMessage[];
+  currentChat: Chats | null;
+  groupMembers: Record<string, Member>;
+  isShowDetail: boolean;
+  ignoreList: string[];
+  historyList: IMessage[];
+  groupInfo: Record<string, any>;
+  currentUrls: string[];
+  loading: boolean;
+  error: string | null;
+}
 
 // ==================== Store 定义 ====================
 
 export const useChatStore = defineStore(StoresEnum.CHAT, () => {
-  // ==================== 依赖初始化 ====================
-
+  // ==================== 依赖 ====================
   const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
   const userStore = useUserStore();
   const settingStore = useSettingStore();
   const log = useLogger();
-  const { buildMessagePreview, buildDraftMessagePreview, findChatIndex, removeMentionHighlightsFromHtml } = useChatInput();
+  const {
+    buildMessagePreview,
+    buildDraftMessagePreview,
+    findChatIndex,
+    removeMentionHighlightsFromHtml
+  } = useChatInput();
   const { addTask } = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   const { play } = useAudioPlayer();
   const { md5 } = useCrypo();
 
-  // 配置异常处理器
-  ExceptionHandler.setLogger(log);
-
-  // ==================== 响应式状态 ====================
-
-  const state = reactive({
-    chatList: [] as Chats[],
-    messageList: [] as IMessage[],
-    currentChat: null as Chats | null,
-    groupMembers: {} as Record<string, Member>,
+  // ==================== 状态 ====================
+  const state = reactive<ChatState>({
+    chatList: [],
+    messageList: [],
+    currentChat: null,
+    groupMembers: {},
     isShowDetail: false,
-    ignoreList: [] as string[],
-    historyList: [] as IMessage[],
-    groupInfo: {} as Record<string, any>,
-    currentUrls: [] as string[],
+    ignoreList: [],
+    historyList: [],
+    groupInfo: {},
+    currentUrls: [],
     loading: false,
-    error: null as string | null,
+    error: null
   });
 
   const page = reactive({ num: 1, size: 20, total: 0 });
 
+  // ==================== 核心工具 ====================
+  const ownerId = computed(() => userStore.userId || storage.get("userId"));
+  const isSingle = (chat: any) => chat?.chatType === MessageType.SINGLE_MESSAGE.code;
+  const mapper = (type: number) => type === MessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
+  const sendApi = (chat: any) => isSingle(chat) ? api.SendSingleMessage : api.SendGroupMessage;
+  const findIdx = (id: any) => findChatIndex(state.chatList, id);
+
   // ==================== 计算属性 ====================
-
-  /** 获取当前用户ID */
-  const getOwnerId = computed(() => userStore.userId || storage.get("userId"));
-  /** 获取当前会话名称 */
-  const getCurrentName = computed(() => state.currentChat?.name || "");
-  /** 获取当前会话类型 */
-  const getCurrentType = computed(() => state.currentChat?.chatType);
-  /** 获取当前会话ID */
-  const getChatById = computed(() => (id: string | number) => state.chatList.find(c => c.chatId === id) ?? null);
-  /** 获取总未读消息数 */
-  const getTotalUnread = computed(() => state.chatList.reduce((sum, c) => c.isMute === 0 ? sum + (c.unread || 0) : sum, 0));
-  /** 获取是否显示详情按钮 */
-  const getShowDetailBtn = computed(() => !!state.currentChat);
-  /** 获取是否显示详情 */
-  const getShowDetail = computed(() => state.isShowDetail);
-  /** 获取是否有消息的会话 */
-  const getHaveMessageChat = computed(() => state.chatList.filter(c => c.unread > 0));
-  /** 获取当前会话是否为群聊 */
-  const getChatIsGroup = computed(() => state.currentChat?.chatType === MessageType.GROUP_MESSAGE.code);
-  /** 获取剩余消息数量 */
-  const remainingQuantity = computed(() => Math.max(0, page.total - page.num * page.size));
-  /** 获取当前会话成员列表（排除自己） */
-  const getCurrentGroupMembersExcludeSelf = computed((): Member[] => {
-    const members = Array.isArray(state.groupMembers) ? state.groupMembers : Object.values(state.groupMembers || {});
-    const me = getOwnerId.value;
-
-    const result: Member[] = [];
-    for (const m of members) {
-      if (!m) continue;
-      let user: Member;
-      if (typeof m === "string" || typeof m === "number") {
-        user = { userId: String(m), name: String(m), avatar: null };
-      } else {
-        const id = m.userId ?? m.id ?? m.uid ?? m.user_id;
-        if (!id) continue;
-        user = {
-          userId: String(id),
-          name: m.name ?? m.nick ?? m.nickname ?? m.displayName ?? m.username ?? String(id),
-          avatar: m.avatar ?? m.avatarUrl ?? m.img ?? m.head ?? null
-        };
-      }
-      if (user.userId !== me) result.push(user);
-    }
-    return result;
-  });
-
-  // ==================== Ref 兼容层（保持 API 兼容） ====================
-
-  const chatList = computed({
-    get: () => state.chatList,
-    set: (v) => { state.chatList = v; }
-  });
-  const messageList = computed({
-    get: () => state.messageList,
-    set: (v) => { state.messageList = v; }
-  });
-  const currentChat = computed({
-    get: () => state.currentChat,
-    set: (v) => { state.currentChat = v; }
-  });
-  const currentChatGroupMemberMap = computed({
-    get: () => state.groupMembers,
-    set: (v) => { state.groupMembers = v; }
-  });
-  const isShowDetail = computed({
-    get: () => state.isShowDetail,
-    set: (v) => { state.isShowDetail = v; }
-  });
-  const ignoreAllList = computed({
-    get: () => state.ignoreList,
-    set: (v) => { state.ignoreList = v; }
-  });
-  const chatDraftMap = computed(() => draftManager.getAll());
-  const historyMessageList = computed({
-    get: () => state.historyList,
-    set: (v) => { state.historyList = v; }
-  });
-  const groupInfo = computed({
-    get: () => state.groupInfo,
-    set: (v) => { state.groupInfo = v; }
-  });
-  const currentUrls = computed({
-    get: () => state.currentUrls,
-    set: (v) => { state.currentUrls = v; }
-  });
-  const loading = computed({
-    get: () => state.loading,
-    set: (v) => { state.loading = v; }
-  });
-  const error = computed({
-    get: () => state.error,
-    set: (v) => { state.error = v; }
-  });
-
-
-  // ==================== 会话操作 ====================
-
-  /** 初始化会话列表 */
-  const handleInitChat = async () => {
-    if (state.chatList.length > 0) return;
-
-    setLoading(true);
-    const data = await safeExecute(() => chatsMapper.selectList(), { operation: "initChat" });
-    if (Array.isArray(data) && data.length) state.chatList = data;
-    setLoading(false);
+  const getters = {
+    currentName: computed(() => state.currentChat?.name || ""),
+    currentType: computed(() => state.currentChat?.chatType),
+    totalUnread: computed(() => state.chatList.reduce((s, c) => c.isMute === 0 ? s + (c.unread || 0) : s, 0)),
+    isGroup: computed(() => state.currentChat?.chatType === MessageType.GROUP_MESSAGE.code),
+    remaining: computed(() => Math.max(0, page.total - page.num * page.size)),
+    unreadChats: computed(() => state.chatList.filter(c => c.unread > 0)),
+    membersExcludeSelf: computed((): Member[] => {
+      const members = Object.values(state.groupMembers || {});
+      return members.filter(m => m?.userId !== ownerId.value).map(m => ({
+        userId: String(m.userId ?? m),
+        name: m.name ?? String(m.userId),
+        avatar: m.avatar ?? null
+      }));
+    }),
   };
 
-  /** 切换当前会话 */
-  const handleChangeCurrentChat = async (chatOrId: ChatOrId): Promise<void> => {
-    // 保存草稿
-    saveDraftAsPreview();
+  // ==================== 内部工具 ====================
+  const exec = <T>(fn: () => Promise<T>, opts?: { op?: string; fallback?: T }) =>
+    safeExecute(fn, { operation: opts?.op, fallback: opts?.fallback, silent: !opts?.op });
 
-    if (!chatOrId) {
-      state.currentChat = null;
-      return;
+  const sortList = () => {
+    state.chatList.sort((a, b) => (b.isTop || 0) - (a.isTop || 0) || (b.messageTime || 0) - (a.messageTime || 0));
+  };
+
+  const upsert = (chat: Partial<Chats> & { chatId?: any }): number => {
+    if (!chat?.chatId) return -1;
+    const idx = findIdx(chat.chatId);
+    if (idx !== -1) {
+      Object.assign(state.chatList[idx], chat);
+      return idx;
     }
+    state.chatList.push(chat as Chats);
+    return state.chatList.length - 1;
+  };
+
+  const persist = (chat: Partial<Chats>) => {
+    if (!chat?.chatId) return;
+    addTask(() => {
+      chatsMapper.insertOrUpdate(chat);
+      chatsMapper.insertOrUpdateFTS(chat);
+    });
+  };
+
+  const emitChange = () => {
+    if (state.currentChat) {
+      globalEventBus.emit(Events.CHAT_CHANGED, {
+        chatId: state.currentChat.chatId,
+        name: state.currentChat.name,
+        notification: (state.currentChat as any)?.notification
+      });
+    }
+  };
+
+  const parseBody = (raw: unknown): Record<string, any> => {
+    if (raw == null) return {};
+    if (typeof raw === "object") return Array.isArray(raw) ? { parts: raw } : raw as Record<string, any>;
+    if (typeof raw !== "string") return { text: String(raw) };
+    try {
+      const parsed = JSON.parse(raw.trim());
+      return typeof parsed === "object" && parsed ? (Array.isArray(parsed) ? { parts: parsed } : parsed) : { text: String(parsed) };
+    } catch { return { text: raw }; }
+  };
+
+  const stringifyBody = (raw: unknown): string => {
+    if (raw == null) return "{}";
+    if (typeof raw === "string") {
+      try { JSON.parse(raw); return raw; } catch { return JSON.stringify({ text: raw }); }
+    }
+    return JSON.stringify(raw);
+  };
+
+  const normalizeMsg = (msg: any, chat: any) => {
+    const body = parseBody(msg?.messageBody);
+    const fromId = msg?.fromId ?? msg?.userId;
+    const isOwner = String(ownerId.value) === String(fromId);
+    if (Number(msg?.messageContentType) === MessageContentType.TIP.code) return { ...msg, messageBody: body };
+
+    const member = !isOwner && fromId ? state.groupMembers?.[String(fromId)] : undefined;
+    const user = userStore.userInfo ?? {};
+    return {
+      ...msg,
+      messageBody: body,
+      name: isOwner ? user.name ?? chat?.name : member?.name ?? chat?.name ?? "",
+      avatar: isOwner ? user.avatar ?? chat?.avatar : member?.avatar ?? chat?.avatar ?? "",
+      isOwner
+    };
+  };
+
+  /**
+   * 构建消息预览（实时计算）
+   */
+  const buildPreview = (msg?: IMessage) => {
+    if (!msg) return null;
+    try {
+      return buildMessagePreview(msg, { currentUserId: ownerId.value, highlightClass: "mention-highlight", asHtml: true });
+    } catch { return null; }
+  };
+
+  const toRecord = (msg: any) => {
+    const r = { ...msg, ownerId: ownerId.value, messageBody: stringifyBody(msg?.messageBody) };
+    delete r.messageTempId;
+    return r;
+  };
+
+  const buildPayload = (content: any, chat: any, contentType: number, meta: any = {}) => {
+    const payload: any = {
+      fromId: ownerId.value,
+      messageBody: content,
+      messageTempId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      messageTime: Date.now(),
+      messageContentType: contentType,
+      messageType: chat?.chatType,
+      [isSingle(chat) ? "toId" : "groupId"]: chat?.toId || ""
+    };
+    if (meta.mentionedUserIds?.length) payload.mentionedUserIds = [...new Set(meta.mentionedUserIds)];
+    if (meta.mentionAll) payload.mentionAll = true;
+    if (meta.replyMessage) payload.replyMessage = meta.replyMessage;
+    return payload;
+  };
+
+  // ==================== 会话操作 ====================
+  const initChat = async () => {
+    if (state.chatList.length) return;
+    state.loading = true;
+    const data = await exec(() => chatsMapper.selectList(), { op: "initChat" });
+    if (Array.isArray(data) && data.length) state.chatList = data;
+    state.loading = false;
+  };
+
+  const changeChat = async (chatOrId: Chats | string | number | null) => {
+    saveDraft();
+    if (!chatOrId) { state.currentChat = null; return; }
 
     const id = typeof chatOrId === "object" ? chatOrId.chatId : chatOrId;
-    let idx = findChat(id);
+    let idx = findIdx(id);
     let chat: Chats | null = null;
 
     if (idx === -1) {
       if (typeof chatOrId === "object") {
-        idx = upsertChat(chatOrId);
+        idx = upsert(chatOrId);
         chat = state.chatList[idx];
       } else {
         state.currentChat = null;
-        setError("会话不存在");
+        state.error = "会话不存在";
         return;
       }
     } else {
       chat = state.chatList[idx];
-      const dbChat = await safeExecute(() => chatsMapper.selectById(chat!.chatId), { silent: true });
-      if (dbChat) {
-        chat.message = removeMentionHighlightsFromHtml(dbChat.message, { returnPlainText: true });
-      }
-      handleSortChatList();
+      const dbChat = await exec(() => chatsMapper.selectById(chat!.chatId));
+      if (dbChat) chat.message = removeMentionHighlightsFromHtml(dbChat.message, { returnPlainText: true });
+      sortList();
     }
 
-    handleResetMessage();
+    resetMessages();
     state.currentChat = chat;
 
-    // 群聊加载成员
-    if (getChatIsGroup.value && chat) {
-      const res: any = await safeExecute(() => api.GetGroupMember({ groupId: chat!.toId }), { operation: "getGroupMembers" });
+    if (getters.isGroup.value && chat) {
+      const res: any = await exec(() => api.GetGroupMember({ groupId: chat!.toId }), { op: "getGroupMembers" });
       state.groupMembers = res ?? {};
     }
-
-    // 触发事件
-    if (state.currentChat) {
-      globalEventBus.emit(Events.CHAT_CHANGED, {
-        chatId: state.currentChat.chatId,
-        name: state.currentChat.name,
-        notification: (state.currentChat as any)?.notification
-      });
-    }
+    emitChange();
   };
 
-  /** 通过目标创建/切换会话 */
-  const handleChangeCurrentChatByTarget = async (target: Record<string, any>, chatType: number) => {
-    const fromId = getOwnerId.value;
+  const changeChatByTarget = async (target: Record<string, any>, chatType: number) => {
     const targetId = target.friendId ?? target.groupId;
     const existIdx = state.chatList.findIndex(c => c.toId === targetId && c.chatType === chatType);
 
     if (existIdx !== -1) {
-      await handleUpdateReadStatus(state.chatList[existIdx], 0);
+      await updateRead(state.chatList[existIdx], 0);
       state.currentChat = state.chatList[existIdx];
     } else {
-      setLoading(true);
-      const res = await safeExecute(
-        () => api.CreateChat({ fromId, toId: targetId, chatType }),
-        { operation: "createChat" }
-      ) as Chats;
-
+      state.loading = true;
+      const res = await exec(() => api.CreateChat({ fromId: ownerId.value, toId: targetId, chatType }), { op: "createChat" }) as Chats;
       if (res) {
-        handleUpdateChatWithMessage(res);
-        upsertChat(res);
-        handleSortChatList();
+        updateWithMsg(res);
+        upsert(res);
+        sortList();
         state.currentChat = res;
       }
-      setLoading(false);
+      state.loading = false;
     }
-
-    if (state.currentChat) {
-      globalEventBus.emit(Events.CHAT_CHANGED, {
-        chatId: state.currentChat.chatId,
-        name: state.currentChat.name,
-        notification: (state.currentChat as any)?.notification
-      });
-    }
+    emitChange();
   };
 
-  /** 更新会话未读状态 */
-  const handleUpdateReadStatus = async (chat: Chats, unread = 0): Promise<void> => {
-    if (!chat) return;
-    const idx = findChat(chat.chatId);
-    if (idx === -1) return setError("会话未找到");
-
+  const updateRead = async (chat: Chats, unread = 0) => {
+    const idx = findIdx(chat?.chatId);
+    if (idx === -1) return;
     state.chatList[idx].unread = unread;
     addTask(() => chatsMapper.updateById(chat.chatId, { unread } as Chats));
   };
 
-  /** 创建或更新会话 */
-  const handleCreateOrUpdateChat = async (message: IMessage | undefined, id: string | number) => {
-    const ownerId = getOwnerId.value;
-    const qb = new QueryBuilder<Chats>().select().and(q => q.eq("ownerId", ownerId).eq("toId", id));
+  const createOrUpdate = async (message: IMessage | undefined, id: string | number) => {
+    const qb = new QueryBuilder<Chats>().select().and(q => q.eq("ownerId", ownerId.value).eq("toId", id));
+    state.loading = true;
 
-    setLoading(true);
+    const chats = await exec(() => chatsMapper.selectList(qb), { op: "queryChat" }) as Chats[] | null;
+    let chat: Chats | null = chats?.[0] ?? null;
 
-    const chats = await safeExecute(() => chatsMapper.selectList(qb), { operation: "queryChat" }) as Chats[] | null;
-    let chat: Chats | null = null;
-
-    if (chats?.length) {
-      chat = chats[0];
-
-      if (message?.fromId !== getOwnerId.value) {
-        triggerNotification(chat, message);
-      }
-
-      const idx = findChat(chat.chatId);
-      if (idx !== -1) {
-        handleUpdateChatWithMessage(state.chatList[idx], message);
-      } else {
-        handleUpdateChatWithMessage(chat, message, true);
-        upsertChat(chat);
-      }
+    if (chat) {
+      if (message?.fromId !== ownerId.value) triggerNotify(chat, message);
+      const idx = findIdx(chat.chatId);
+      updateWithMsg(idx !== -1 ? state.chatList[idx] : chat, message, idx === -1);
+      if (idx === -1) upsert(chat);
     } else {
-      chat = await safeExecute(() => api.GetChat({ ownerId, toId: id }), { operation: "fetchChat" }) as Chats;
-      if (chat) {
-        handleUpdateChatWithMessage(chat, message, true);
-        upsertChat(chat);
-      }
+      chat = await exec(() => api.GetChat({ ownerId: ownerId.value, toId: id }), { op: "fetchChat" }) as Chats;
+      if (chat) { updateWithMsg(chat, message, true); upsert(chat); }
     }
 
-    if (chat) handleSortChatList();
-    setLoading(false);
+    if (chat) sortList();
+    state.loading = false;
   };
 
-  /** 根据消息更新会话 */
-  const handleUpdateChatWithMessage = (chat: Chats, message?: IMessage, isNew = false) => {
+  const updateWithMsg = (chat: Chats, message?: IMessage, isNew = false) => {
     if (!chat) return;
-
     const now = Date.now();
+
     if (!message) {
       Object.assign(chat, { message: "", messageTime: now, sequence: now, unread: 0 });
-      persistChat({ ...chat, message: "" });
+      persist({ ...chat, message: "" });
       return;
     }
 
-    const preview = buildPreview(message, true);
-    if (!preview) {
-      Object.assign(chat, { message: "", messageTime: message.messageTime || now, sequence: message.sequence || now });
-      persistChat({ ...chat, message: "" });
-      return;
-    }
-
+    // 构建预览
+    const preview = buildPreview(message);
     const isCurrent = String(chat.toId) === String(state.currentChat?.toId);
+
     if (!isCurrent && !isNew) {
       chat.unread = (chat.unread || 0) + 1;
-      chat.message = preview.html;
+      chat.message = preview?.html || "";
     } else {
-      chat.message = preview.plainText;
+      chat.message = preview?.plainText || "";
     }
 
     chat.messageTime = message.messageTime || now;
     chat.sequence = message.sequence || now;
-    persistChat({ ...chat, message: preview.originalText || preview.plainText });
+    persist({ ...chat, message: preview?.originalText || preview?.plainText || "" });
   };
 
-  /** 删除会话 */
-  const handleDeleteChat = async (chat: Chats) => {
-    if (!chat) return;
-
-    const idx = findChat(chat.chatId);
+  const deleteChat = async (chat: Chats) => {
+    const idx = findIdx(chat?.chatId);
     if (idx !== -1) {
       addTask(async () => {
         await chatsMapper.deleteById(chat.chatId);
@@ -344,211 +330,143 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       state.chatList.splice(idx, 1);
     }
 
-    if (state.currentChat?.chatId === chat.chatId) {
+    if (state.currentChat?.chatId === chat?.chatId) {
       state.currentChat = null;
-      handleResetMessage();
+      resetMessages();
       state.groupMembers = {};
     }
-
-    draftManager.clear(chat.chatId);
+    draftManager.clear(chat?.chatId);
   };
 
-  /** 置顶会话 */
-  const handlePinChat = async (chat: Chats) => {
-    if (!chat) return;
-    const idx = findChat(chat.chatId);
+  const togglePin = async (chat: Chats) => {
+    const idx = findIdx(chat?.chatId);
     if (idx === -1) return;
-
-    const newTop = state.chatList[idx].isTop === 1 ? 0 : 1;
-    state.chatList[idx].isTop = newTop;
-    await chatsMapper.updateById(chat.chatId, { isTop: newTop } as Chats);
-    handleSortChatList();
+    const isTop = state.chatList[idx].isTop === 1 ? 0 : 1;
+    state.chatList[idx].isTop = isTop;
+    await chatsMapper.updateById(chat.chatId, { isTop } as Chats);
+    sortList();
   };
 
-  /** 免打扰 */
-  const handleMuteChat = async (chat: Chats) => {
-    if (!chat) return;
-    const idx = findChat(chat.chatId);
+  const toggleMute = async (chat: Chats) => {
+    const idx = findIdx(chat?.chatId);
     if (idx === -1) return;
-
-    const newMute = state.chatList[idx].isMute === 1 ? 0 : 1;
-    state.chatList[idx].isMute = newMute;
-    await chatsMapper.updateById(chat.chatId, { isMute: newMute } as Chats);
-    handleSortChatList();
+    const isMute = state.chatList[idx].isMute === 1 ? 0 : 1;
+    state.chatList[idx].isMute = isMute;
+    await chatsMapper.updateById(chat.chatId, { isMute } as Chats);
+    sortList();
   };
 
-  /** 排序会话列表 */
-  const handleSortChatList = (list?: Chats[]) => {
-    const target = list || state.chatList;
-    state.chatList = [...target].sort((a, b) => {
-      const topDiff = (b.isTop || 0) - (a.isTop || 0);
-      return topDiff !== 0 ? topDiff : (b.messageTime || 0) - (a.messageTime || 0);
-    });
-  };
-
-  /** 忽略所有未读 */
-  const handleIgnoreAll = () => {
-    getHaveMessageChat.value.forEach(item => {
-      const id = String(item.chatId);
+  const ignoreAll = () => {
+    getters.unreadChats.value.forEach(c => {
+      const id = String(c.chatId);
       if (!state.ignoreList.includes(id)) state.ignoreList.push(id);
     });
   };
 
-  /** 跳转到会话 */
-  const handleJumpToChat = async () => {
-    if (state.currentChat) {
-      await safeExecute(ShowMainWindow, { silent: true });
-    }
-  };
-
-  /** 获取会话 */
-  const handleGetChat = (chatId: any): Chats | undefined => state.chatList.find(c => c.chatId === chatId);
-
-  /** 切换详情面板 */
-  const handleChatDetail = () => { state.isShowDetail = !state.isShowDetail; };
-
-  /** 删除消息敏感字段 */
-  const handleDeleteMessage = (message: any) => {
-    if (message?.messageContentType) delete message.messageContentType;
-  };
+  const jumpToChat = () => state.currentChat && exec(ShowMainWindow);
+  const getChat = (id: any) => state.chatList.find(c => c.chatId === id);
+  const toggleDetail = () => { state.isShowDetail = !state.isShowDetail; };
 
   // ==================== 消息操作 ====================
-
-  /** 重置消息状态 */
-  const handleResetMessage = () => {
+  const resetMessages = () => {
     state.messageList = [];
     state.historyList = [];
     state.currentUrls = [];
     state.groupInfo = {};
-    page.num = 1;
-    page.total = 0;
+    Object.assign(page, { num: 1, total: 0 });
   };
 
-  /** 发送消息 */
-  const handleSendMessage = async (parts: IMessagePart[]) => {
+  const sendMessage = async (parts: IMessagePart[]) => {
     if (!parts?.length || !state.currentChat) return;
-
     const chat = state.currentChat;
-    const fileMsgs = parts.filter(m => ["image", "video", "file"].includes(m.type));
-    const textMsgs = parts.filter(m => m.type === "text");
 
-    // 并行发送文件
-    await Promise.all(fileMsgs.map(async m => {
-      if (!m.file) return;
-      const contentType = m.type === "image" ? MessageContentType.IMAGE.code
-        : m.type === "video" ? MessageContentType.VIDEO.code
-          : MessageContentType.FILE.code;
-      await safeExecute(() => uploadAndSendFile(m.file!, chat, contentType), { operation: "sendFile" });
-    }));
-
-    // 并行发送文本
-    await Promise.all(textMsgs.map(async m => {
-      const payload = buildPayload({ text: m.content }, chat, MessageContentType.TEXT.code, {
-        mentionedUserIds: m.mentionedUserIds || [],
-        mentionAll: m.mentionAll,
-        replyMessage: m.replyMessage
-      });
-      await safeExecute(() => sendSingle(payload, chat, getSendApi(chat)), { operation: "sendText" });
-    }));
+    const tasks = parts.map(async m => {
+      if (["image", "video", "file"].includes(m.type) && m.file) {
+        const contentType = m.type === "image" ? MessageContentType.IMAGE.code
+          : m.type === "video" ? MessageContentType.VIDEO.code : MessageContentType.FILE.code;
+        await exec(() => uploadAndSend(m.file!, chat, contentType), { op: "sendFile" });
+      } else if (m.type === "text") {
+        const payload = buildPayload({ text: m.content }, chat, MessageContentType.TEXT.code, {
+          mentionedUserIds: m.mentionedUserIds || [],
+          mentionAll: m.mentionAll,
+          replyMessage: m.replyMessage
+        });
+        await exec(() => send(payload, chat), { op: "sendText" });
+      }
+    });
+    await Promise.all(tasks);
   };
 
-  /** 发送单条消息 */
-  const sendSingle = async (formData: any, chat: any, sendFn: Function) => {
-    const res = await sendFn(formData);
-    handleCreateMessage(chat.toId, res, chat.chatType, true);
+  const send = async (formData: any, chat: any) => {
+    const res = await sendApi(chat)(formData);
+    createMessage(chat.toId, res, chat.chatType, true);
     return res;
   };
 
-  /** 上传并发送文件 */
-  const uploadAndSendFile = async (file: File, chat: any, contentType: number) => {
+  const uploadAndSend = async (file: File, chat: any, contentType: number) => {
     const md5Str = await md5(file);
     const formData = new FormData();
     formData.append("identifier", md5Str.toString());
     formData.append("file", file);
 
     const uploadRes: any = contentType === MessageContentType.IMAGE.code
-      ? await api.uploadImage(formData)
-      : await api.UploadFile(formData);
+      ? await api.uploadImage(formData) : await api.UploadFile(formData);
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     const payload = buildPayload({ ...uploadRes, size: file.size, suffix: ext }, chat, contentType);
-    await sendSingle(payload, chat, getSendApi(chat));
-
+    await send(payload, chat);
     return uploadRes;
   };
 
-  /** 加载更多消息 */
-  const handleMoreMessage = (): void => {
+  const loadMore = () => {
     if (!state.currentChat) return;
     page.num++;
-    handleGetMessageList(state.currentChat);
+    getMessages(state.currentChat);
   };
 
-  /** 获取消息列表 */
-  const handleGetMessageList = async (chat: any) => {
+  const getMessages = async (chat: any) => {
     if (!chat) return;
-    if (page.total === 0) await handleGetMessageCount();
+    if (!page.total) await getMessageCount();
 
-    const ownId = getOwnerId.value;
     const offset = (page.num - 1) * page.size;
-    const mapper = getMapper(chat.chatType);
-
-    const messages = await safeExecute(
-      () => mapper.findMessage(ownId, chat.toId, offset, page.size),
-      { operation: "getMessages", fallback: [] }
-    ) || [];
-
-    const normalized = messages.map((msg: any) => normalizeMessage(msg, ownId, userStore.userInfo, chat));
+    const msgs = await exec(() => mapper(chat.chatType).findMessage(ownerId.value, chat.toId, offset, page.size), { fallback: [] }) || [];
+    const normalized = msgs.map((m: any) => normalizeMsg(m, chat));
     state.messageList = [...normalized, ...state.messageList];
   };
 
-  /** 获取消息总数 */
-  const handleGetMessageCount = async () => {
+  const getMessageCount = async () => {
     const chat = state.currentChat;
     if (!chat) return;
-
-    const mapper = getMapper(chat.chatType);
-    page.total = await safeExecute(
-      () => mapper.findMessageCount(chat.ownerId || chat.toId, chat.toId),
-      { fallback: 0 }
-    ) || 0;
+    page.total = await exec(() => mapper(chat.chatType).findMessageCount(chat.ownerId || chat.toId, chat.toId), { fallback: 0 }) || 0;
   };
 
-  /** 创建消息 */
-  const handleCreateMessage = (id: string | number, message: any, messageType: number, isSender = false) => {
+  const createMessage = (id: string | number, message: any, messageType: number, isSender = false) => {
     if (id === state.currentChat?.toId) {
-      const normalized = normalizeMessage(message, getOwnerId.value, userStore.userInfo, state.currentChat);
-      state.messageList.push(normalized);
-
-      if (isSender) handleCreateOrUpdateChat(message, state.currentChat.toId);
+      state.messageList.push(normalizeMsg(message, state.currentChat));
+      if (isSender) createOrUpdate(message, state.currentChat.toId);
     }
-
-    handleInsertToDatabase(message, messageType);
+    insertToDb(message, messageType);
   };
 
-  /** 插入消息到数据库 */
-  const handleInsertToDatabase = async (message: any, messageType: number) => {
-    const record = toDbRecord(message);
-    const mapper = getMapper(messageType);
-
+  const insertToDb = (message: any, messageType: number) => {
+    const record = toRecord(message);
+    const m = mapper(messageType);
     addTask(() => {
-      mapper.insert(record);
+      m.insert(record);
       const text = message.messageBody?.text;
-      if (text) mapper.insertOrUpdateFTS({ ...record, messageBody: text });
+      if (text) m.insertOrUpdateFTS({ ...record, messageBody: text });
     });
   };
 
-  /** 发送撤回消息 */
-  const handleSendRecallMessage = async (message: any, opts: { reason?: string; recallTime?: number } = {}) => {
+  const recallMessage = async (message: any, opts: { reason?: string; recallTime?: number } = {}) => {
     if (!message?.messageId) return { ok: false, msg: "invalid message" };
 
-    const ownerId = getOwnerId.value;
     const payload = {
       actionType: 1,
-      operatorId: ownerId,
+      operatorId: ownerId.value,
       recallTime: opts.recallTime ?? Date.now(),
       reason: opts.reason ?? "已撤回",
-      fromId: ownerId,
+      fromId: ownerId.value,
       messageTempId: message.messageTempId ?? "",
       messageId: String(message.messageId),
       messageContentType: Number(message.messageContentType ?? MessageContentType.TEXT.code),
@@ -557,23 +475,20 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       messageBody: {}
     };
 
-    const result = await safeExecute(() => api.RecallMessage(payload), { operation: "recallMessage" });
+    const result = await exec(() => api.RecallMessage(payload), { op: "recallMessage" });
     if (result !== undefined) {
-      await handleReCallMessage(payload);
+      await handleRecall(payload);
       return { ok: true };
     }
     return { ok: false, msg: "撤回失败" };
   };
 
-  /** 处理撤回消息 */
-  const handleReCallMessage = async (data: any) => {
-    if (!data?.messageId) return setError("invalid recall payload");
-
+  const handleRecall = async (data: any) => {
+    if (!data?.messageId) return;
     const messageId = String(data.messageId);
-    const messageType = Number(data.messageType ?? MessageType.SINGLE_MESSAGE.code);
-    const mapper = getMapper(messageType);
+    const m = mapper(Number(data.messageType ?? MessageType.SINGLE_MESSAGE.code));
 
-    const recallPayload = {
+    const recallBody = {
       _recalled: true,
       operatorId: data.operatorId ?? data.fromId ?? "",
       recallTime: data.recallTime ?? Date.now(),
@@ -581,56 +496,37 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       text: "已撤回一条消息"
     };
 
-    // 更新内存
-    const idx = state.messageList.findIndex((m: any) => String(m.messageId) === messageId);
+    const idx = state.messageList.findIndex((msg: any) => String(msg.messageId) === messageId);
     if (idx !== -1) {
       state.messageList[idx] = {
         ...state.messageList[idx],
-        messageBody: recallPayload,
+        messageBody: recallBody,
         messageContentType: MessageContentType.TIP?.code ?? 99
       };
     }
 
-    // 更新数据库
     addTask(async () => {
-      await mapper.updateById(messageId, {
-        messageBody: JSON.stringify(recallPayload),
-        messageContentType: MessageContentType.TIP?.code ?? 99
-      } as any);
-      await mapper.deleteFTSById(messageId);
+      await m.updateById(messageId, { messageBody: JSON.stringify(recallBody), messageContentType: MessageContentType.TIP?.code ?? 99 } as any);
+      await m.deleteFTSById(messageId);
     });
   };
 
-  /** 搜索消息 URL */
-  const handleSearchMessageUrl = async (msg: any): Promise<void> => {
-    const mapper = getMapper(msg.messageType);
-    state.currentUrls = await safeExecute(
-      () => mapper.findMessageUrl(msg.fromId || msg.groupId, msg.toId),
-      { fallback: [] }
-    ) || [];
+  const searchUrls = async (msg: any) => {
+    state.currentUrls = await exec(() => mapper(msg.messageType).findMessageUrl(msg.fromId || msg.groupId, msg.toId), { fallback: [] }) || [];
   };
 
-  /** 获取历史消息 */
-  const handleHistoryMessage = async (
-    pageInfo: PageResult<any>,
-    searchStr?: string | string[]
-  ): Promise<{ list: any[]; total: number }> => {
+  const searchHistory = async (pageInfo: PageResult<any>, searchStr?: string | string[]): Promise<{ list: any[]; total: number }> => {
     const chat = state.currentChat;
     if (!chat?.toId) return { list: [], total: 0 };
 
-    const ownId = getOwnerId.value;
-    const toId = chat.toId;
-    const isSingle = isSingleChat(chat);
-    const mapper = isSingle ? singleMessageMapper : groupMessageMapper;
+    const single = isSingle(chat);
+    const m = single ? singleMessageMapper : groupMessageMapper;
+    const params: (string | number)[] = single ? [ownerId.value, chat.toId, chat.toId, ownerId.value] : [ownerId.value, chat.toId];
 
     const qb = new FTSQueryBuilder<any>();
-    const params: (string | number)[] = isSingle ? [ownId, toId, toId, ownId] : [ownId, toId];
-    qb.raw(
-      isSingle ? "((fromId = ? AND toId = ?) OR (fromId = ? AND toId = ?))" : "ownerId = ? AND groupId = ?",
-      ...params
-    ).orderByAsc("sequence");
+    qb.raw(single ? "((fromId = ? AND toId = ?) OR (fromId = ? AND toId = ?))" : "ownerId = ? AND groupId = ?", ...params).orderByAsc("sequence");
 
-    // 分词处理
+    // 分词
     let tokens: string[] = [];
     if (Array.isArray(searchStr)) {
       tokens = searchStr.map(String);
@@ -638,171 +534,118 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       if (searchStr.includes(" ")) {
         tokens = searchStr.trim().split(/\s+/);
       } else {
-        const segmented = await safeExecute(() => Segmenter.segment(searchStr), { silent: true });
+        const segmented = await exec(() => Segmenter.segment(searchStr));
         tokens = segmented || (/[\p{Script=Han}]/u.test(searchStr) ? Array.from(searchStr) : searchStr.split(/\s+/).filter(Boolean));
       }
     }
-
     tokens = tokens.map(t => t.trim().replace(/["']/g, "")).filter(Boolean);
 
     if (tokens.length) {
-      qb.setMatchColumn("messageBody")
-        .matchKeyword(tokens.join(" "), "and")
+      qb.setMatchColumn("messageBody").matchKeyword(tokens.join(" "), "and")
         .addSnippetSelect("excerpt", "snippet({table}, 0, '<b>', '</b>', '...', 10)")
         .setRankingExpr("bm25({table})", "DESC");
     } else {
       qb.isNotNull("messageBody");
     }
 
-    const ftsPage: any = await safeExecute(
-      () => (mapper as any).searchFTS5Page(qb, pageInfo.page, pageInfo.size),
-      { fallback: { records: [], total: 0 } }
-    ) || { records: [], total: 0 };
-
+    const ftsPage: any = await exec(() => (m as any).searchFTS5Page(qb, pageInfo.page, pageInfo.size), { fallback: { records: [], total: 0 } }) || { records: [], total: 0 };
     const ids = ftsPage.records?.map((i: any) => i.messageId).filter(Boolean) ?? [];
     if (!ids.length) return { list: [], total: ftsPage.total ?? 0 };
 
-    const records: any[] = await safeExecute(
-      () => (mapper as any).selectByIds(ids, "messageTime", "desc"),
-      { fallback: [] }
-    ) || [];
-
+    const records: any[] = await exec(() => (m as any).selectByIds(ids, "messageTime", "desc"), { fallback: [] }) || [];
     if (!records.length) return { list: [], total: ftsPage.total ?? 0 };
 
-    const memberMap = new Map(getCurrentGroupMembersExcludeSelf.value.map(m => [m.userId, m]));
-    const userInfo = userStore.userInfo ?? {};
+    const memberMap = new Map(getters.membersExcludeSelf.value.map(mb => [mb.userId, mb]));
+    const user = userStore.userInfo ?? {};
 
-    const formatted = records.map(item => {
+    const list = records.map(item => {
       if (!item) return null;
+      let body = typeof item.messageBody === "string"
+        ? exec(() => JSON.parse(item.messageBody), { fallback: { text: String(item.messageBody ?? "") } })
+        : item.messageBody;
 
-      let body: any;
-      if (typeof item.messageBody === "string") {
-        const parsed = safeExecute(() => JSON.parse(item.messageBody), { silent: true, fallback: { text: String(item.messageBody ?? "") } });
-        body = parsed;
-      } else {
-        body = item.messageBody;
-      }
-
-      if (tokens.length && body?.text) {
-        body.text = highlightTextByTokens(body.text, tokens);
-      }
-
-      const isOwner = ownId === item.fromId;
-      const member = isSingle ? null : memberMap.get(item.fromId);
+      if (tokens.length && body?.text) body.text = highlightTextByTokens(body.text, tokens);
+      const isOwner = ownerId.value === item.fromId;
+      const member = single ? null : memberMap.get(item.fromId);
 
       return {
         ...item,
         messageBody: body,
-        name: isOwner ? userInfo.name : isSingle ? chat.name : member?.name ?? "未知",
-        avatar: isOwner ? userInfo.avatar : isSingle ? chat.avatar : member?.avatar ?? "",
+        name: isOwner ? user.name : single ? chat.name : member?.name ?? "未知",
+        avatar: isOwner ? user.avatar : single ? chat.avatar : member?.avatar ?? "",
         isOwner
       };
     }).filter(Boolean);
 
-    return { list: formatted, total: ftsPage.total ?? 0 };
+    return { list, total: ftsPage.total ?? 0 };
   };
 
-  /** 更新消息 */
-  const handleUpdateMessage = (message: any, update: any) => {
-    const mapper = getMapper(message.messageType);
-    mapper.updateById(message.messageId, update);
-
+  const updateMessage = (message: any, update: any) => {
+    mapper(message.messageType).updateById(message.messageId, update);
     const idx = state.messageList.findIndex(m => m.messageId === message.messageId);
     if (idx !== -1) state.messageList[idx] = { ...state.messageList[idx], ...update };
   };
 
-  /** 清空消息 */
-  const handleClearMessage = async (chat: Chats) => {
-    const ownerId = getOwnerId.value;
-
-    if (!isSingleChat(chat)) {
-      await groupMessageMapper.clearChatHistory(String(chat.toId), String(ownerId));
+  const clearMessages = async (chat: Chats) => {
+    if (!isSingle(chat)) {
+      await groupMessageMapper.clearChatHistory(String(chat.toId), String(ownerId.value));
     } else {
-      await singleMessageMapper.deleteByFormIdAndToId(String(ownerId), String(chat.toId));
-      await singleMessageMapper.deleteByFormIdAndToIdVirtual(String(ownerId), String(chat.toId));
+      await singleMessageMapper.deleteByFormIdAndToId(String(ownerId.value), String(chat.toId));
+      await singleMessageMapper.deleteByFormIdAndToIdVirtual(String(ownerId.value), String(chat.toId));
     }
-
-    handleResetMessage();
-    await handleGetMessageList(chat);
+    resetMessages();
+    await getMessages(chat);
   };
 
-  /** 删除消息 */
-  const handleDeleteMessageFromList = async (message: any) => {
+  const deleteMessage = async (message: any) => {
     const idx = state.messageList.findIndex(m => m.messageId === message.messageId);
     if (idx !== -1) state.messageList.splice(idx, 1);
 
-    const mapper = getMapper(message.messageType);
+    const m = mapper(message.messageType);
     addTask(async () => {
-      await mapper.deleteById(message.messageId);
-      await mapper.deleteFTSById(message.messageId);
+      await m.deleteById(message.messageId);
+      await m.deleteFTSById(message.messageId);
     });
   };
 
-  // ==================== 草稿管理（代理到 draftManager） ====================
-
-  /** 设置草稿 */
+  // ==================== 草稿 ====================
   const setDraft = (chatId: string | number, html: string) => draftManager.set(chatId, html);
-
-  /** 获取草稿 */
   const getDraft = (chatId: string | number) => draftManager.get(chatId);
-
-  /** 清除草稿 */
   const clearDraft = (chatId: string | number) => draftManager.clear(chatId);
-
-  /** 检查是否有草稿 */
   const hasDraft = (chatId: string | number) => draftManager.has(chatId);
 
-  /** 保存草稿作为会话预览 */
-  const saveDraftAsPreview = async () => {
+  const saveDraft = () => {
     const chatId = state.currentChat?.chatId;
     if (!chatId) return;
-
-    const draftHtml = getDraft(chatId);
-    if (!draftHtml) return;
-
-    const preview = buildDraftMessagePreview(String(chatId), draftHtml);
-    if (preview) {
-      upsertChat({ chatId, message: preview, messageTime: Date.now() } as any);
-    }
+    const html = getDraft(chatId);
+    if (!html) return;
+    const preview = buildDraftMessagePreview(String(chatId), html);
+    if (preview) upsert({ chatId, message: preview, messageTime: Date.now() } as any);
   };
-
 
   // ==================== 群组操作 ====================
-
-  /** 添加群成员 */
-  const handleAddGroupMember = async (membersList: string[], isInvite = false) => {
-    if (!membersList?.length) return;
-
-    await safeExecute(() => api.InviteGroupMember({
+  const addGroupMember = async (memberIds: string[], isInvite = false) => {
+    if (!memberIds?.length) return;
+    await exec(() => api.InviteGroupMember({
       groupId: state.currentChat?.toId ?? "",
       userId: storage.get("userId") || "",
-      memberIds: membersList,
+      memberIds,
       type: isInvite ? ActionType.INVITE_TO_GROUP.code : ActionType.CREATE_GROUP.code
-    }), { operation: "addGroupMember" });
+    }), { op: "addGroupMember" });
   };
 
-  /** 批准群邀请 */
-  const handleApproveGroupInvite = async (inviteInfo: any) => {
-    await safeExecute(() => api.ApproveGroup({
-      requestId: inviteInfo.requestId,
-      groupId: inviteInfo.groupId ?? "",
+  const approveInvite = async (info: any) => {
+    await exec(() => api.ApproveGroup({
+      requestId: info.requestId,
+      groupId: info.groupId ?? "",
       userId: storage.get("userId") || "",
-      inviterId: inviteInfo.inviterId,
-      approveStatus: inviteInfo.approveStatus
-    }), { operation: "approveGroupInvite" });
+      inviterId: info.inviterId,
+      approveStatus: info.approveStatus
+    }), { op: "approveGroupInvite" });
   };
 
-  /** 更新群信息 */
-  const updateGroupInfo = async (dto: {
-    groupId: string;
-    chatId?: string;
-    userId?: string;
-    groupName?: string;
-    avatar?: string;
-    introduction?: string;
-    notification?: string;
-  }) => {
-    const payload: any = { groupId: dto.groupId, userId: dto.userId ?? getOwnerId.value };
+  const updateGroup = async (dto: { groupId: string; chatId?: string; userId?: string; groupName?: string; avatar?: string; introduction?: string; notification?: string }) => {
+    const payload: any = { groupId: dto.groupId, userId: dto.userId ?? ownerId.value };
     if (dto.groupName) payload.groupName = dto.groupName;
     if (dto.avatar) payload.avatar = dto.avatar;
     if (dto.introduction) payload.introduction = dto.introduction;
@@ -812,21 +655,18 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (!result) throw new Error("UPDATE_GROUP_INFO_FAILED");
 
     const chatKey = dto.chatId ?? dto.groupId;
+    const friendsStore = useFriendsStore();
 
     // 更新群名
     if (dto.groupName) {
-      const idx = findChat(chatKey);
+      const idx = findIdx(chatKey);
       if (idx !== -1) {
         state.chatList[idx].name = dto.groupName as any;
         await chatsMapper.updateById(chatKey, { name: dto.groupName } as Chats);
         await chatsMapper.insertOrUpdateFTS({ chatId: chatKey, name: dto.groupName } as any);
       }
-      if (state.currentChat?.chatId === chatKey) {
-        (state.currentChat as any).name = dto.groupName;
-      }
+      if (state.currentChat?.chatId === chatKey) (state.currentChat as any).name = dto.groupName;
 
-      // 同步好友列表
-      const friendsStore = useFriendsStore();
       const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(dto.groupId));
       if (gIdx !== -1) friendsStore.groups[gIdx].groupName = dto.groupName;
       if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(dto.groupId)) {
@@ -836,16 +676,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
     // 更新群公告
     if (dto.notification) {
-      const idx = findChat(chatKey);
+      const idx = findIdx(chatKey);
       if (idx !== -1) {
         (state.chatList[idx] as any).notification = dto.notification;
         await chatsMapper.updateById(chatKey, { notification: dto.notification } as any);
       }
-      if (state.currentChat?.chatId === chatKey) {
-        (state.currentChat as any).notification = dto.notification;
-      }
+      if (state.currentChat?.chatId === chatKey) (state.currentChat as any).notification = dto.notification;
 
-      const friendsStore = useFriendsStore();
       const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(dto.groupId));
       if (gIdx !== -1) (friendsStore.groups[gIdx] as any).notification = dto.notification;
       if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(dto.groupId)) {
@@ -856,224 +693,112 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     return result;
   };
 
-  // ==================== 工具方法 ====================
-
-  const handleShowScreenshot = () => CreateScreenWindow(screen.availWidth, screen.availHeight);
-  const handleShowRecord = () => CreateRecordWindow(screen.availWidth, screen.availHeight);
-
-  const triggerNotification = async (chat: Chats, message?: IMessage) => {
-    if (settingStore.notification.message && chat.isMute === 0 && message) {
-      play(AudioEnum.MESSAGE_ALERT);
-    }
-  };
-
-  const fetchChatFromServer = async (ownerId: string | number, toId: string | number) => {
-    return safeExecute(() => api.GetChat({ ownerId, toId }), { operation: "fetchChat" }) as Promise<Chats | null>;
-  };
-
-  const findMessageIndex = (messageId: string | number) => state.messageList.findIndex(m => m.messageId == messageId);
-
-  const chooseByIMessageType = (messageType: number) => ({
-    mapper: getMapper(messageType),
-    isSingle: messageType === MessageType.SINGLE_MESSAGE.code
-  });
-
-
-  // ==================== 状态管理 ====================
-
-  const setLoading = (flag: boolean) => { state.loading = flag; };
-  const setError = (err: string | null) => {
-    state.error = err;
-    if (err) log.error?.("[ChatStore]", err);
-  };
-
-  // ==================== 辅助工具 ====================
-
-  const isSingleChat = (chat: any): boolean => chat?.chatType === MessageType.SINGLE_MESSAGE.code;
-  const getMapper = (type: number) => type === MessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
-  const getSendApi = (chat: any) => isSingleChat(chat) ? api.SendSingleMessage : api.SendGroupMessage;
-
-  const findChat = (id: any): number => findChatIndex(state.chatList, id);
-
-  const upsertChat = (chat: Partial<Chats> & { chatId?: any }): number => {
-    if (!chat?.chatId) return -1;
-    const idx = findChat(chat.chatId);
-    if (idx !== -1) {
-      state.chatList[idx] = { ...state.chatList[idx], ...chat };
-      return idx;
-    }
-    state.chatList.push(chat as Chats);
-    return state.chatList.length - 1;
-  };
-
-  const persistChat = (chat: Partial<Chats>) => {
-    if (!chat?.chatId) return;
-    addTask(() => {
-      chatsMapper.insertOrUpdate(chat);
-      chatsMapper.insertOrUpdateFTS(chat);
-    });
-  };
-
-  const buildPayload = (content: any, chat: any, contentType: number, meta: any = {}) => {
-    const toKey = isSingleChat(chat) ? "toId" : "groupId";
-    const payload: any = {
-      fromId: getOwnerId.value,
-      messageBody: content,
-      messageTempId: `${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-      messageTime: Date.now(),
-      messageContentType: contentType,
-      messageType: chat?.chatType,
-      [toKey]: chat?.toId || ""
-    };
-
-    if (meta.mentionedUserIds?.length) payload.mentionedUserIds = [...new Set(meta.mentionedUserIds)];
-    if (meta.mentionAll) payload.mentionAll = true;
-    if (meta.replyMessage) payload.replyMessage = meta.replyMessage;
-
-    return payload;
-  };
-
-  const normalizeBodyToObject = (raw: unknown): Record<string, any> => {
-    if (raw == null) return {};
-    if (typeof raw === "object") return Array.isArray(raw) ? { parts: raw } : (raw as Record<string, any>);
-    if (typeof raw !== "string") return { text: String(raw) };
-
-    const s = raw.trim();
-    if (!s) return {};
-
-    try {
-      const parsed = JSON.parse(s);
-      if (parsed == null) return {};
-      if (typeof parsed === "object") return Array.isArray(parsed) ? { parts: parsed } : (parsed as Record<string, any>);
-      return { text: String(parsed) };
-    } catch {
-      return { text: s };
-    }
-  };
-
-  const normalizeBodyToDbString = (raw: unknown): string => {
-    if (raw == null) return JSON.stringify({});
-    if (typeof raw === "string") {
-      const s = raw.trim();
-      if (!s) return JSON.stringify({});
-      try {
-        const parsed = JSON.parse(s);
-        if (parsed != null && typeof parsed === "object") return s;
-      } catch {
-        // ignore
-      }
-      return JSON.stringify({ text: s });
-    }
-    if (typeof raw === "object") return JSON.stringify(raw);
-    return JSON.stringify({ text: String(raw) });
-  };
-
-  const toDbRecord = (msg: any) => {
-    const record = { ...msg, ownerId: getOwnerId.value, messageBody: normalizeBodyToDbString(msg?.messageBody) };
-    delete record.messageTempId;
-    return record;
-  };
-
-  /** 消息处理 获取用户信息 */
-  const normalizeMessage = (msg: any, ownId: string, userInfo: any, chat: any) => {
-    const messageBody = normalizeBodyToObject(msg?.messageBody);
-    const fromId = msg?.fromId ?? msg?.userId ?? msg?.senderId;
-    const isOwner = fromId != null && String(ownId) === String(fromId);
-
-    const member = !isOwner && fromId != null ? state.groupMembers?.[String(fromId)] : undefined;
-    const fallbackName = chat?.name ?? msg?.name ?? "";
-    const fallbackAvatar = chat?.avatar ?? msg?.avatar ?? "";
-
-    if (Number(msg?.messageContentType) === MessageContentType.TIP.code) {
-      return { ...msg, messageBody };
-    }
-
-    return {
-      ...msg,
-      messageBody,
-      name: isOwner ? (userInfo?.name ?? fallbackName) : (member?.name ?? fallbackName),
-      avatar: isOwner ? (userInfo?.avatar ?? fallbackAvatar) : (member?.avatar ?? fallbackAvatar),
-      isOwner
-    };
-  };
-
-  const buildPreview = (message?: IMessage, asHtml = true) => {
-    if (!message) return null;
-    try {
-      return buildMessagePreview(message, {
-        currentUserId: getOwnerId.value,
-        highlightClass: "mention-highlight",
-        asHtml
-      });
-    } catch {
-      return null;
-    }
+  // ==================== 工具 ====================
+  const showScreenshot = () => CreateScreenWindow(screen.availWidth, screen.availHeight);
+  const showRecord = () => CreateRecordWindow(screen.availWidth, screen.availHeight);
+  const triggerNotify = (chat: Chats, message?: IMessage) => {
+    if (settingStore.notification.message && chat.isMute === 0 && message) play(AudioEnum.MESSAGE_ALERT);
   };
 
   // ==================== 导出 ====================
-
   return {
-    // 状态（兼容 ref 写法）
-    chatList, messageList, currentChat, currentChatGroupMemberMap,
-    isShowDetail, ignoreAllList, chatDraftMap, historyMessageList,
-    groupInfo, currentUrls, loading, error, page,
+    // 状态
+    state, page,
+    chatList: computed({ get: () => state.chatList, set: v => { state.chatList = v; } }),
+    messageList: computed({ get: () => state.messageList, set: v => { state.messageList = v; } }),
+    currentChat: computed({ get: () => state.currentChat, set: v => { state.currentChat = v; } }),
+    currentChatGroupMemberMap: computed({ get: () => state.groupMembers, set: v => { state.groupMembers = v; } }),
+    isShowDetail: computed({ get: () => state.isShowDetail, set: v => { state.isShowDetail = v; } }),
+    ignoreAllList: computed({ get: () => state.ignoreList, set: v => { state.ignoreList = v; } }),
+    historyMessageList: computed({ get: () => state.historyList, set: v => { state.historyList = v; } }),
+    groupInfo: computed({ get: () => state.groupInfo, set: v => { state.groupInfo = v; } }),
+    currentUrls: computed({ get: () => state.currentUrls, set: v => { state.currentUrls = v; } }),
+    loading: computed({ get: () => state.loading, set: v => { state.loading = v; } }),
+    error: computed({ get: () => state.error, set: v => { state.error = v; } }),
+    chatDraftMap: computed(() => draftManager.getAll()),
 
     // 计算属性
-    getCurrentName, getChatById, getCurrentType, getTotalUnread,
-    getShowDetailBtn, getShowDetail, getHaveMessageChat, getChatIsGroup,
-    getOwnerId, getCurrentGroupMembersExcludeSelf, remainingQuantity,
+    getCurrentName: getters.currentName,
+    getCurrentType: getters.currentType,
+    getTotalUnread: getters.totalUnread,
+    getChatIsGroup: getters.isGroup,
+    remainingQuantity: getters.remaining,
+    getHaveMessageChat: getters.unreadChats,
+    getCurrentGroupMembersExcludeSelf: getters.membersExcludeSelf,
+    getOwnerId: ownerId,
+    getChatById: computed(() => (id: string | number) => state.chatList.find(c => c.chatId === id) ?? null),
+    getShowDetailBtn: computed(() => !!state.currentChat),
+    getShowDetail: computed(() => state.isShowDetail),
 
     // 状态管理
-    setLoading, setError,
+    setLoading: (v: boolean) => { state.loading = v; },
+    setError: (e: string | null) => { state.error = e; if (e) log.error?.("[ChatStore]", e); },
 
     // 会话操作
-    handleInitChat, handleChangeCurrentChat, handleChangeCurrentChatByTarget,
-    handleUpdateReadStatus, handleCreateOrUpdateChat, handleUpdateChatWithMessage,
-    handleDeleteChat, handlePinChat, handleMuteChat, handleSortChatList,
-    handleIgnoreAll, handleJumpToChat, handleGetChat, handleChatDetail,
-    handleDeleteMessage, upsertChat, persistPreviewToDb: persistChat,
-    buildPreviewFromMessage: buildPreview, fetchChatFromServer, triggerNotification,
+    handleInitChat: initChat,
+    handleChangeCurrentChat: changeChat,
+    handleChangeCurrentChatByTarget: changeChatByTarget,
+    handleUpdateReadStatus: updateRead,
+    handleCreateOrUpdateChat: createOrUpdate,
+    handleUpdateChatWithMessage: updateWithMsg,
+    handleDeleteChat: deleteChat,
+    handlePinChat: togglePin,
+    handleMuteChat: toggleMute,
+    handleSortChatList: sortList,
+    handleIgnoreAll: ignoreAll,
+    handleJumpToChat: jumpToChat,
+    handleGetChat: getChat,
+    handleChatDetail: toggleDetail,
+    handleDeleteMessage: (m: any) => { if (m?.messageContentType) delete m.messageContentType; },
+    upsertChat: upsert,
+    persistPreviewToDb: persist,
+    buildPreviewFromMessage: buildPreview,
+    fetchChatFromServer: (oId: string | number, toId: string | number) => exec(() => api.GetChat({ ownerId: oId, toId }), { op: "fetchChat" }) as Promise<Chats | null>,
+    triggerNotification: triggerNotify,
 
-    // 草稿管理
-    setDraft, getDraft, clearDraft, hasDraft, saveDraftAsPreview,
+    // 草稿
+    setDraft, getDraft, clearDraft, hasDraft, saveDraftAsPreview: saveDraft,
 
     // 消息操作
-    handleResetMessage, handleSendMessage, sendSingle, uploadAndSendFile,
-    handleMoreMessage, handleGetMessageList, handleGetMessageCount,
-    handleCreateMessage, handleInsertToDatabase, handleSendRecallMessage,
-    handleReCallMessage, handleSearchMessageUrl, handleHistoryMessage,
-    handleUpdateMessage, handleClearMessage, handleDeleteMessageFromList,
+    handleResetMessage: resetMessages,
+    handleSendMessage: sendMessage,
+    sendSingle: send,
+    uploadAndSendFile: uploadAndSend,
+    handleMoreMessage: loadMore,
+    handleGetMessageList: getMessages,
+    handleGetMessageCount: getMessageCount,
+    handleCreateMessage: createMessage,
+    handleInsertToDatabase: insertToDb,
+    handleSendRecallMessage: recallMessage,
+    handleReCallMessage: handleRecall,
+    handleSearchMessageUrl: searchUrls,
+    handleHistoryMessage: searchHistory,
+    handleUpdateMessage: updateMessage,
+    handleClearMessage: clearMessages,
+    handleDeleteMessageFromList: deleteMessage,
 
     // 群组操作
-    handleAddGroupMember, handleApproveGroupInvite, updateGroupInfo,
+    handleAddGroupMember: addGroupMember,
+    handleApproveGroupInvite: approveInvite,
+    updateGroupInfo: updateGroup,
 
-    // 工具方法
-    handleShowScreenshot, handleShowRecord, isSingleChat,
-    getMapperByType: getMapper, getSendApiByChat: getSendApi,
-    buildFormPayload: buildPayload, toDbRecord, normalizeMessageForUI: normalizeMessage,
-    findMessageIndex, chooseByIMessageType
+    // 工具
+    handleShowScreenshot: showScreenshot,
+    handleShowRecord: showRecord,
+    isSingleChat: isSingle,
+    getMapperByType: mapper,
+    getSendApiByChat: sendApi,
+    buildFormPayload: buildPayload,
+    toDbRecord: toRecord,
+    normalizeMessageForUI: normalizeMsg,
+    findMessageIndex: (id: string | number) => state.messageList.findIndex(m => m.messageId == id),
+    chooseByIMessageType: (type: number) => ({ mapper: mapper(type), isSingle: type === MessageType.SINGLE_MESSAGE.code })
   };
 }, {
   persist: [
-    {
-      key: `${StoresEnum.CHAT}_local`,
-      paths: ["state.groupMembers", "state.ignoreList"],
-      storage: localStorage
-    },
-    {
-      key: `${StoresEnum.CHAT}_session_chat`,
-      paths: ["state.chatList", "state.currentChat"],
-      storage: sessionStorage
-    },
-    {
-      key: `${StoresEnum.CHAT}_session_message`,
-      paths: ["state.messageList"],
-      storage: sessionStorage
-    }
+    { key: `${StoresEnum.CHAT}_local`, paths: ["state.groupMembers", "state.ignoreList"], storage: localStorage },
+    { key: `${StoresEnum.CHAT}_session_chat`, paths: ["state.chatList", "state.currentChat"], storage: sessionStorage },
+    { key: `${StoresEnum.CHAT}_session_message`, paths: ["state.messageList"], storage: sessionStorage }
   ],
-  sync: {
-    paths: ["state.chatList"],
-    targetWindows: [StoresEnum.NOTIFY],
-    sourceWindow: StoresEnum.MAIN
-  }
+  sync: { paths: ["state.chatList"], targetWindows: [StoresEnum.NOTIFY], sourceWindow: StoresEnum.MAIN }
 });

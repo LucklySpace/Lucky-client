@@ -3,7 +3,7 @@
     <!-- 头部区域 -->
     <header class="friend-requests__header">
       <div class="friend-requests__header-left">
-        <h2 class="friend-requests__title">{{ $t("contacts.friendRequests") }}</h2>
+        <h2 class="friend-requests__title">{{ $t("business.friend.requests.title") }}</h2>
         <el-tag v-if="pendingCount > 0" class="friend-requests__count" round size="small">
           {{ pendingCount }}
         </el-tag>
@@ -19,7 +19,7 @@
     <main class="friend-requests__body">
       <el-scrollbar>
         <div v-if="!hasRequests" class="friend-requests__empty">
-          <el-empty :description="$t('contacts.noRequests')" />
+          <el-empty :description="$t('business.friend.requests.noRequests')" />
         </div>
 
         <transition-group v-else class="friend-requests__list" name="list" tag="ul">
@@ -29,9 +29,9 @@
 
             <!-- 请求信息 -->
             <div class="friend-requests__info">
-              <div class="friend-requests__name">{{ req.name || $t("contacts.unknownUser") }}</div>
+              <div class="friend-requests__name">{{ req.name || $t("common.status.unknown") }}</div>
               <div class="friend-requests__message" :class="{ 'friend-requests__message--empty': !req.message }">
-                {{ req.message || $t("contacts.defaultRequestMsg") }}
+                {{ req.message || $t("business.friend.requests.defaultMessage") }}
               </div>
             </div>
 
@@ -59,7 +59,7 @@
                 <el-icon v-else>
                   <CircleClose />
                 </el-icon>
-                <span>{{ isAccepted(req) ? $t("contacts.accepted") : $t("contacts.rejected") }}</span>
+                <span>{{ isAccepted(req) ? $t("business.friend.status.accepted") : $t("business.friend.status.rejected") }}</span>
               </div>
             </div>
           </li>
@@ -130,9 +130,9 @@ const refresh = async () => {
   isRefreshing.value = true;
   try {
     await friendStore.loadNewFriends();
-    ElMessage.success(t("contacts.syncSuccess", "同步成功"));
+    ElMessage.success(t("business.friend.requests.syncSuccess"));
   } catch {
-    ElMessage.error(t("contacts.syncFailed", "同步失败"));
+    ElMessage.error(t("business.friend.requests.syncFailed"));
   } finally {
     isRefreshing.value = false;
   }
@@ -159,7 +159,7 @@ const handleApprove = async (req: FriendRequest, status: number) => {
     ElMessage.success(isAccept ? ACCEPTED.type : REJECTED.type);
   } catch (err) {
     console.error("Approve contact error:", err);
-    ElMessage.error(t("contacts.actionFailed", "操作失败"));
+    ElMessage.error(t("business.friend.requests.actionFailed"));
   } finally {
     if (loadingMap[req.id]) loadingMap[req.id]![action] = false;
   }

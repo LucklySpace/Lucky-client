@@ -1,6 +1,6 @@
+import { useNow } from "@vueuse/core";
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useI18n } from "vue-i18n";
-import { useNow } from "@vueuse/core";
 
 /**
  * Vue3 Hook：集成 i18n 的时间格式化工具
@@ -29,12 +29,12 @@ export function useTimeFormat() {
       const srcVal = toValue(timestamp);
       const src = srcVal instanceof Date ? srcVal : new Date(srcVal as any);
 
-      if (isNaN(src.getTime())) return t("time.invalid");
+      if (isNaN(src.getTime())) return t("common.status.unknown");
 
       const delta = nowVal.getTime() - src.getTime();
 
       // 小于 1 分钟
-      if (delta < 60_000) return t("time.justNow");
+      if (delta < 60_000) return t("common.time.justNow");
 
       const startOfToday = getStartOfDay(nowVal);
       const timeStr = formatDate(src, "hh:mm");
@@ -52,8 +52,8 @@ export function useTimeFormat() {
       const dayBeforeYesterday = offsetDays(startOfToday, -2);
       const sevenDaysAgo = offsetDays(startOfToday, -7);
 
-      if (src >= yesterday) return t("time.yesterday") + (appendTime ? ` ${timeStr}` : "");
-      if (src >= dayBeforeYesterday) return t("time.dayBeforeYesterday") + (appendTime ? ` ${timeStr}` : "");
+      if (src >= yesterday) return t("common.time.yesterday") + (appendTime ? ` ${timeStr}` : "");
+      if (src >= dayBeforeYesterday) return t("common.time.dayBeforeYesterday") + (appendTime ? ` ${timeStr}` : "");
 
       if (src >= sevenDaysAgo) {
         const weekday = src.getDay(); // 0-6，0 是 星期日
@@ -168,7 +168,7 @@ export function useTimeFormat() {
 //       const src = new Date(toValue(timestamp));
 //       const delta = nowVal.getTime() - src.getTime();
 
-//       if (isNaN(src.getTime())) return t("time.invalid");
+//       if (isNaN(src.getTime())) return t("common.status.unknown");
 
 //       // 刚刚（1 分钟内）
 //       if (delta < 60 * 1000) return t("time.justNow");

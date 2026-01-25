@@ -37,25 +37,25 @@
         </el-col>
 
         <el-col :span="18">
-          <el-form-item :label="$t('settings.profile.nickname')">
-            <el-input v-model="profileForm.name" :placeholder="$t('settings.profile.enterNickname')" />
+          <el-form-item :label="$t('business.profile.fields.nickname')">
+            <el-input v-model="profileForm.name" :placeholder="$t('business.profile.placeholder.nickname')" />
           </el-form-item>
 
-          <el-form-item :label="$t('settings.profile.birthday')">
+          <el-form-item :label="$t('business.profile.fields.birthday')">
             <el-date-picker
               v-model="profileForm.birthday"
               :clearable="true"
               date-format="yyyy-MM-dd"
-              :placeholder="$t('settings.profile.selectBirthday')"
+              :placeholder="$t('business.profile.placeholder.birthday')"
               placement="bottom-start"
               type="date"
             />
           </el-form-item>
 
-          <el-form-item :label="$t('settings.profile.sex.label')">
+          <el-form-item :label="$t('business.profile.fields.sex.label')">
             <el-radio-group v-model="profileForm.gender">
-              <el-radio :label="1">{{ $t("settings.profile.sex.male") }}</el-radio>
-              <el-radio :label="0">{{ $t("settings.profile.sex.female") }}</el-radio>
+              <el-radio :label="1">{{ $t("business.profile.fields.sex.male") }}</el-radio>
+              <el-radio :label="0">{{ $t("business.profile.fields.sex.female") }}</el-radio>
             </el-radio-group>
           </el-form-item>
         </el-col>
@@ -63,18 +63,18 @@
 
       <el-row :gutter="20" align="middle">
         <el-col :span="24">
-          <el-form-item :label="$t('settings.profile.address')">
-            <el-input v-model="profileForm.location" :placeholder="$t('settings.profile.enterAddress')" />
+          <el-form-item :label="$t('business.profile.fields.address')">
+            <el-input v-model="profileForm.location" :placeholder="$t('business.profile.placeholder.address')" />
           </el-form-item>
 
-          <el-form-item :label="$t('settings.profile.mobile')">
-            <el-input v-model="profileForm.phone" :placeholder="$t('settings.profile.enterMobile')" />
+          <el-form-item :label="$t('business.profile.fields.mobile')">
+            <el-input v-model="profileForm.phone" :placeholder="$t('business.profile.placeholder.mobile')" />
           </el-form-item>
 
-          <el-form-item :label="$t('settings.profile.signature')">
+          <el-form-item :label="$t('business.profile.fields.signature')">
             <el-input
               v-model="profileForm.selfSignature"
-              :placeholder="$t('settings.profile.enterSignature')"
+              :placeholder="$t('business.profile.placeholder.signature')"
               :rows="2"
               resize="none"
               type="textarea"
@@ -84,7 +84,7 @@
 
         <!-- 操作按钮 -->
         <el-col :span="24" class="actions">
-          <el-button type="primary" @click="handleSubmit">{{ $t("profile.save") }} </el-button>
+          <el-button type="primary" @click="handleSubmit">{{ $t("business.profile.buttons.save") }} </el-button>
         </el-col>
       </el-row>
 
@@ -96,10 +96,10 @@
 </template>
 
 <script lang="ts" setup>
-  import { useUserStore } from "@/store/modules/user";
-  import { ElMessage } from "element-plus";
-  import { Camera } from "@element-plus/icons-vue";
   import Avatar from "@/components/Avatar/index.vue";
+import { useUserStore } from "@/store/modules/user";
+import { Camera } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 
   const userStore = useUserStore();
   const userAvatar = ref("");

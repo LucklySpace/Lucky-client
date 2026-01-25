@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="$t('settings.general.language.download')"
+    :title="$t('pages.settings.general.language.download')"
     width="600px"
     :close-on-click-modal="false"
   >
@@ -11,7 +11,7 @@
         <el-icon class="is-loading">
           <loading />
         </el-icon>
-        <span>{{ $t("common.loading") }}...</span>
+        <span>{{ $t("common.status.loading") }}...</span>
       </div>
 
       <!-- 语言包列表 -->
@@ -26,10 +26,10 @@
             <div class="language-name">
               <span class="name">{{ lang.name }}</span>
               <el-tag v-if="lang.isInstalled" type="success" size="small">
-                {{ $t("settings.general.language.installed") }}
+                {{ $t("pages.settings.general.language.installed") }}
               </el-tag>
               <el-tag v-else-if="lang.hasUpdate" type="warning" size="small">
-                {{ $t("settings.general.language.updateAvailable") }}
+                {{ $t("pages.settings.general.language.updateAvailable") }}
               </el-tag>
             </div>
             <div class="language-meta">
@@ -56,7 +56,7 @@
               plain
               disabled
             >
-              {{ $t("settings.general.language.installed") }}
+              {{ $t("pages.settings.general.language.installed") }}
             </el-button>
 
             <!-- 有更新 -->
@@ -66,37 +66,37 @@
               type="warning"
               @click="handleDownload(lang)"
             >
-              {{ $t("settings.general.language.update") }}
+              {{ $t("common.actions.update") }}
             </el-button>
 
             <!-- 未安装 -->
             <el-button v-else size="small" type="primary" @click="handleDownload(lang)">
-              {{ $t("settings.general.language.download") }}
+              {{ $t("common.actions.download") }}
             </el-button>
           </div>
         </div>
 
         <!-- 空状态 -->
-        <el-empty v-if="displayLanguages.length === 0" :description="$t('common.noData')" />
+        <el-empty v-if="displayLanguages.length === 0" :description="$t('common.status.noData')" />
       </div>
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">{{ $t("actions.cancel") }}</el-button>
+      <el-button @click="visible = false">{{ $t("common.actions.cancel") }}</el-button>
       <el-button type="primary" @click="handleRefresh">
         <el-icon><refresh /></el-icon>
-        {{ $t("settings.general.language.refresh") }}
+        {{ $t("common.actions.refresh") }}
       </el-button>
     </template>
   </el-dialog>
 </template>
 
 <script lang="ts" setup>
-  import { ref, computed } from "vue";
-  import { ElMessage } from "element-plus";
-  import { Loading, Refresh } from "@element-plus/icons-vue";
-  import { useLanguageManager, type LanguagePackMeta } from "@/i18n/LanguageManager";
   import { useI18n } from "@/i18n";
+import { useLanguageManager, type LanguagePackMeta } from "@/i18n/LanguageManager";
+import { Loading, Refresh } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { computed, ref } from "vue";
 
   /**
    * 增强的语言包信息（包含 UI 状态）

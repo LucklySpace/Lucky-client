@@ -1,5 +1,5 @@
 <template>
-  <div :aria-label="$t('contacts.contactInfo')" class="contact-detail" role="region">
+  <div :aria-label="$t('pages.contacts.info.title')" class="contact-detail" role="region">
     <!-- 联系人卡片 -->
     <el-card v-if="hasFriend" :body-style="{ padding: '18px' }" class="contact-detail__card" shadow="hover">
       <!-- 头部：头像 + 基本信息 -->
@@ -19,7 +19,7 @@
               </svg>
             </div>
           <div v-if="friendInfo.friendId" class="contact-detail__id">
-            {{ $t("contacts.idLabel") }} {{ friendInfo.friendId }}
+            {{ $t("pages.contacts.info.idLabel") }} {{ friendInfo.friendId }}
           </div>
         </el-col>
       </el-row>
@@ -28,7 +28,7 @@
 
       <!-- 详细信息 -->
       <div class="contact-detail__info">
-        <InfoRow v-if="friendInfo.name" :label="$t('profile.remark')">
+        <InfoRow v-if="friendInfo.name" :label="$t('business.profile.fields.remark')">
           <template v-if="!isEditingRemark">
             <span class="contact-detail__remark" @click="startEditRemark">
               {{ remark || friendInfo.name }}
@@ -45,15 +45,15 @@
           />
         </InfoRow>
 
-        <InfoRow v-if="friendInfo.name" :label="$t('contacts.nicknameLabel')">
+        <InfoRow v-if="friendInfo.name" :label="$t('pages.contacts.info.nicknameLabel')">
           {{ friendInfo.name }}
         </InfoRow>
 
-        <InfoRow v-if="friendInfo.location" :label="$t('contacts.regionLabel')">
+        <InfoRow v-if="friendInfo.location" :label="$t('pages.contacts.info.regionLabel')">
           {{ friendInfo.location }}
         </InfoRow>
 
-        <InfoRow v-if="friendInfo.selfSignature" :label="$t('contacts.signatureLabel')" class="contact-detail__signature">
+        <InfoRow v-if="friendInfo.selfSignature" :label="$t('pages.contacts.info.signatureLabel')" class="contact-detail__signature">
           {{ friendInfo.selfSignature }}
         </InfoRow>
       </div>
@@ -61,28 +61,28 @@
       <!-- 操作按钮 -->
       <div class="contact-detail__actions">
         <el-button type="primary" @click="handleSendMessage">
-          {{ $t("actions.sendMsg") }}
+          {{ $t("pages.contacts.actions.sendMessage") }}
           </el-button>
         <el-button @click="handleCall">
-          {{ $t("actions.videoCall") }}
+          {{ $t("pages.contacts.actions.videoCall") }}
           </el-button>
       </div>
     </el-card>
 
     <!-- 空状态 -->
-    <div v-else class="contact-detail__empty">{{ $t("contacts.noSelectionOrEmpty") }}</div>
+    <div v-else class="contact-detail__empty">{{ $t("pages.contacts.empty.noSelection") }}</div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch, h } from "vue";
-import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
-import { MessageType, MAX_REMARK_LEN } from "@/constants";
-import { useFriendsStore } from "@/store/modules/friends";
-import { useChatStore } from "@/store/modules/chat";
-import { useCallStore } from "@/store/modules/call";
 import Avatar from "@/components/Avatar/index.vue";
+import { MAX_REMARK_LEN, MessageType } from "@/constants";
+import { useCallStore } from "@/store/modules/call";
+import { useChatStore } from "@/store/modules/chat";
+import { useFriendsStore } from "@/store/modules/friends";
+import { ElMessage } from "element-plus";
+import { computed, h, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 
 // ========================= 类型定义 =========================
 interface Friend {
@@ -142,12 +142,12 @@ const saveRemark = async () => {
   if (!id) return;
 
   if (!trimmed) {
-    ElMessage.warning(t("errors.remark.empty"));
+    ElMessage.warning(t("common.errors.remark.empty"));
     return;
   }
 
   if (trimmed.length > MAX_REMARK_LEN) {
-    ElMessage.error(t("errors.remark.tooLong", { max: MAX_REMARK_LEN }));
+    ElMessage.error(t("common.errors.remark.tooLong", { max: MAX_REMARK_LEN }));
     return;
   }
 

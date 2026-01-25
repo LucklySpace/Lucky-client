@@ -1,7 +1,7 @@
 <template>
   <div id="new-msg-list-div" class="new-msg-list-div no-select">
     <div class="content-div">
-      <div class="title">{{ $t("notifications.newMessages", { count: totalNumber }) }}</div>
+      <div class="title">{{ $t("business.notification.newMessages", { count: totalNumber }) }}</div>
 
       <div v-if="chatStore.getHaveMessageChat.length" class="list-div">
         <div v-for="(item, index) in chatStore.getHaveMessageChat" :key="item.name" class="list-item"
@@ -28,17 +28,17 @@
         </div>
       </div>
     </div>
-    <div class="footer" @click="handleIgnoreAll">{{ $t("notifications.ignoreAll") }}</div>
+    <div class="footer" @click="handleIgnoreAll">{{ $t("business.notification.ignoreAll") }}</div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { StoresEnum } from "@/constants/index";
-import { useChatStore } from "@/store/modules/chat";
 import Avatar from "@/components/Avatar/index.vue";
-import { hideNotifyWindow } from "@/windows/notify";
-import { useTauriEvent } from "@/hooks/useTauriEvent";
+import { StoresEnum } from "@/constants/index";
 import Chats from "@/database/entity/Chats";
+import { useTauriEvent } from "@/hooks/useTauriEvent";
+import { useChatStore } from "@/store/modules/chat";
+import { hideNotifyWindow } from "@/windows/notify";
 
 const chatStore = useChatStore();
 

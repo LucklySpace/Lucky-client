@@ -28,7 +28,7 @@
       <div class="profile-details">
         <!-- 备注：仅好友显示且可编辑，自己不可编辑 -->
         <div v-if="!isMe && contact?.flag === 1" class="detail-item clickable" @click="handleStartEdit">
-          <span class="label">{{ $t("profile.remark") }}</span>
+          <span class="label">{{ $t("business.profile.fields.remark") }}</span>
           <div class="value">
             <template v-if="!isEditingRemark">
               <span class="text-ellipsis">{{ remark || safeName }}</span>
@@ -51,10 +51,10 @@
       <!-- 底部操作栏：自己不显示操作 -->
       <div v-if="!isMe && contact?.flag === 1" class="profile-actions">
         <el-button type="primary" class="action-btn" @click="handleSend">
-          {{ $t("actions.sendMsg") }}
+          {{ $t("pages.contacts.actions.sendMessage") }}
         </el-button>
         <el-button class="action-btn" @click="handleCall">
-          {{ $t("actions.videoCall") }}
+          {{ $t("pages.contacts.actions.videoCall") }}
         </el-button>
       </div>
     </template>
@@ -127,10 +127,10 @@ const genderClass = computed(() => ({
 
 const displayInfo = computed(() => {
   const list = [
-    { label: t("profile.nickname"), value: props.contact?.name },
-    { label: t("profile.telephone"), value: props.contact?.telephone },
-    { label: t("profile.signature"), value: props.contact?.selfSignature },
-    { label: t("profile.address"), value: props.contact?.location },
+    { label: t("business.profile.fields.nickname"), value: props.contact?.name },
+    { label: t("business.profile.fields.telephone"), value: props.contact?.telephone },
+    { label: t("business.profile.fields.signature"), value: props.contact?.selfSignature },
+    { label: t("business.profile.fields.address"), value: props.contact?.location },
   ];
   return list.filter(i => !!i.value);
 });

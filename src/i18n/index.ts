@@ -1,10 +1,10 @@
-import { onBeforeUnmount, Ref, ref, shallowRef } from "vue";
-import { createI18n, I18n } from "vue-i18n";
-import { BaseDirectory, exists, mkdir, readDir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { useLogger } from "@/hooks/useLogger";
 import { useSettingStore } from "@/store/modules/setting";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useLogger } from "@/hooks/useLogger";
+import { BaseDirectory, exists, mkdir, readDir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { onBeforeUnmount, Ref, ref, shallowRef } from "vue";
+import { createI18n, I18n } from "vue-i18n";
 
 /** i18n 文件结构定义 */
 interface I18nFile {
@@ -37,6 +37,9 @@ const i18nOptions = {
 
 /** 全局 vue-i18n 实例（单例） */
 const i18n: I18n = createI18n(i18nOptions);
+
+/** 导出全局 i18n 实例，用于非组件环境（如 store、工具函数等） */
+export { useI18n, i18n as globalI18n };
 
 /**
  * I18n 管理器（单例）
@@ -221,7 +224,7 @@ class I18nManager {
    */
   private parseI18nFile(raw: any, sourceLabel: string): I18nFile | undefined {
     if (!raw) return undefined;
-    
+
     let parsed: any = raw;
     if (typeof raw === "string") {
       try {
@@ -231,11 +234,11 @@ class I18nManager {
         return undefined;
       }
     }
-    
+
     if (parsed.locale && parsed.messages) {
       return parsed as I18nFile;
     }
-    
+
     this.logger.warn(`无效的 i18n 文件结构 (${sourceLabel}), 缺少 locale 或 messages 字段`);
     return undefined;
   }
@@ -287,7 +290,7 @@ class I18nManager {
 }
 
 /** 导出 hook，返回单例管理器的接口 */
-export function useI18n() {
+function useI18n() {
   const mgr = I18nManager.getInstance();
   return {
     i18n: mgr.i18n,

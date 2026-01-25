@@ -1,38 +1,37 @@
 // 常量定义
-import { MessageType, MessageContentType } from "@/constants";
+import { MessageContentType, MessageType } from "@/constants";
 // 本地工具和存储
-import { storage } from "@/utils/Storage";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
+import { initAllCache } from "@/hooks/useImageCache";
 import { useTauriEvent } from "@/hooks/useTauriEvent";
-import { useGlobalShortcut } from "./hooks/useGlobalShortcut";
+import { useTray } from "@/hooks/useTray";
 import ObjectUtils from "@/utils/ObjectUtils";
 import { downloadDir } from "@tauri-apps/api/path";
-import { useTray } from "@/hooks/useTray";
 import { exit } from "@tauri-apps/plugin-process";
-import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
-import { globalEventBus } from "@/hooks/useEventBus";
-import { initAllCache } from "@/hooks/useImageCache"
+import { useGlobalShortcut } from "./hooks/useGlobalShortcut";
 
 // 路由
 import router from "@/router";
 // 窗口操作
-import { CreateScreenWindow } from "@/windows/screen";
-import { calculateHideNotifyWindow, hideNotifyWindow, showOrCreateNotifyWindow } from "@/windows/notify";
 import { appIsMinimizedOrHidden, ShowMainWindow } from "@/windows/main";
+import { calculateHideNotifyWindow, hideNotifyWindow, showOrCreateNotifyWindow } from "@/windows/notify";
+import { CreateScreenWindow } from "@/windows/screen";
 // 数据请求
 import api from "@/api/index";
 // 配置和初始化
-import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
 import { useGlobalScheduler } from "@/hooks/useScheduler";
+import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
 // 状态管理和数据存储
-import { useChatStore } from "@/store/modules/chat";
-import { useUserStore } from "@/store/modules/user";
 import { useCallStore } from "@/store/modules/call";
-import { useSettingStore } from "@/store/modules/setting";
+import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
+import { useSettingStore } from "@/store/modules/setting";
+import { useUserStore } from "@/store/modules/user";
 // 数据库实体
 import { initDatabase, useMappers } from "@/database";
-import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
 import { MessageQueue, Priority } from "@/utils/MessageQueue";
+import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
 
 // ==================== 工具函数 ====================
 
@@ -58,7 +57,7 @@ async function withTiming<T>(
 
 /** 消息内容类型到显示文本的映射 */
 const MESSAGE_DISPLAY_MAP: Record<number, string | ((msg: any) => string)> = {
-  [MessageContentType.TEXT.code]: (msg) => msg.message,
+  [MessageContentType.TEXT.code]: msg => msg.message,
   [MessageContentType.IMAGE.code]: "[图片]",
   [MessageContentType.VIDEO.code]: "[视频]",
   [MessageContentType.AUDIO.code]: "[语音]",
@@ -92,11 +91,11 @@ class MainManager {
   private readonly log = useLogger();
   private readonly exec = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   private readonly messageQueue = new MessageQueue<any>({
-    maxFrameTime: 8,           // 每帧最多 8ms，保证 60fps
-    initialBatchSize: 20,      // 初始批大小
-    maxBatchSize: 200,         // 高峰期最大批量
+    maxFrameTime: 8, // 每帧最多 8ms，保证 60fps
+    initialBatchSize: 20, // 初始批大小
+    maxBatchSize: 200, // 高峰期最大批量
     backpressureThreshold: 500, // 背压阈值
-    enablePriority: true,      // 启用优先级
+    enablePriority: true, // 启用优先级
   });
   private readonly tray = useTray();
   private readonly tauriEvent = useTauriEvent();
@@ -132,7 +131,7 @@ class MainManager {
       // 1. 语言初始化
       this.initLanguage();
 
-      // 2. 关键路径：串行执行（有依赖关系）
+      // 2. 串行执行（有依赖关系）
       await this.initUser();
       await this.initDatabase();
 
@@ -163,7 +162,6 @@ class MainManager {
     }
   }
 
-
   /** 销毁资源 */
   async destroy(): Promise<void> {
     this.log.prettyInfo("core", "开始清理资源");
@@ -186,7 +184,12 @@ class MainManager {
   }
 
   private initUser(): Promise<void> {
-    return withTiming("user", "用户信息初始化", () => this.stores.user.handleGetUserInfo(), this.log);
+    return withTiming(
+      "user",
+      "用户信息初始化",
+      () => Promise.all([this.stores.user.handleGetUserInfo()]).then(() => { }),
+      this.log
+    );
   }
 
   private initDatabase(): Promise<void> {
@@ -198,19 +201,25 @@ class MainManager {
   }
 
   private initScheduler() {
-    return withTiming("scheduler", "定时任务初始化", () => Promise.resolve().then(() => {
-      const scheduler = useGlobalScheduler({
-        onTick: ({ taskId, runCount }) => {
-          if (taskId === "refresh") {
-            this.syncFriends();
-          }
-        },
-        onCompleted: (taskId) => { }
-      });
+    return withTiming(
+      "scheduler",
+      "定时任务初始化",
+      () =>
+        Promise.resolve().then(() => {
+          const scheduler = useGlobalScheduler({
+            onTick: ({ taskId, runCount }) => {
+              if (taskId === "refresh") {
+                this.syncFriends();
+              }
+            },
+            onCompleted: taskId => { },
+          });
 
-      // 定时刷新任务：每 30 秒执行
-      scheduler.startInterval("refresh", 30000, { immediate: true });
-    }), this.log);
+          // 定时刷新任务：每 30 秒执行
+          scheduler.startInterval("refresh", 30000, { immediate: true });
+        }),
+      this.log
+    );
   }
 
   initImageCache() {
@@ -218,20 +227,25 @@ class MainManager {
   }
 
   /**
-  * 初始化 WebSocket 连接。
-  * - 先注册消息处理回调，再建立连接。
-  * - 添加用户认证参数。
-  */
+   * 初始化 WebSocket 连接。
+   * - 先注册消息处理回调，再建立连接。
+   * - 添加用户认证参数。
+   */
   private async initWebSocket(): Promise<void> {
     return withTiming(
       "ws",
       "WebSocket初始化",
       async () => {
+        const currentUserId = this.stores.user.userId;
+        const accessToken = this.stores.user.getAccess();
 
-        const { userId, token } = this.stores.user;
+        if (!accessToken || !currentUserId) {
+          throw new Error("无有效的 Token 或用户 ID");
+        }
+
         const url = new URL(import.meta.env.VITE_API_SERVER_WS);
-        url.searchParams.append("uid", userId);
-        url.searchParams.append("token", token);
+        url.searchParams.append("uid", currentUserId);
+        url.searchParams.append("token", accessToken);
 
         onMessage((e: any) => {
           this.log.prettyInfo("websocket", "收到 WebSocket 消息:", e);
@@ -241,13 +255,13 @@ class MainManager {
         connect(url.toString(), {
           payload: {
             code: MessageType.REGISTER.code,
-            token: token,
+            token: accessToken,
             data: "registrar",
-            deviceType: import.meta.env.VITE_DEVICE_TYPE
+            deviceType: import.meta.env.VITE_DEVICE_TYPE,
           },
-          heartbeat: { code: MessageType.HEART_BEAT.code, token: token, data: "heartbeat" },
+          heartbeat: { code: MessageType.HEART_BEAT.code, token: accessToken, data: "heartbeat" },
           interval: import.meta.env.VITE_API_SERVER_HEARTBEAT,
-          protocol: import.meta.env.VITE_API_PROTOCOL_TYPE
+          protocol: import.meta.env.VITE_API_PROTOCOL_TYPE,
         });
       },
       this.log
@@ -255,7 +269,7 @@ class MainManager {
   }
 
   private initEventListeners(): void {
-    globalEventBus.on("message:recall", (payload) => {
+    globalEventBus.on("message:recall", payload => {
       this.stores.chat.handleSendRecallMessage(payload);
     });
   }
@@ -266,12 +280,7 @@ class MainManager {
     scheduleIdleTask(async () => {
       this.log.prettyInfo("background", "开始后台任务");
 
-      const tasks = [
-        this.initDownloadPath(),
-        this.syncAllData(),
-        this.initSystemTray(),
-        this.initShortcuts(),
-      ];
+      const tasks = [this.initDownloadPath(), this.syncAllData(), this.initSystemTray(), this.initShortcuts()];
 
       const results = await Promise.allSettled(tasks);
       results.forEach((r, i) => {
@@ -295,12 +304,7 @@ class MainManager {
     return withTiming(
       "sync",
       "用户数据同步",
-      () =>
-        Promise.all([
-          this.syncOfflineMessages(),
-          this.syncChatSessions(),
-          this.syncFriends(),
-        ]).then(() => { }),
+      () => Promise.all([this.syncOfflineMessages(), this.syncChatSessions(), this.syncFriends()]).then(() => { }),
       this.log
     );
   }
@@ -314,7 +318,7 @@ class MainManager {
 
   private async syncOfflineMessages(): Promise<void> {
     const { chatsMapper, singleMessageMapper, groupMessageMapper } = this.mappers;
-    const ownerId = storage.get("userId");
+    const ownerId = this.stores.user.userId;
 
     const chats = await chatsMapper.findLastChat();
     const sequence = chats?.[0]?.sequence || 0;
@@ -349,11 +353,12 @@ class MainManager {
   private async syncChatSessions(): Promise<void> {
     const { chatsMapper } = this.mappers;
     const { chat } = this.stores;
+    const ownerId = this.stores.user.userId;
 
     try {
       const lastChats = await chatsMapper.findLastChat();
       const sequence = lastChats?.[0]?.sequence ?? 0;
-      const res: any = await api.GetChatList({ fromId: storage.get("userId"), sequence });
+      const res: any = await api.GetChatList({ fromId: ownerId, sequence });
 
       if (Array.isArray(res) && res.length > 0) {
         const transformed = res.map((item: any) => {
@@ -460,7 +465,7 @@ class MainManager {
     // 根据消息类型确定优先级
     const priority = this.getMessagePriority(res.code);
 
-    this.messageQueue.push(res, priority).then(async (item) => {
+    this.messageQueue.push(res, priority).then(async item => {
       const { code, data } = item;
 
       // 注册相关（静默处理）

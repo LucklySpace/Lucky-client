@@ -5,14 +5,14 @@
         <!-- 搜索群成员 -->
         <div class="search-section">
           <el-input v-model="ui.search" class="group-search" clearable
-            :placeholder="$t('chat.groupChat.searchMembers')">
+            :placeholder="$t('business.group.members.search')">
           </el-input>
         </div>
 
         <!-- 群成员网格 -->
         <div class="members-section">
           <div class="section-header">
-            <span>{{ $t('chat.groupChat.members') }} ({{ filteredMembers.length }})</span>
+            <span>{{ $t('business.group.members.title') }} ({{ filteredMembers.length }})</span>
           </div>
           <div class="members-grid">
             <div v-for="item in displayedMembers" :key="item.userId" class="member-item">
@@ -26,12 +26,12 @@
                   <Plus />
                 </el-icon>
               </div>
-              <div class="member-name">{{ $t("actions.add") }}</div>
+              <div class="member-name">{{ $t("common.actions.add") }}</div>
             </div>
           </div>
           <div v-if="filteredMembers.length > 15" class="expand-btn-wrapper">
             <el-button link type="primary" @click="toggleExpand">
-              {{ ui.members.expanded ? $t("chat.groupChat.collapse") : $t("chat.groupChat.viewMore") }}
+              {{ ui.members.expanded ? $t("business.group.members.collapse") : $t("business.group.members.viewMore") }}
             </el-button>
           </div>
         </div>
@@ -41,7 +41,7 @@
         <!-- 基本设置 -->
         <div class="settings-section">
           <div class="setting-item" :class="{ clickable: isOwner }" @click="startEditGroupName">
-            <span class="label">{{ $t('chat.groupChat.groupName') }}</span>
+            <span class="label">{{ $t('business.group.details.name') }}</span>
             <div class="content">
               <template v-if="!ui.edit.name.editing">
                 <span class="value">{{ groupInfoData.name }}</span>
@@ -55,10 +55,10 @@
           </div>
 
           <div class="setting-item" :class="{ clickable: canEditNotice }" @click="startEditGroupNotice">
-            <span class="label">{{ $t('chat.groupChat.groupNotice') }}</span>
+            <span class="label">{{ $t('business.group.details.notice') }}</span>
             <div class="content notice-content">
               <template v-if="!ui.edit.notice.editing">
-                <span class="value notice-text">{{ groupInfoData.notification || $t("group.noAnnouncement") }}</span>
+                <span class="value notice-text">{{ groupInfoData.notification || $t("business.group.notice.empty") }}</span>
                 <el-icon v-if="canEditNotice" class="arrow-icon">
                   <ArrowRight />
                 </el-icon>
@@ -74,7 +74,7 @@
         <!-- 交互设置 -->
         <div class="settings-section">
           <div class="setting-item clickable" @click="switchHistoryMessage">
-            <span class="label">{{ $t('chat.toolbar.history') }}</span>
+            <span class="label">{{ $t('pages.chat.toolbar.history') }}</span>
             <div class="content">
               <el-icon class="arrow-icon">
                 <ArrowRight />
@@ -83,14 +83,14 @@
           </div>
 
           <div class="setting-item">
-            <span class="label">{{ $t('chat.toolbar.mute') }}</span>
+            <span class="label">{{ $t('pages.chat.toolbar.mute') }}</span>
             <div class="content">
               <el-switch v-model="ui.switches.mute" class="custom-switch" />
             </div>
           </div>
 
           <div class="setting-item">
-            <span class="label">{{ $t('chat.toolbar.pin') }}</span>
+            <span class="label">{{ $t('pages.chat.toolbar.pin') }}</span>
             <div class="content">
               <el-switch v-model="ui.switches.top" class="custom-switch" />
             </div>
@@ -102,37 +102,36 @@
         <!-- 危险操作 -->
         <div class="danger-section">
           <div class="danger-item clickable" @click="handleClearGroupMessage">
-            {{ $t("dialog.clearChatLog") }}
+            {{ $t("components.dialog.clearChat.title") }}
           </div>
           <div class="danger-item clickable" @click="handleQuitGroup">
-            {{ isOwner ? $t("contacts.deleteGroup") : $t("contacts.quitGroup") }}
+            {{ isOwner ? $t("pages.contacts.actions.delete") : $t("business.group.actions.leave") }}
           </div>
         </div>
       </el-form>
 
       <!-- 弹窗 -->
       <el-dialog v-model="ui.dialogs.invite" :destroy-on-close="true" class="invite-dialog"
-        :title="$t('search.invite.title')" width="550px">
+        :title="$t('components.search.inviteMembers')" width="550px">
         <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
       </el-dialog>
 
-      <HistoryDialog :visible="ui.dialogs.history" :title="$t('chat.toolbar.history')"
+      <HistoryDialog :visible="ui.dialogs.history" :title="$t('pages.chat.toolbar.history')"
         @handleClose="toggleHistoryDialog" />
     </div>
   </el-scrollbar>
 </template>
 
 <script lang="ts" setup>
-import SelectContact from "@/components/SelectContact/index.vue";
-import { reactive, computed, onMounted, onUnmounted, nextTick, ref } from "vue";
-import { ElMessageBox, ElMessage } from "element-plus";
-import { useChatStore } from "@/store/modules/chat";
-import { MessageType } from "@/constants";
-import Chats from "@/database/entity/Chats";
-import HistoryDialog from "@/components/History/index.vue";
 import Avatar from "@/components/Avatar/index.vue";
+import HistoryDialog from "@/components/History/index.vue";
+import SelectContact from "@/components/SelectContact/index.vue";
+import { Events, MessageType } from "@/constants";
+import Chats from "@/database/entity/Chats";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { Events } from "@/constants";
+import { useChatStore } from "@/store/modules/chat";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t: $t } = useI18n();
@@ -181,7 +180,7 @@ const isOwner = computed(() => {
 const canEditNotice = computed(() => isOwner.value || isAdmin.value);
 
 const onNoPermission = () => {
-  ElMessage.warning($t("chat.groupChat.noPermission"));
+  ElMessage.warning($t("business.group.empty.noSelection"));
 };
 
 const onBusGroupRenamed = (payload: any) => {

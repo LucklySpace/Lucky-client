@@ -16,30 +16,30 @@
 
       <!-- 用户名登录表单 -->
       <el-form v-if="loginType === 'form'" ref="loginForms" v-model="loginForm" label-position="top" label-width="60px">
-        <el-form-item :label="$t('login.username')" prop="userId">
-          <el-input v-model="loginForm.principal" :placeholder="$t('login.inputUsername')" type="text"></el-input>
+        <el-form-item :label="$t('pages.login.form.username')" prop="userId">
+          <el-input v-model="loginForm.principal" :placeholder="$t('pages.login.placeholder.username')" type="text"></el-input>
         </el-form-item>
-        <el-form-item :label="$t('login.password')" prop="password">
-          <el-input v-model="loginForm.credentials" :placeholder="$t('login.inputPassword')" show-password
+        <el-form-item :label="$t('pages.login.form.password')" prop="password">
+          <el-input v-model="loginForm.credentials" :placeholder="$t('pages.login.placeholder.password')" show-password
             type="password" @keyup.enter.native="login"></el-input>
         </el-form-item>
 
-        <a href="#" style="float: right" @click.prevent="selectForm('sms')">{{ $t("login.phone") }}</a>
+        <a href="#" style="float: right" @click.prevent="selectForm('sms')">{{ $t("pages.login.methods.phone") }}</a>
         <!-- <a style="float: right; margin-right: 10px;" href="#" @click.prevent="selectForm('scan')">扫码登录</a> -->
 
         <br />
         <el-button :loading="loginLoading" class="login-button" type="primary" @click.prevent="login()">{{
-          $t("login.label") }}
+          $t("pages.login.title") }}
         </el-button>
       </el-form>
 
       <!-- 手机登录表单 -->
       <el-form v-if="loginType === 'sms'" ref="loginForms" v-model="loginForm" label-position="top" label-width="60px">
-        <el-form-item :label="$t('login.phoneNumber')" prop="principal">
-          <el-input v-model="loginForm.principal" :placeholder="$t('login.inputPhoneNumber')" type="text"></el-input>
+        <el-form-item :label="$t('pages.login.form.phoneNumber')" prop="principal">
+          <el-input v-model="loginForm.principal" :placeholder="$t('pages.login.placeholder.phoneNumber')" type="text"></el-input>
         </el-form-item>
-        <el-form-item :label="$t('login.code')" prop="credentials">
-          <el-input v-model="loginForm.credentials" :placeholder="$t('login.inputCode')" type="text"
+        <el-form-item :label="$t('pages.login.form.code')" prop="credentials">
+          <el-input v-model="loginForm.credentials" :placeholder="$t('pages.login.placeholder.code')" type="text"
             @keyup.enter.native="login">
             <template #append>
               <el-button :disabled="isDisabled" :style="`color: var(--el-color-primary)`" type="primary"
@@ -50,23 +50,23 @@
           </el-input>
         </el-form-item>
 
-        <a href="#" style="float: right" @click.prevent="selectForm('form')">{{ $t("login.account") }}</a>
+        <a href="#" style="float: right" @click.prevent="selectForm('form')">{{ $t("pages.login.methods.account") }}</a>
         <br />
-        <el-button :loading="loginLoading" class="login-button" type="primary" @click="login()">{{ $t("login.label") }}
+        <el-button :loading="loginLoading" class="login-button" type="primary" @click="login()">{{ $t("pages.login.title") }}
         </el-button>
       </el-form>
 
       <!-- 扫码登录表单 -->
       <el-form v-if="loginType === 'scan'" ref="loginForms" label-position="top">
         <el-form-item prop="scan">
-          <div style="margin: 0 auto; margin-bottom: 20px; font-size: 16px">{{ $t("login.scan") }}</div>
+          <div style="margin: 0 auto; margin-bottom: 20px; font-size: 16px">{{ $t("pages.login.methods.qrcode") }}</div>
           <div class="qr-code">
-            <img v-if="qrCodeUrl" :alt="$t('login.qrcode')" :src="qrCodeUrl" class="lazy-img" />
-            <span v-else>{{ $t("login.loadingQR") }}</span>
+            <img v-if="qrCodeUrl" :alt="$t('pages.login.qrcode.loading')" :src="qrCodeUrl" class="lazy-img" />
+            <span v-else>{{ $t("pages.login.qrcode.loading") }}</span>
           </div>
         </el-form-item>
 
-        <a href="#" style="float: right" @click.prevent="selectForm('form')">{{ $t("login.account") }}</a>
+        <a href="#" style="float: right" @click.prevent="selectForm('form')">{{ $t("pages.login.methods.account") }}</a>
         <br />
       </el-form>
     </div>
@@ -78,15 +78,13 @@
 </template>
 
 <script lang="ts" setup>
+import api from "@/api";
+import defaultImg from '@/assets/img/icon1.png';
 import svgIcon from "@/components/SvgIcon/index.vue";
 import system from "@/components/System/index.vue";
-import Avatar from "@/components/Avatar/index.vue";
-import { ElMessage } from "element-plus";
 import { useUserStore } from "@/store/modules/user";
-import api from "@/api";
 import RSA from "@/utils/Auth";
-import defaultImg from '@/assets/img/icon1.png';
-import { storage } from "@/utils/Storage";
+import { ElMessage } from "element-plus";
 
 const { t } = useI18n();
 
@@ -116,7 +114,7 @@ const initPublicKey = async (): Promise<boolean> => {
     return false;
   } catch (error) {
     console.error("获取公钥失败：", error);
-    ElMessage.error(t("login.initError") || "初始化失败，请刷新重试");
+    ElMessage.error(t("pages.login.messages.failed") || "初始化失败，请刷新重试");
     return false;
   }
 };
@@ -128,7 +126,7 @@ const loginForm = ref({
 });
 
 // 倒计时按钮文本和状态
-const buttonText = ref(t("login.sendCode"));
+const buttonText = ref(t("pages.login.buttons.sendCode"));
 const isDisabled = ref(false);
 const smsTimerId = ref<ReturnType<typeof setInterval> | null>(null);
 
@@ -172,7 +170,7 @@ const startSmsCountdown = () => {
     buttonText.value = `${count}s`;
     if (count <= 0) {
       clearSmsTimer();
-      buttonText.value = t("login.sendCode");
+      buttonText.value = t("pages.login.buttons.sendCode");
       isDisabled.value = false;
     }
   }, 1000);
@@ -199,12 +197,12 @@ const validateForm = (): boolean => {
   const { principal, credentials } = loginForm.value;
 
   if (!principal.trim()) {
-    ElMessage.warning(loginType.value === "sms" ? t("login.inputPhoneNumber") : t("login.inputUsername"));
+    ElMessage.warning(loginType.value === "sms" ? t("pages.login.placeholder.phoneNumber") : t("pages.login.placeholder.username"));
     return false;
   }
 
   if (!credentials.trim()) {
-    ElMessage.warning(loginType.value === "sms" ? t("login.inputCode") : t("login.inputPassword"));
+    ElMessage.warning(loginType.value === "sms" ? t("pages.login.placeholder.code") : t("pages.login.placeholder.password"));
     return false;
   }
 
@@ -225,7 +223,7 @@ const login = async () => {
   if (!isPublicKeyReady.value) {
     const success = await initPublicKey();
     if (!success) {
-      ElMessage.error(t("login.initError") || "初始化失败，请重试");
+      ElMessage.error(t("pages.login.messages.failed") || "初始化失败，请重试");
       return;
     }
   }
@@ -233,7 +231,7 @@ const login = async () => {
   const password = rsa.rsaPublicData(loginForm.value.credentials.trim());
   if (!password) {
     // 加密失败，重新获取公钥
-    ElMessage.warning(t("login.encryptError") || "加密失败，正在重试...");
+    ElMessage.warning(t("pages.login.messages.failed") || "加密失败，正在重试...");
     isPublicKeyReady.value = false;
     const success = await initPublicKey();
     if (!success) return;
@@ -241,7 +239,7 @@ const login = async () => {
     // 重新加密
     const retryPassword = rsa.rsaPublicData(loginForm.value.credentials.trim());
     if (!retryPassword) {
-      ElMessage.error(t("login.encryptError") || "加密失败，请刷新页面重试");
+      ElMessage.error(t("pages.login.messages.failed") || "加密失败，请刷新页面重试");
       return;
     }
   }
@@ -268,7 +266,7 @@ const sendSmsCode = async () => {
   const phone = loginForm.value.principal.trim();
 
   if (!phone) {
-    ElMessage.warning(t("login.inputPhoneNumber"));
+    ElMessage.warning(t("pages.login.placeholder.phoneNumber"));
     return;
   }
 
@@ -279,11 +277,11 @@ const sendSmsCode = async () => {
 
   try {
     await api.Sms({ phone });
-    ElMessage.success(t("login.codeSent") || "验证码已发送");
+    ElMessage.success(t("pages.login.messages.success") || "验证码已发送");
     startSmsCountdown();
   } catch (error) {
     console.error("发送验证码失败：", error);
-    ElMessage.error(t("login.smsError") || "发送验证码失败");
+    ElMessage.error(t("pages.login.messages.codeSendFailed") || "发送验证码失败");
   }
 };
 
@@ -306,11 +304,11 @@ const requestQRCode = async () => {
       qrCodeExpireAt.value = result.expireAt || (Date.now() + 180000); // 默认3分钟过期
       startQRCodePolling(qrCode.value);
     } else {
-      ElMessage.error(t("login.getQrcodeError"));
+      ElMessage.error(t("pages.login.qrcode.error"));
     }
   } catch (error) {
     console.error("获取二维码失败：", error);
-    ElMessage.error(t("login.getQrcodeError"));
+    ElMessage.error(t("pages.login.qrcode.error"));
   }
 };
 
@@ -335,7 +333,7 @@ const startQRCodePolling = (code: string) => {
       switch (result.status) {
         case "EXPIRED":
           clearScanInterval();
-          ElMessage.warning(t("login.qrcodeExpired"));
+          ElMessage.warning(t("pages.login.qrcode.expired"));
           requestQRCode();
           break;
 
@@ -353,7 +351,7 @@ const startQRCodePolling = (code: string) => {
           };
 
           if (!formData.credentials) {
-            ElMessage.error(t("login.authError") || "授权信息无效");
+            ElMessage.error(t("pages.login.messages.failed") || "授权信息无效");
             requestQRCode();
             return;
           }

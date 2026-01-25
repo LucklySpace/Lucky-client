@@ -1,14 +1,14 @@
 <template>
   <article class="msg">
     <!-- 系统消息：仅渲染气泡 -->
-    <section v-if="isSystem" :aria-label="$t('messages.system')" class="msg--system">
+    <section v-if="isSystem" :aria-label="$t('components.message.system')" class="msg--system">
       <div class="msg__system-bubble">
         <Suspense>
           <template #default>
             <component :is="currentComponent" :message="message" />
           </template>
           <template #fallback>
-            <div class="msg__loading">{{ $t("messages.loading") }}</div>
+            <div class="msg__loading">{{ $t("components.message.loading") }}</div>
           </template>
         </Suspense>
       </div>
@@ -17,9 +17,9 @@
     <!-- 非系统消息：头像/昵称/气泡/气泡弹出 -->
     <section v-else :class="['msg__row', { 'msg__row--owner': message.isOwner }]">
       <div v-if="more || time" class="msg__meta">
-        <button v-if="more" :aria-label="$t('messages.viewMoreHistory')" class="msg__more no-select" type="button"
+        <button v-if="more" :aria-label="$t('components.message.loadMoreHistory')" class="msg__more no-select" type="button"
           @click="handleMoreMessage">
-          <span>{{ $t("messages.viewMoreMessages") }}</span>
+          <span>{{ $t("components.message.loadMore") }}</span>
         </button>
 
         <time v-if="time" :datetime="new Date(message.messageTime).toISOString()" class="msg__time no-select">
@@ -88,20 +88,20 @@
 
 <script lang="ts" setup>
 
-import TextBubble from "@/components/Bubble/text.vue";
+import Avatar from "@/components/Avatar/index.vue";
 import ImageBubble from "@/components/Bubble/image.vue";
+import TextBubble from "@/components/Bubble/text.vue";
 import VideoBubble from "@/components/Bubble/video.vue";
+import { MessageContentType } from "@/constants";
+import { useTimeFormat } from "@/hooks/useTimeFormat";
+import { useFriendsStore } from "@/store/modules/friends";
+import { useUserStore } from "@/store/modules/user";
 const FileBubble = defineAsyncComponent(() => import("@/components/Bubble/file.vue"));
 const AudioBubble = defineAsyncComponent(() => import("@/components/Bubble/audio.vue"));
 const StickerBubble = defineAsyncComponent(() => import("@/components/Bubble/sticker.vue"));
 const SystemBubble = defineAsyncComponent(() => import("@/components/Bubble/system.vue"));
 const GroupInviteBubble = defineAsyncComponent(() => import("@/components/Bubble/groupInvite.vue"));
 const UserPopover = defineAsyncComponent(() => import("@/components/UserPopover/index.vue"));
-import Avatar from "@/components/Avatar/index.vue";
-import { useFriendsStore } from "@/store/modules/friends";
-import { useUserStore } from "@/store/modules/user";
-import { MessageContentType } from "@/constants";
-import { useTimeFormat } from "@/hooks/useTimeFormat";
 
 const { useFriendlyTime } = useTimeFormat();
 

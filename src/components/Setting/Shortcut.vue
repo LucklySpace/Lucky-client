@@ -3,7 +3,7 @@
     <el-form :model="shortcutForm" label-width="0">
       <!-- 发送消息 -->
       <div class="form-row">
-        <div :title="$t('settings.shortcut.send')" class="row-label">{{ $t("settings.shortcut.send") }}</div>
+        <div :title="$t('pages.settings.shortcut.sendMessage')" class="row-label">{{ $t("pages.settings.shortcut.sendMessage") }}</div>
         <div class="row-control">
           <el-select class="custom-select" v-model="shortcutForm.sendMessage" @change="handleKeyChange('sendMessage')">
             <el-option label="Alt + S" value="Alt + S" />
@@ -14,12 +14,12 @@
 
       <!-- 截图 -->
       <div class="form-row">
-        <div :title="$t('settings.shortcut.screen')" class="row-label">{{ $t("settings.shortcut.screen") }}</div>
+        <div :title="$t('pages.settings.shortcut.screenshot')" class="row-label">{{ $t("pages.settings.shortcut.screenshot") }}</div>
         <div class="row-control">
           <el-input
             class="custom-input"
             v-model="shortcutForm.screenshot"
-            :placeholder="$t('settings.shortcut.click')"
+            :placeholder="$t('pages.settings.shortcut.clickToSet')"
             readonly
             @keydown.prevent="handleKeyDown($event as KeyboardEvent, 'screenshot')"
             @keyup.prevent="submitShortcut('screenshot')"
@@ -31,7 +31,7 @@
       <div class="form-bottom">
         <!-- 如果这一行 label 需要留空，也可直接用 &nbsp; 占位 -->
         <span>
-          <el-button type="primary" @click="resetDefaults">{{ $t("settings.shortcut.default") }}</el-button>
+          <el-button type="primary" @click="resetDefaults">{{ $t("pages.settings.shortcut.resetDefault") }}</el-button>
         </span>
       </div>
     </el-form>
@@ -39,10 +39,10 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref, shallowReactive } from "vue";
-  import { ElMessage } from "element-plus";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
-  import { useSettingStore } from "@/store/modules/setting";
+import { useSettingStore } from "@/store/modules/setting";
+import { ElMessage } from "element-plus";
+import { ref, shallowReactive } from "vue";
 
   interface ShortcutForm {
     sendMessage: string;

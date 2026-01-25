@@ -2,7 +2,7 @@
   <div class="search-container no-select">
     <div class="search-bar">
       <div class="search-input-wrapper">
-        <el-input ref="headerInputRef" v-model="searchStr" :placeholder="$t('search.placeholder')"
+        <el-input ref="headerInputRef" v-model="searchStr" :placeholder="$t('components.search.placeholder')"
           class="custom-search-input" clearable @clear="handleClear" @click="toggleSearchPopover" @input="handleInput"
           @keydown.enter.prevent="handleEnter">
           <template #prefix>
@@ -43,14 +43,14 @@
               </el-icon>
             </div>
             <div class="entry-text">
-              <div class="title">{{ t("search.moreFriends.title") }}</div>
-              <div class="subtitle">{{ t("search.moreFriends.subtitle") }}</div>
+              <div class="title">{{ t("components.search.moreFriends.title") }}</div>
+              <div class="subtitle">{{ t("components.search.moreFriends.subtitle") }}</div>
             </div>
           </div>
 
           <!-- 联系人结果 -->
           <div v-if="(activeTab === 'all' || activeTab === 'friends') && friends.length" class="result-section">
-            <div class="section-title">{{ t("search.section.contacts") }}</div>
+            <div class="section-title">{{ t("components.search.sections.contacts") }}</div>
             <div v-for="(f, idx) in friends" :key="`friend-${f.userId}`"
               :class="['result-item', { focused: isFocused(flatIndex('friend', idx)) }]"
               @click="selectResult('friend', f)" @mousemove="setHover(flatIndex('friend', idx))">
@@ -67,7 +67,7 @@
 
           <!-- 消息结果 -->
           <div v-if="(activeTab === 'all' || activeTab === 'messages') && messages.length" class="result-section">
-            <div class="section-title">{{ t("search.section.messages") }}</div>
+            <div class="section-title">{{ t("components.search.sections.messages") }}</div>
             <div v-for="(m, idx) in messages" :key="`msg-${m.chatId}`"
               :class="['result-item', { focused: isFocused(flatIndex('message', idx)) }]"
               @click="selectResult('message', m)" @mousemove="setHover(flatIndex('message', idx))">
@@ -80,7 +80,7 @@
                 </div>
                 <div class="item-sub">
                   <span class="preview" v-html="highlight(m.message)"></span>
-                  <span class="count">{{ t("search.count", { count: m.count }) }}</span>
+                  <span class="count">{{ t("components.search.count", { count: m.count }) }}</span>
                 </div>
               </div>
             </div>
@@ -88,25 +88,25 @@
 
           <!-- 空状态 -->
           <!-- <div v-show="!hasAnyResult" class="empty-state">
-            <el-empty :image-size="60" :description="t('search.noResult')" />
+            <el-empty :image-size="60" :description="t('components.search.noResult')" />
           </div> -->
         </div>
       </div>
     </el-popover>
 
     <!-- 弹窗部分 -->
-    <el-dialog v-model="inviteDialogVisible" :title="$t('search.invite.title')" width="550px" destroy-on-close
+    <el-dialog v-model="inviteDialogVisible" :title="$t('components.search.inviteMembers')" width="550px" destroy-on-close
       class="modern-dialog">
       <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="inviteDialogVisible = false" />
     </el-dialog>
 
-    <el-dialog v-model="friendSearchDialogVisible" :title="$t('search.friendSearch.title')" width="400px"
+    <el-dialog v-model="friendSearchDialogVisible" :title="$t('business.friend.search.title')" width="400px"
       destroy-on-close class="modern-dialog">
       <div class="friend-search-body">
-        <el-input v-model="searchFriendStr" :placeholder="$t('search.friendSearch.title')" clearable
+        <el-input v-model="searchFriendStr" :placeholder="$t('business.friend.search.title')" clearable
           class="search-input-large" @keydown.enter.prevent="handleFriendSearch">
           <template #append>
-            <el-button type="primary" @click="handleFriendSearch">{{ t("search.friendSearch.searchBtn") }}</el-button>
+            <el-button type="primary" @click="handleFriendSearch">{{ t("business.friend.search.button") }}</el-button>
           </template>
         </el-input>
 
@@ -118,48 +118,48 @@
               <div class="id">ID: {{ friend.friendId }}</div>
             </div>
             <div class="action">
-              <el-button v-if="friend.flag == 1" link disabled>{{ t("search.addFriend.addedLabel") }}</el-button>
+              <el-button v-if="friend.flag == 1" link disabled>{{ t("business.friend.addFriend.added") }}</el-button>
               <el-button v-else type="primary" size="small" @click="handleAddFriend(friend)">{{
-                t("search.addFriend.addButton") }}</el-button>
+                t("business.friend.addFriend.button") }}</el-button>
             </div>
           </div>
-          <div v-if="!searchedFriends.length && searchFriendStr" class="no-data">{{ t("search.friendSearch.noResult") }}
+          <div v-if="!searchedFriends.length && searchFriendStr" class="no-data">{{ t("business.friend.search.noResult") }}
           </div>
         </div>
       </div>
     </el-dialog>
 
-    <el-dialog v-model="addFriendDialogVisible" :title="$t('search.addFriend.title')" width="380px"
+    <el-dialog v-model="addFriendDialogVisible" :title="$t('business.friend.addFriend.title')" width="380px"
       class="modern-dialog">
       <el-form label-position="top">
-        <el-form-item :label="$t('search.addFriend.verifyLabel')">
+        <el-form-item :label="$t('business.friend.addFriend.verifyLabel')">
           <el-input v-model="verifyMsg" type="textarea" :rows="3" maxlength="100" show-word-limit />
         </el-form-item>
-        <el-form-item :label="$t('profile.remark')">
+        <el-form-item :label="$t('business.profile.fields.remark')">
           <el-input v-model="remark" maxlength="20" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="addFriendDialogVisible = false">{{ t("actions.cancel") }}</el-button>
-        <el-button type="primary" @click="confirmAddFriend">{{ t("actions.confirm") }}</el-button>
+        <el-button @click="addFriendDialogVisible = false">{{ t("common.actions.cancel") }}</el-button>
+        <el-button type="primary" @click="confirmAddFriend">{{ t("common.actions.confirm") }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script lang="ts" setup>
+import Avatar from "@/components/Avatar/index.vue";
+import { MessageType } from "@/constants";
+import { useTimeFormat } from "@/hooks/useTimeFormat";
+import { useChatStore } from "@/store/modules/chat";
+import { useFriendsStore } from "@/store/modules/friends";
+import { useSearchStore } from "@/store/modules/search";
+import { useUserStore } from "@/store/modules/user";
+import { escapeHtml } from "@/utils/Strings";
+import { ElMessage } from "element-plus";
 import { computed, nextTick, ref, unref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import SelectContact from "../SelectContact/index.vue";
-import { useSearchStore } from "@/store/modules/search";
-import { useFriendsStore } from "@/store/modules/friends";
-import Avatar from "@/components/Avatar/index.vue";
-import { MessageType } from "@/constants";
-import { ElMessage } from "element-plus";
-import { escapeHtml } from "@/utils/Strings";
-import { useTimeFormat } from "@/hooks/useTimeFormat";
-import { useUserStore } from "@/store/modules/user";
-import { useChatStore } from "@/store/modules/chat";
 
 /* -------------------- 类型定义 -------------------- */
 interface Chat {
@@ -194,9 +194,9 @@ const { useFriendlyTime } = useTimeFormat();
 const searchStr = ref("");
 const activeTab = ref<"all" | "friends" | "messages">("all");
 const tabs = computed(() => [
-  { label: t("search.tabs.all"), value: "all" as const },
-  { label: t("search.tabs.friends"), value: "friends" as const },
-  { label: t("search.tabs.messages"), value: "messages" as const }
+  { label: t("components.search.tabs.all"), value: "all" as const },
+  { label: t("components.search.tabs.contacts"), value: "friends" as const },
+  { label: t("components.search.tabs.messages"), value: "messages" as const }
 ]);
 
 const inviteDialogVisible = ref(false);

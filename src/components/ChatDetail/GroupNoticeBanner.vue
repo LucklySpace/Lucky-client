@@ -1,26 +1,25 @@
 <template>
   <div v-if="showBanner" class="group-notice-banner" role="button" @click="openDialog">
     <i class="iconfont icon-gonggao" aria-hidden="true"></i>
-    <span class="prefix">【 {{ t('group.notice.prefix') }} 】</span>
+    <span class="prefix">【 {{ t('business.group.notice.prefix') }} 】</span>
     <span class="text" :title="oneLineText">{{ oneLineText }}</span>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="$t('group.notice.title')" width="520px" @close="markRead">
+  <el-dialog v-model="dialogVisible" :title="$t('business.group.notice.title')" width="520px" @close="markRead">
     <div class="notice-content">
       <pre class="content">{{ fullText }}</pre>
     </div>
     <template #footer>
-      <el-button type="primary" @click="closeAndRead">{{ $t("group.notice.known") }}</el-button>
+      <el-button type="primary" @click="closeAndRead">{{ $t("business.group.notice.confirm") }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onBeforeUnmount, ref } from "vue";
-import { useChatStore } from "@/store/modules/chat";
+import { Events, MessageType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { Events } from "@/constants";
-import { MessageType } from "@/constants";
+import { useChatStore } from "@/store/modules/chat";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 type NoticePayload = {

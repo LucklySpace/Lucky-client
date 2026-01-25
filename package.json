@@ -18,11 +18,16 @@
     "type-check": "vue-tsc --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "docs:build": "typedoc",
-    "prepare": "husky install"
+    "docs:build": "typedoc"
   },
   "dependencies": {
-    "zod": "^3.24.2",
+    "@bufbuild/protobuf": "^2.8.0",
+    "@element-plus/icons-vue": "^2.3.1",
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@jitsi/rnnoise-wasm": "^0.2.1",
+    "@kangc/v-md-editor": "^2.3.18",
     "@tauri-apps/api": "2.5.0",
     "@tauri-apps/plugin-clipboard-manager": "2.3.2",
     "@tauri-apps/plugin-dialog": "2.2.2",
@@ -37,16 +42,10 @@
     "@tauri-apps/plugin-shell": "2.2.2",
     "@tauri-apps/plugin-sql": "2.2.0",
     "@tauri-apps/plugin-store": "2.2.0",
+    "@tauri-apps/plugin-stronghold": "2.3.1",
     "@tauri-apps/plugin-updater": "2.9.0",
     "@tauri-apps/plugin-upload": "2.4.0",
     "@tauri-apps/plugin-websocket": "^2.4.0",
-    "@bufbuild/protobuf": "^2.8.0",
-    "@element-plus/icons-vue": "^2.3.1",
-    "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
-    "@jitsi/rnnoise-wasm": "^0.2.1",
-    "@kangc/v-md-editor": "^2.3.18",
     "@types/js-cookie": "^3.0.6",
     "@types/spark-md5": "^3.0.5",
     "@vue-office/docx": "^1.6.3",
@@ -73,7 +72,8 @@
     "vue-draggable-plus": "^0.5.3",
     "vue-i18n": "^11.1.10",
     "vue-router": "^4.2.0",
-    "vue-virtual-scroller": "2.0.0-beta.8"
+    "vue-virtual-scroller": "2.0.0-beta.8",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": ">=2.0.0-rc.0",

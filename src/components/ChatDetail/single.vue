@@ -19,10 +19,10 @@
       <div class="settings-section">
         <!-- 备注设置 -->
         <div class="setting-item clickable" @click="startEditRemark">
-          <span class="label">{{ $t('profile.remark') }}</span>
+          <span class="label">{{ $t('business.profile.fields.remark') }}</span>
           <div class="content">
             <template v-if="!isEditingRemark">
-              <span class="value">{{ form.remark || singleInfo.name || $t('common.noData') }}</span>
+              <span class="value">{{ form.remark || singleInfo.name || $t('common.status.noData') }}</span>
               <el-icon class="arrow-icon">
                 <ArrowRight />
               </el-icon>
@@ -33,7 +33,7 @@
         </div>
 
         <div class="setting-item clickable" @click="switchHistoryMessage">
-          <span class="label">{{ $t('chat.toolbar.history') }}</span>
+          <span class="label">{{ $t('pages.chat.toolbar.history') }}</span>
           <div class="content">
             <el-icon class="arrow-icon">
               <ArrowRight />
@@ -47,14 +47,14 @@
       <!-- 交互控制区域 -->
       <div class="settings-section">
         <div class="setting-item">
-          <span class="label">{{ $t('chat.toolbar.mute') }}</span>
+          <span class="label">{{ $t('pages.chat.toolbar.mute') }}</span>
           <div class="content">
             <el-switch v-model="messageMute" class="custom-switch" />
           </div>
         </div>
 
         <div class="setting-item">
-          <span class="label">{{ $t('chat.toolbar.pin') }}</span>
+          <span class="label">{{ $t('pages.chat.toolbar.pin') }}</span>
           <div class="content">
             <el-switch v-model="top" class="custom-switch" />
           </div>
@@ -66,16 +66,16 @@
       <!-- 危险操作区域 -->
       <div class="danger-section">
         <div class="danger-item clickable" @click="handleClearFriendMessage">
-          {{ $t('dialog.clearChatLog') }}
+          {{ $t('components.dialog.clearChat.title') }}
         </div>
         <div class="danger-item clickable" @click="handleDeleteContact">
-          {{ $t('contacts.delete') }}
+          {{ $t('pages.contacts.actions.delete') }}
         </div>
       </div>
     </el-form>
   </div>
 
-  <HistoryDialog :visible="historyDialogParam.showDialog" :title="$t('chat.toolbar.history')"
+  <HistoryDialog :visible="historyDialogParam.showDialog" :title="$t('pages.chat.toolbar.history')"
     @handleClose="toggleHistoryDialog" />
 
   <el-popover ref="InfoRef" :virtual-ref="popRef" placement="right-end" trigger="click" virtual-triggering width="240">
@@ -84,17 +84,16 @@
 </template>
 
 <script lang="ts" setup>
-import { ElMessageBox, ElMessage, FormInstance, FormRules } from 'element-plus';
-import { useFriendsStore } from '@/store/modules/friends';
-import { useChatStore } from '@/store/modules/chat';
-import HistoryDialog from '@/components/History/index.vue';
-import Chats from '@/database/entity/Chats';
 import Avatar from '@/components/Avatar/index.vue';
+import HistoryDialog from '@/components/History/index.vue';
 import UserPopover from '@/components/UserPopover/index.vue';
+import { Events, MAX_REMARK_LEN } from '@/constants';
+import Chats from '@/database/entity/Chats';
 import { globalEventBus } from '@/hooks/useEventBus';
-import { Events } from '@/constants';
-import { MAX_REMARK_LEN } from '@/constants';
+import { useChatStore } from '@/store/modules/chat';
+import { useFriendsStore } from '@/store/modules/friends';
 import type { PopoverInstance } from 'element-plus';
+import { ElMessage, ElMessageBox, FormInstance, FormRules } from 'element-plus';
 
 const { t: $t } = useI18n();
 const chatStore = useChatStore();
@@ -146,11 +145,11 @@ const startEditRemark = () => {
 const saveRemark = async () => {
   const next = (form.value.remark || '').trim();
   if (!next) {
-    ElMessage.warning($t('errors.remark.empty'));
+    ElMessage.warning($t('common.errors.remark.empty'));
     return cancelEdit();
   }
   if (next.length > MAX_REMARK_LEN) {
-    ElMessage.error($t('errors.remark.tooLong', { max: MAX_REMARK_LEN }));
+    ElMessage.error($t('common.errors.remark.tooLong', { max: MAX_REMARK_LEN }));
     return;
   }
   try {

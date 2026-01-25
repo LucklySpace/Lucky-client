@@ -1,23 +1,53 @@
-import HttpClient, { HttpParams } from "@/utils/Http.ts";
-import { storage } from "@/utils/Storage";
-import Signer from "@/utils/Sign";
-import { ElMessage } from "element-plus";
 import { MessageCode } from "@/constants/MessageCode";
+import HttpClient, { HttpParams } from "@/utils/Http.ts";
+import Signer from "@/utils/Sign";
+import { storage } from "@/utils/Storage";
+import { ElMessage } from "element-plus";
 
 // 创建实例，配置 baseURL、headers 与 timeout
 const Http = HttpClient.create({
   baseURL: import.meta.env.VITE_API_SERVER,
   headers: { "Content-Type": "application/json" },
-  timeout: 10000
+  timeout: 10000,
 });
 
-// 添加请求拦截器（如：注入 Token 和签名）
+// 添加请求拦截器（注入 Token 和签名）
 Http.interceptors.request.use(async (config: HttpParams) => {
-  // 添加 token
-  if (storage.get("token")) {
+  // 获取 Token（自动处理过期检测）
+  let accessToken = storage.get("token");
+
+  // 如果 Token 为空，尝试获取原始 Token（可能需要刷新）
+  // if (!accessToken) {
+  //   const needsRefresh = await tokenManager.needsRefresh();
+
+  //   if (needsRefresh) {
+  //     // 处理 Token 刷新（防止并发）
+  //     if (!isRefreshing) {
+  //       isRefreshing = true;
+
+  //       const newToken = await doRefreshToken();
+  //       isRefreshing = false;
+
+  //       if (newToken) {
+  //         onTokenRefreshed(newToken);
+  //         accessToken = newToken;
+  //       }
+  //     } else {
+  //       // 等待刷新完成
+  //       accessToken = await new Promise<string>((resolve) => {
+  //         subscribeTokenRefresh((token: string) => {
+  //           resolve(token);
+  //         });
+  //       });
+  //     }
+  //   }
+  // }
+
+  // 注入 Token
+  if (accessToken) {
     config.headers = {
       ...config.headers,
-      Authorization: `Bearer ${storage.get("token")}`
+      Authorization: `Bearer ${accessToken}`,
     };
   }
 
@@ -25,13 +55,13 @@ Http.interceptors.request.use(async (config: HttpParams) => {
   const signedParams = Signer.buildSignedParams(config.data || {}, "yourAppId", "secretFor_yourAppId");
   config.params = {
     ...config.params,
-    ...signedParams
+    ...signedParams,
   };
 
   return config;
 });
 
-// 添加响应拦截器（如：全局错误处理）
+// 添加响应拦截器（全局错误处理）
 Http.interceptors.response.use(async (data: any) => {
   const code = data.code as number;
   const msg = data.message as string;
@@ -45,6 +75,7 @@ Http.interceptors.response.use(async (data: any) => {
   switch (code) {
     case MessageCode.UNAUTHORIZED:
       ElMessage.warning("登录已过期，请重新登录");
+      // 清除 Token，触发重新登录
       return Promise.reject(new Error(msg));
 
     case MessageCode.FORBIDDEN:
@@ -102,6 +133,7 @@ Http.interceptors.response.use(async (data: any) => {
       break;
     case MessageCode.TOKEN_IS_INVALID:
       ElMessage.warning("Token 无效");
+      // Token 无效，清除并触发重新登录
       break;
     case MessageCode.EXCESSIVE_LOGIN_FAILURES:
       ElMessage.warning("登录失败次数过多");

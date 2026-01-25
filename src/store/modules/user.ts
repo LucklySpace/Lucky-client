@@ -1,377 +1,261 @@
-import { StoresEnum } from "@/constants";
 import api from "@/api/index";
-import { CreateMainWindow, CloseMainWindow } from "@/windows/main";
-import { HideLoginWindow, ShowLoginWindow } from "@/windows/login";
-import { storage } from "@/utils/Storage";
-import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
-import { ElMessage } from "element-plus";
 import defaultImg from "@/assets/avatar/default.jpg";
+import { StoresEnum } from "@/constants";
 import useCrypo from "@/hooks/useCrypo";
+import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
+import { safeExecute, ValidationError } from "@/utils/ExceptionHandler";
+import { storage } from "@/utils/Storage";
+import tokenManager from "@/utils/TokenManager"; // 导入刚才优化的管理器
+import { HideLoginWindow, ShowLoginWindow } from "@/windows/login";
+import { CloseMainWindow, CreateMainWindow } from "@/windows/main";
+import { ElMessage } from "element-plus";
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
 
-// 用户信息接口
-interface UserInfo {
-  avatar?: string;
-  name?: string;
-  [key: string]: any; // 允许其他属性
-}
+// ==================== 类型定义 ====================
 
-// 定义 store 状态接口
-interface UserState {
-  token: string;
-  userId: string;
-  userInfo: UserInfo;
-}
-
-// 登录状态枚举
 export enum LoginStatus {
   IDLE = "idle",
   LOGGING_IN = "logging_in",
   LOGGED_IN = "logged_in",
-  LOGGING_OUT = "logging_out"
+  LOGGING_OUT = "logging_out",
 }
 
-/**
- * 用户状态管理
- * 使用 Pinia setup 语法重构，提供响应式状态管理和方法
- */
+interface UserInfo {
+  userId?: string;
+  avatar?: string;
+  name?: string;
+  nickname?: string;
+  [key: string]: any;
+}
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  userId: string;
+  accessExpiresAt: number;
+  refreshExpiresAt?: number;
+}
+
+// ==================== Store ====================
+
 export const useUserStore = defineStore(StoresEnum.USER, () => {
-  // 响应式状态
-  const token = ref<string>("");
-  const userId = ref<string>("");
-  const userInfo = ref<UserInfo>({});
-  const userEmojiPackIds = ref<String[]>([]);
-  const loginStatus = ref<LoginStatus>(LoginStatus.IDLE);
+  // 1. 核心依赖
   const { md5 } = useCrypo();
+  const { disconnect: wsDisconnect, destroy: wsDestroy } = useWebSocketWorker();
 
-  // 计算属性
-  /**
-   * 获取用户头像
-   * 如果没有设置头像，则返回默认头像
-   */
-  const avatar = computed(() => userInfo.value?.avatar ?? defaultImg);
+  // 2. 响应式状态 (State)
+  // Token 仅在内存保留 AccessToken，刷新需走 TokenManager
+  const token = ref("");
+  const userInfo = ref<UserInfo>({});
+  const status = ref<LoginStatus>(LoginStatus.IDLE);
+  const emojiPackIds = ref<string[]>([]);
 
-  /**
-   * 获取用户名称
-   */
-  const name = computed(() => userInfo.value?.name || "");
+  // 3. 计算属性 (Getters)
+  const isLogged = computed(() => status.value === LoginStatus.LOGGED_IN);
+  const isLoading = computed(() => [LoginStatus.LOGGING_IN, LoginStatus.LOGGING_OUT].includes(status.value));
 
-  /**
-   * 是否已登录
-   */
-  const isLoggedIn = computed(() => !!token.value && !!userId.value);
+  const avatar = computed(() => userInfo.value.avatar || defaultImg);
+  const name = computed(() => userInfo.value.name || userInfo.value.nickname || "Unknown");
+  const userId = computed(() => userInfo.value.userId || "");
 
-  /**
-   * 是否正在登录/退出
-   */
-  const isLoading = computed(() =>
-    loginStatus.value === LoginStatus.LOGGING_IN ||
-    loginStatus.value === LoginStatus.LOGGING_OUT
-  );
+  // ==================== 核心动作 (Actions) ====================
 
   /**
-   * 日志记录器
+   * 初始化检查 (App启动调用)
+   * 尝试从 TokenManager 恢复会话，避免用户重复登录
    */
-  const logger = useLogger();
-
-  /**
-   * 用户登录
-   * @param loginForm 登录表单数据
-   * @throws 登录失败时抛出错误
-   */
-  const login = async (loginForm: any): Promise<void> => {
-    if (loginStatus.value === LoginStatus.LOGGING_IN) {
-      logger.warn("登录操作正在进行中，请勿重复提交");
-      return;
-    }
-
-    loginStatus.value = LoginStatus.LOGGING_IN;
-
-    // 重置用户状态
-    resetUserState();
-
-    try {
-      const res: any = await api.Login(loginForm);
-
-      if (!res || !res.accessToken || !res.userId) {
-        throw new Error("登录响应数据不完整");
-      }
-
-      // 保存用户信息到本地存储
-      token.value = res.accessToken;
-      userId.value = res.userId;
-      saveToStorage();
-
-      loginStatus.value = LoginStatus.LOGGED_IN;
-
-      // 创建主窗口并关闭登录窗口
-      await CreateMainWindow();
-      await HideLoginWindow();
-
-      logger.info("用户登录成功", { userId: res.userId });
-    } catch (error) {
-      loginStatus.value = LoginStatus.IDLE;
-      const errorMsg = error instanceof Error ? error.message : "登录失败";
-      logger.error("用户登录失败", error);
-      throw new Error(errorMsg);
+  const initSession = async () => {
+    const accessToken = await tokenManager.getAccess();
+    if (accessToken) {
+      token.value = accessToken;
+      status.value = LoginStatus.LOGGED_IN;
+      // 可选：静默刷新用户信息
+      handleGetUserInfo(true);
     }
   };
 
-  /**
-   * 刷新 Token
-   * @throws 刷新失败时抛出错误
-   */
-  const refreshToken = async (): Promise<void> => {
-    try {
-      const res: any = await api.RefreshToken();
+  /** 登录逻辑 */
+  const login = async (form: any) => {
+    if (isLoading.value) return;
 
-      if (!res || !res.token) {
-        throw new Error("Token 刷新响应数据不完整");
+    status.value = LoginStatus.LOGGING_IN;
+
+    try {
+      // 1. 网络请求
+      const res: any = await api.Login(form);
+
+      if (!res?.accessToken || !res?.userId) {
+        throw new ValidationError("登录响应无效");
       }
 
-      token.value = res.token;
-      saveToStorage();
+      // 2. 并行处理：安全存储 + 状态更新
+      await Promise.all([
+        tokenManager.set({
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken,
+          accessExpiresAt: res.accessExpiresAt || Date.now() + 7200000,
+          refreshExpiresAt: res.refreshExpiresAt
+        }),
+        (async () => {
+          token.value = res.accessToken;
+          storage.set("token", res.accessToken);
+          userInfo.value.userId = res.userId; // 先设置 ID 以便后续请求使用
+        })()
+      ]);
 
-      logger.info("Token 刷新成功");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Token 刷新失败";
-      logger.error("Token 刷新失败", error);
-      throw new Error(errorMsg);
+      status.value = LoginStatus.LOGGED_IN;
+
+      // 3. 界面流转 (非阻塞)
+      // 先加载数据，同时切换窗口，提升感知速度
+      handleGetUserInfo();
+      await switchWindowToMain();
+
+      ElMessage.success(`欢迎回来，${name.value}`);
+
+    } catch (e: any) {
+      status.value = LoginStatus.IDLE;
+      throw e; // 让 UI 层处理具体的错误提示
     }
   };
 
-  /**
-   * 更新用户信息
-   * @param profile 用户资料
-   * @throws 更新失败时抛出错误
-   */
-  const updateUserInfo = async (profile: any): Promise<void> => {
-    try {
-      const res: any = await api.UpdateUserInfo(profile);
+  /** 退出登录 */
+  const logout = async (options: { silent?: boolean; force?: boolean } = {}) => {
+    if (status.value === LoginStatus.LOGGING_OUT) return;
+    status.value = LoginStatus.LOGGING_OUT;
 
-      if (!res) {
-        throw new Error("更新用户信息失败");
-      }
-
-      await handleGetUserInfo();
-      logger.info("用户信息更新成功");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "更新用户信息失败";
-      logger.error("更新用户信息失败", error);
-      throw new Error(errorMsg);
-    }
-  };
-
-  /**
-   * 上传用户头像
-   * @param file 头像文件
-   * @returns 上传结果
-   * @throws 上传失败时抛出错误
-   */
-  const uploadUserAvatar = async (file: File): Promise<any> => {
-    try {
-      if (!file) {
-        throw new Error("文件不能为空");
-      }
-
-      const md5Str = await md5(file)
-      const formData = new FormData();
-      formData.append("identifier", md5Str.toString());
-      formData.append("file", file);
-
-      const res: any = await api.uploadAvatar(formData);
-
-      if (!res) {
-        throw new Error("上传头像失败");
-      }
-
-      logger.info("用户头像上传成功");
-      return res;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "上传头像失败";
-      logger.error("上传头像失败", error);
-      throw new Error(errorMsg);
-    }
-  };
-
-  /**
-   * 获取用户信息
-   * @throws 获取失败时抛出错误
-   */
-  const handleGetUserInfo = async (): Promise<void> => {
-    try {
-      const currentUserId = userId.value;
-
-      if (!currentUserId) {
-        throw new Error("用户ID不存在");
-      }
-
-      // 获取用户基本信息
-      const userRes: any = await api.GetUserInfo({ userId: currentUserId });
-
-      if (userRes) {
-        userInfo.value = userRes;
-      } else {
-        logger.warn("获取用户信息返回空数据");
-      }
-
-      // 获取用户表情包（非关键数据，失败不影响主流程）
-      try {
-        const emojiRes: any = await api.GetUserEmojis({ userId: currentUserId });
-        if (emojiRes) {
-          userEmojiPackIds.value = emojiRes;
-        }
-      } catch (emojiError) {
-        logger.warn("获取用户表情包失败", emojiError);
-      }
-
-      logger.info("用户信息获取成功");
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "获取用户信息失败";
-      logger.error("获取用户信息失败", error);
-      throw new Error(errorMsg);
-    }
-  };
-
-  /**
-   * 退出登录
-   * @param options 退出选项
-   * @param options.showWindow 是否显示登录窗口，默认 true
-   * @param options.closeMain 是否关闭主窗口，默认 true
-   * @throws 退出失败时抛出错误
-   */
-  const loginOut = async (options: { showWindow?: boolean; closeMain?: boolean } = {}): Promise<void> => {
-    const { showWindow = true, closeMain = true } = options;
-
-    if (loginStatus.value === LoginStatus.LOGGING_OUT) {
-      logger.warn("退出操作正在进行中");
-      return;
-    }
-
-    loginStatus.value = LoginStatus.LOGGING_OUT;
+    const { silent = false, force = false } = options;
+    const uid = userId.value;
 
     try {
-      const currentUserId = userId.value;
+      // 1. 清理工作 (WebSocket & Backend)
+      disconnectWebSocket();
 
-      // 1. 断开 WebSocket 连接
-      try {
-        const { disconnect, destroy } = useWebSocketWorker();
-        disconnect();
-        destroy();
-        logger.info("WebSocket 连接已断开");
-      } catch (wsError) {
-        logger.warn("断开 WebSocket 时发生错误", wsError);
+      if (uid && !force) {
+        // 发送退出请求但不阻塞后续清理
+        safeExecute(() => api.LoginOut({ userId: uid }), { silent: true });
       }
 
-      // 2. 调用后端退出接口
-      if (currentUserId) {
-        try {
-          await api.LoginOut({ userId: currentUserId });
-        } catch (apiError) {
-          logger.warn("调用退出接口失败（非致命）", apiError);
-        }
-      }
+      // 2. 清除本地凭证
+      token.value = "";
+      userInfo.value = {};
+      await tokenManager.clear();
 
-      // 3. 清空本地状态
-      resetUserState();
+      // 3. 窗口切换
+      await switchWindowToLogin();
 
-      // 4. 窗口操作
-      if (closeMain) {
-        await CloseMainWindow();
-      }
-      if (showWindow) {
-        await ShowLoginWindow();
-      }
-
-      ElMessage.success("已退出登录");
-      logger.info("用户退出登录成功");
-    } catch (error) {
-      // 即使出错也要清空本地状态
-      resetUserState();
-      logger.error("退出登录时发生错误", error);
+      if (!silent) ElMessage.success("已退出登录");
     } finally {
-      loginStatus.value = LoginStatus.IDLE;
+      status.value = LoginStatus.IDLE;
     }
   };
 
-  /**
-   * 强制退出（被踢下线等场景）
-   */
-  const forceLogout = async (reason?: string): Promise<void> => {
-    logger.warn("强制退出登录", { reason });
+  const refreshToken = async () => {
 
-    // 断开 WebSocket
-    try {
-      const { disconnect, destroy } = useWebSocketWorker();
-      disconnect();
-      destroy();
-    } catch (e) {
-      // ignore
+  }
+
+  /** 强制下线 (被踢/Token失效) */
+  const forceLogout = (reason?: string) => {
+    if (reason) ElMessage.warning(reason);
+    logout({ silent: true, force: true });
+  };
+
+  // ==================== 数据获取 ====================
+
+  /** 获取/更新用户信息 */
+  const handleGetUserInfo = async (silent = false) => {
+    if (!userId.value) return;
+
+    const res = await safeExecute<UserInfo>(
+      () => api.GetUserInfo({ userId: userId.value }),
+      { silent }
+    );
+
+    if (res) {
+      userInfo.value = { ...userInfo.value, ...res };
+      // 懒加载表情包，不阻塞主流程
+      fetchUserEmojis();
     }
+  };
 
-    resetUserState();
+  const fetchUserEmojis = async () => {
+    const res: any = await api.GetUserEmojis({ userId: userId.value });
 
-    await CloseMainWindow();
+    if (res) emojiPackIds.value = res;
+  };
+
+  const updateUserInfo = async (profile: Partial<UserInfo>) => {
+    const res = await safeExecute(() => api.UpdateUserInfo(profile));
+    if (res) await handleGetUserInfo(true);
+  };
+
+  const uploadAvatar = async (file: File) => {
+    const md5Str = await md5(file);
+    const formData = new FormData();
+    formData.append("identifier", md5Str);
+    formData.append("file", file);
+
+    const res = await safeExecute(() => api.uploadAvatar(formData));
+    if (res) ElMessage.success("头像上传成功");
+    return res;
+  };
+
+  // ==================== 辅助逻辑 ====================
+
+  const disconnectWebSocket = () => {
+    wsDisconnect();
+    wsDestroy();
+  };
+
+  /** 窗口切换：登录 -> 主窗口 */
+  const switchWindowToMain = async () => {
+    // 技巧：先创建主窗口，准备好后再隐藏登录窗口，避免闪烁
+    await CreateMainWindow();
+    // 可选：在这里发送事件给主窗口通知它加载数据
+    HideLoginWindow(); // 不 await，让其在后台关闭
+  };
+
+  /** 窗口切换：主窗口 -> 登录 */
+  const switchWindowToLogin = async () => {
     await ShowLoginWindow();
-
-    if (reason) {
-      ElMessage.warning(reason);
-    }
+    CloseMainWindow(); // 不 await
   };
 
-  // 将用户信息保存到本地存储
-  const saveToStorage = () => {
-    storage.set("token", token.value);
-    storage.set("userId", userId.value);
-  };
-
-  // 重置用户状态
-  const resetUserState = () => {
-    token.value = "";
-    userId.value = "";
-    userInfo.value = {};
-    userEmojiPackIds.value = [];
-    loginStatus.value = LoginStatus.IDLE;
-    storage.remove("token");
-    storage.remove("userId");
-  };
-
-  // 返回 store 的内容
   return {
-    // 状态
+    // State (只读或通过 Action 修改)
     token,
-    userId,
     userInfo,
-    userEmojiPackIds,
-    loginStatus,
+    status,
+    emojiPackIds,
 
-    // 计算属性
+    // Getters
+    isLogged,
+    isLoading,
     avatar,
     name,
-    isLoggedIn,
-    isLoading,
+    userId,
 
-    // 方法
+    // Actions
+    initSession,
     login,
-    refreshToken,
-    updateUserInfo,
-    uploadUserAvatar,
-    handleGetUserInfo,
-    loginOut,
+    logout,
     forceLogout,
-    saveToStorage,
-    resetUserState
+    handleGetUserInfo,
+    updateUserInfo,
+    uploadAvatar,
+
+    // Low-level Access (如果拦截器需要)
+    getAccess: () => token.value,
+    refreshToken,
+    checkToken: () => tokenManager.getAccess(), // 给 Axios 拦截器用的检查方法
   };
 }, {
+  // Pinia 持久化配置 (仅存储非敏感 UI 数据)
   persist: [
     {
-      key: `${StoresEnum.USER}_local`,
-      paths: ["token", "userId", "userInfo"],
-      storage: localStorage
-    },
-    {
-      key: `${StoresEnum.USER}_session`,
-      paths: [],
-      storage: sessionStorage
+      key: `${StoresEnum.USER}_ui`,
+      paths: ["userInfo"],
+      storage: localStorage,
     }
   ]
 });

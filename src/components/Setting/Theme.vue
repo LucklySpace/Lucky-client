@@ -1,14 +1,14 @@
 <template>
   <div class="theme-card">
     <div class="theme-header">
-      <span>{{ $t("settings.theme.current") }}</span>
+      <span>{{ $t("pages.settings.theme.current") }}</span>
     </div>
 
     <!-- 单选切换主题 -->
     <el-radio-group v-model="appearance" size="default">
-      <el-radio value="light">{{ $t("settings.theme.light") }}</el-radio>
-      <el-radio value="dark">{{ $t("settings.theme.dark") }}</el-radio>
-      <el-radio value="auto">{{ $t("settings.theme.auto") }}</el-radio>
+      <el-radio value="light">{{ $t("pages.settings.theme.options.light") }}</el-radio>
+      <el-radio value="dark">{{ $t("pages.settings.theme.options.dark") }}</el-radio>
+      <el-radio value="auto">{{ $t("pages.settings.theme.options.auto") }}</el-radio>
     </el-radio-group>
   </div>
 </template>

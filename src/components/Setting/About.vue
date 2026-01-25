@@ -2,8 +2,8 @@
   <div class="setting-container">
     <!-- 版本号 -->
     <div class="form-row">
-      <div :title="$t('settings.about.version')" class="row-label">
-        {{ $t("settings.about.version") }}
+      <div :title="$t('pages.settings.about.version')" class="row-label">
+        {{ $t("pages.settings.about.version") }}
       </div>
       <div class="row-control">{{ version }}</div>
     </div>
@@ -13,19 +13,19 @@
       <div class="row-label">&nbsp;</div>
       <div class="row-control">
         <el-button type="primary" @click="handleCheckUpdate">
-          {{ $t("settings.about.update") }}
+          {{ $t("pages.settings.about.checkUpdate") }}
         </el-button>
       </div>
     </div>
 
     <!-- 查看帮助按钮 -->
     <div class="form-row">
-      <div :title="$t('settings.about.help')" class="row-label">
-        {{ $t("settings.about.help") }}
+      <div :title="$t('pages.settings.about.help')" class="row-label">
+        {{ $t("pages.settings.about.help") }}
       </div>
       <div class="row-control">
         <el-button @click="handleViewHelp">
-          {{ $t("settings.about.viewHelp") }}
+          {{ $t("pages.settings.about.viewHelp") }}
         </el-button>
       </div>
     </div>
@@ -33,28 +33,28 @@
     <!-- 更新信息弹窗 -->
     <el-dialog
       :model-value="showUpdateDialog"
-      :title="$t('settings.about.updateInfo')"
+      :title="$t('pages.settings.about.update.title')"
       width="450px"
       @close="showUpdateDialog = false"
     >
       <div v-if="updateInfo">
         <p>
-          <strong>{{ $t("settings.about.newVersion") }}:</strong> {{ updateInfo.version }}
+          <strong>{{ $t("pages.settings.about.update.newVersion") }}:</strong> {{ updateInfo.version }}
         </p>
         <p>
-          <strong>{{ $t("settings.about.date") }}:</strong> {{ formatDate(new Date(updateInfo.date), "yyyy-MM-dd") }}
+          <strong>{{ $t("pages.settings.about.update.releaseDate") }}:</strong> {{ formatDate(new Date(updateInfo.date), "yyyy-MM-dd") }}
         </p>
         <p>
-          <strong>{{ $t("settings.about.body") }}:</strong>
+          <strong>{{ $t("pages.settings.about.update.releaseNotes") }}:</strong>
         </p>
         <p class="update-notes">{{ updateInfo.body }}</p>
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button @click="showUpdateDialog = false">
-          {{ $t("actions.cancel") }}
+          {{ $t("common.actions.cancel") }}
         </el-button>
         <el-button type="primary" @click="handleDownloadUpdate">
-          {{ $t("settings.about.download") }}
+          {{ $t("pages.settings.about.update.download") }}
         </el-button>
       </span>
     </el-dialog>
@@ -62,11 +62,11 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref } from "vue";
-  import { ElMessage } from "element-plus";
   import { useUpdate } from "@/hooks/useUpdate";
-  import { formatDate } from "@/utils/Date";
-  import { getVersion } from "@tauri-apps/api/app";
+import { formatDate } from "@/utils/Date";
+import { getVersion } from "@tauri-apps/api/app";
+import { ElMessage } from "element-plus";
+import { ref } from "vue";
 
   const appVersion = await getVersion();
 

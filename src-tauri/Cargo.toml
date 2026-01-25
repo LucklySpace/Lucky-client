@@ -49,6 +49,8 @@ image = "0.24.9"
 sysinfo = "0.29"
 sha2 = "0.10"
 jieba-rs = { version = "0.7", features = ["tfidf", "textrank"] }
+tauri-plugin-stronghold = "2.3.1"
+argon2 = "0.5"
 
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]

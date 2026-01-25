@@ -44,7 +44,7 @@
               <span class="contact-list__name">{{ truncateName(getDisplayName(item, key)) }}</span>
               <span v-if="item.message" class="contact-list__message">{{ item.message }}</span>
               <span v-if="item.memberCount" class="contact-list__sub">
-                {{ $t("contacts.count", { count: item.memberCount }) }}
+                {{ $t("pages.contacts.count", { count: item.memberCount }) }}
               </span>
             </div>
           </li>
@@ -55,10 +55,10 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useFriendsStore } from "@/store/modules/friends";
-import { useChatStore } from "@/store/modules/chat";
 import Avatar from "@/components/Avatar/index.vue";
+import { useChatStore } from "@/store/modules/chat";
+import { useFriendsStore } from "@/store/modules/friends";
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 // ========================= 类型定义 =========================
 type SectionKey = "newFriends" | "groups" | "contacts";
@@ -96,9 +96,9 @@ let observer: IntersectionObserver | null = null;
 
 // ========================= Computed =========================
 const sectionTitles = computed(() => ({
-    newFriends: t("contacts.newFriends"),
-    groups: t("contacts.groupChat"),
-  contacts: t("contacts.contacts"),
+    newFriends: t("pages.contacts.newFriends"),
+    groups: t("pages.contacts.groupChat"),
+  contacts: t("pages.contacts.title"),
 }));
 
 const sectionCounts = computed(() => ({

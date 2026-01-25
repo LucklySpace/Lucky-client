@@ -14,16 +14,16 @@
     <!-- 右下控制面板（可交互）-->
     <div ref="controlsRef" class="control-panel" @mousedown="startDrag" @click.stop>
       <button :disabled="isRecording || loading" class="btn start" @click="handleStart">
-        <span v-if="!loading">{{ $t("chat.toolbar.recorder.start") }}</span>
-        <span v-else>{{ $t("chat.toolbar.recorder.recording") }}</span>
+        <span v-if="!loading">{{ $t("pages.chat.toolbar.recorder.start") }}</span>
+        <span v-else>{{ $t("pages.chat.toolbar.recorder.recording") }}</span>
       </button>
       <button :disabled="!isRecording" class="btn stop" @click="handleStop">
-        {{ $t("chat.toolbar.recorder.stop") }}
+        {{ $t("pages.chat.toolbar.recorder.stop") }}
       </button>
-      <button class="btn cancel" @click="handleCancel">{{ $t("chat.toolbar.recorder.cancel") }}</button>
+      <button class="btn cancel" @click="handleCancel">{{ $t("pages.chat.toolbar.recorder.cancel") }}</button>
 
       <button :disabled="!downloadUrl" class="btn download" @click="handleDownload">
-        {{ $t("chat.toolbar.recorder.save") }}
+        {{ $t("pages.chat.toolbar.recorder.save") }}
       </button>
     </div>
 
@@ -189,14 +189,14 @@
   async function handleStart() {
     if (isRecording.value) return;
     loading.value = true;
-    showStatusMsg(t("chat.toolbar.recorder.status.request_permission"));
+    showStatusMsg(t("pages.chat.toolbar.recorder.status.requestPermission"));
     try {
       await startScreenRecord({ mimeType: "video/mp4;codecs=vp9", bitsPerSecond: 2_500_000, includeAudio: false });
       // hook 的 isRecording 应该切换为 true，watch 将启动 timer
-      showStatusMsg(t("chat.toolbar.recorder.status.started"));
+      showStatusMsg(t("pages.chat.toolbar.recorder.status.started"));
       startMousePoller();
     } catch (e: any) {
-      showErrorMessage(e?.message || t("chat.toolbar.recorder.errors.start_failed"));
+      showErrorMessage(e?.message || t("pages.chat.toolbar.recorder.errors.startFailed"));
     } finally {
       loading.value = false;
     }
@@ -205,7 +205,7 @@
   // 停止录制
   async function handleStop() {
     if (!isRecording.value) return;
-    showStatusMsg(t("chat.toolbar.recorder.status.stopping"));
+    showStatusMsg(t("pages.chat.toolbar.recorder.status.stopping"));
     try {
       const res = await stopScreenRecord({
         transcodeToMp4: false, ffmpegProgressCb: () => {
@@ -217,13 +217,13 @@
         if (downloadUrl.value) URL.revokeObjectURL(downloadUrl.value);
         downloadUrl.value = URL.createObjectURL(blob);
         downloadName.value = `screen_${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "")}.mp4`;
-        showStatusMsg(t("chat.toolbar.recorder.status.completed"));
+        showStatusMsg(t("pages.chat.toolbar.recorder.status.completed"));
       } else {
-        showErrorMessage(t("chat.toolbar.recorder.errors.not_generated"));
+        showErrorMessage(t("pages.chat.toolbar.recorder.errors.notGenerated"));
       }
       stopMousePoller();
     } catch (e: any) {
-      showErrorMessage(e?.message || t("chat.toolbar.recorder.errors.stop_failed"));
+      showErrorMessage(e?.message || t("pages.chat.toolbar.recorder.errors.stopFailed"));
     }
   }
 
@@ -235,12 +235,12 @@
         URL.revokeObjectURL(downloadUrl.value);
         downloadUrl.value = null;
       }
-      showStatusMsg(t("chat.toolbar.recorder.status.canceled"));
+      showStatusMsg(t("pages.chat.toolbar.recorder.status.canceled"));
       stopTimer();
       stopMousePoller();
       CloseRecordWindow();
     } catch (e) {
-      showErrorMessage(t("chat.toolbar.recorder.errors.cancel_failed"));
+      showErrorMessage(t("pages.chat.toolbar.recorder.errors.cancelFailed"));
     }
   }
 
@@ -251,7 +251,7 @@
         URL.revokeObjectURL(downloadUrl.value);
         downloadUrl.value = null;
       }
-      showStatusMsg(t("chat.toolbar.recorder.status.download_done"));
+      showStatusMsg(t("pages.chat.toolbar.recorder.status.downloadDone"));
     }, 500);
   }
 

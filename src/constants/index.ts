@@ -1,7 +1,7 @@
 // ========== 导出新的常量模块 ==========
-export * from "./MessageContentType";
 export * from "./MessageActionType";
 export * from "./MessageCode";
+export * from "./MessageContentType";
 export * from "./MessageType";
 
 

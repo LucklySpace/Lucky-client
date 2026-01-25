@@ -130,6 +130,17 @@
     "positioner:default",
     "positioner:allow-move-window",
     "positioner:allow-set-tray-icon-state",
+    "stronghold:default",
+    "stronghold:allow-initialize",
+    "stronghold:allow-destroy",
+    "stronghold:allow-create-client",
+    "stronghold:allow-load-client",
+    "stronghold:allow-save",
+    "stronghold:allow-save-secret",
+    "stronghold:allow-get-store-record",
+    "stronghold:allow-remove-secret",
+    "stronghold:allow-remove-store-record",
+    "stronghold:allow-execute-procedure",
     {
       "identifier": "fs:default",
       "allow": [

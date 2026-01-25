@@ -2,11 +2,11 @@
   <div class="setting-container">
     <!-- 语言选择行 -->
     <div class="form-row">
-      <div :title="$t('settings.general.language.label')" class="row-label">{{ $t("settings.general.language.label") }}</div>
+      <div :title="$t('pages.settings.general.language.title')" class="row-label">{{ $t("pages.settings.general.language.title") }}</div>
       <div class="row-control">
         <el-select 
           v-model="locale" 
-          :placeholder="$t('settings.general.select')" 
+          :placeholder="$t('pages.settings.general.language.select')" 
           @change="onChangeLocale(locale)"
         >
           <el-option 
@@ -21,20 +21,20 @@
           :icon="Download" 
           circle 
           @click="handleOpenLanguageDownload"
-          :title="$t('settings.general.language.downloadMore')"
+          :title="$t('pages.settings.general.language.downloadMore')"
         />
       </div>
     </div>
 
     <!-- 清空聊天记录行 -->
     <div class="form-row">
-      <div :title="$t('settings.general.ChatLog')" class="row-label">{{ $t("settings.general.ChatLog") }}</div>
+      <div :title="$t('pages.settings.general.chatLog.title')" class="row-label">{{ $t("pages.settings.general.chatLog.title") }}</div>
       <div class="row-control">
         <el-button type="danger" @click="handleClearChat">
           <el-icon>
             <delete />
           </el-icon>
-          {{ $t("settings.general.clearChat") }}
+          {{ $t("pages.settings.general.chatLog.clear") }}
         </el-button>
       </div>
     </div>
@@ -42,13 +42,13 @@
     <!-- 存储管理行 -->
     <div class="form-row">
       <!-- 如果这一行 label 需要留空，也可直接用 &nbsp; 占位 -->
-      <div class="row-label">{{ $t("settings.general.storage.details") }}</div>
+      <div class="row-label">{{ $t("pages.settings.general.storage.details") }}</div>
       <div class="row-control">
         <el-button type="primary" @click="handleStorageManage">
           <el-icon>
             <folder />
           </el-icon>
-          {{ $t("settings.general.storage.label") }}
+          {{ $t("pages.settings.general.storage.title") }}
         </el-button>
       </div>
     </div>
@@ -92,14 +92,14 @@
    * 清空聊天记录
    */
   const handleClearChat = () => {
-    ElMessageBox.confirm(t("dialog.confirmClearChat"), t("dialog.warning"), {
-      confirmButtonText: t("dialog.confirm"),
-      cancelButtonText: t("dialog.cancel"),
+    ElMessageBox.confirm(t("components.dialog.clearChat.confirm"), t("components.dialog.title.warning"), {
+      confirmButtonText: t("components.dialog.buttons.confirm"),
+      cancelButtonText: t("components.dialog.buttons.cancel"),
       type: "warning"
     })
       .then(() => {
         // 这里添加清空聊天记录的逻辑
-        console.log(t("dialog.clearChatLog"));
+        console.log(t("components.dialog.clearChat.title"));
       })
       .catch(() => {
         // 取消操作

@@ -27,17 +27,17 @@
       <!-- 详细信息 -->
       <div class="group-detail__info">
         <div class="group-detail__row">
-          <strong class="no-select">{{ $t("group.memberLabel") }}</strong>
-          <span>{{ groupInfo.memberCount ?? $t("group.unknown") }}</span>
+          <strong class="no-select">{{ $t("business.group.info.memberCount") }}</strong>
+          <span>{{ groupInfo.memberCount ?? $t("common.status.unknown") }}</span>
         </div>
 
         <div v-if="groupInfo.description" class="group-detail__row">
-          <strong class="no-select">{{ $t("group.descriptionLabel") }}</strong>
+          <strong class="no-select">{{ $t("business.group.info.description") }}</strong>
           <span>{{ groupInfo.description }}</span>
         </div>
 
         <div v-if="groupNotice" class="group-detail__row">
-          <strong class="no-select">{{ $t("chat.groupChat.groupNotice") }}</strong>
+          <strong class="no-select">{{ $t("business.group.details.notice") }}</strong>
           <span>{{ groupNotice }}</span>
         </div>
       </div>
@@ -45,23 +45,23 @@
       <!-- 操作按钮 -->
       <div class="group-detail__actions">
         <el-button type="primary" @click="handleEnterGroup">
-          {{ $t("group.enterGroup") }}
+          {{ $t("business.group.actions.enter") }}
           </el-button>
       </div>
     </el-card>
 
     <!-- 空状态 -->
-    <div v-else class="group-detail__empty">{{ $t("group.noSelectionOrEmpty") }}</div>
+    <div v-else class="group-detail__empty">{{ $t("business.group.empty.noSelection") }}</div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import Avatar from "@/components/Avatar/index.vue";
+import { MessageType } from "@/constants";
+import { useChatStore } from "@/store/modules/chat";
+import { useFriendsStore } from "@/store/modules/friends";
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { MessageType } from "@/constants";
-import { useFriendsStore } from "@/store/modules/friends";
-import { useChatStore } from "@/store/modules/chat";
-import Avatar from "@/components/Avatar/index.vue";
 
 // ========================= 类型定义 =========================
 interface Group {
@@ -109,10 +109,10 @@ watch(
 
 const groupTypeText = computed(() => {
   const typeMap: Record<number, string> = {
-    1: t("group.type.normal"),
-    2: t("group.type.private"),
+    1: t("business.group.type.normal"),
+    2: t("business.group.type.private"),
   };
-  return typeMap[groupInfo.value.groupType ?? 0] ?? t("group.type.default");
+  return typeMap[groupInfo.value.groupType ?? 0] ?? t("business.group.type.default");
 });
 
 const groupNotice = computed(() =>

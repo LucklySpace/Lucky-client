@@ -45,35 +45,35 @@
 
   // Tab 配置：name 用作 key，label 为标签名，component 为异步引入
   const tabs = computed(() => [
-    { name: "profile", label: t("settings.tabs.profile"), component: Profile },
+    { name: "profile", label: t("pages.settings.tabs.profile"), component: Profile },
     {
       name: "notification",
-      label: t("settings.tabs.notification"),
+      label: t("pages.settings.tabs.notification"),
       component: defineAsyncComponent(() => import("@/components/Setting/Notification.vue"))
     },
     {
       name: "theme",
-      label: t("settings.tabs.theme"),
+      label: t("pages.settings.tabs.theme"),
       component: defineAsyncComponent(() => import("@/components/Setting/Theme.vue"))
     },
     {
       name: "general",
-      label: t("settings.tabs.general"),
+      label: t("pages.settings.tabs.general"),
       component: defineAsyncComponent(() => import("@/components/Setting/General.vue"))
     },
     {
       name: "fileManagement",
-      label: t("settings.tabs.fileManagement"),
+      label: t("pages.settings.tabs.file"),
       component: defineAsyncComponent(() => import("@/components/Setting/FileManagement.vue"))
     },
     {
       name: "shortcut",
-      label: t("settings.tabs.shortcut"),
+      label: t("pages.settings.tabs.shortcut"),
       component: defineAsyncComponent(() => import("@/components/Setting/Shortcut.vue"))
     },
     {
       name: "about",
-      label: t("settings.tabs.about"),
+      label: t("pages.settings.tabs.about"),
       component: defineAsyncComponent(() => import("@/components/Setting/About.vue"))
     }
   ]);

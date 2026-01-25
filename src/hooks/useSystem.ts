@@ -1,9 +1,9 @@
+import { useSettingStore } from "@/store/modules/setting";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ElMessageBox } from "element-plus";
-import { exit } from "@tauri-apps/plugin-process";
 import type { Platform } from "@tauri-apps/plugin-os";
 import { platform as appPlatform } from "@tauri-apps/plugin-os";
-import { useSettingStore } from "@/store/modules/setting";
+import { exit } from "@tauri-apps/plugin-process";
+import { ElMessageBox } from "element-plus";
 import { useLogger } from "./useLogger";
 
 interface CloseOptions {

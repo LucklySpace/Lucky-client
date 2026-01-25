@@ -2,17 +2,17 @@
   <div class="file-container">
     <!-- 文件自动下载 -->
     <div class="form-row">
-      <div :title="$t('settings.file.settings')" class="row-label">{{ $t("settings.file.settings") }}</div>
+      <div :title="$t('pages.settings.file.settings')" class="row-label">{{ $t("pages.settings.file.settings") }}</div>
       <div class="row-control">
         <el-checkbox v-model="autoDownload">
-          {{ $t("settings.file.switchAutoDownload") }}
+          {{ $t("pages.settings.file.autoDownload") }}
         </el-checkbox>
       </div>
     </div>
 
     <!-- 保存路径 -->
     <div class="form-row">
-      <div :title="$t('settings.file.fileManagement')" class="row-label">{{ $t("settings.file.fileManagement") }}</div>
+      <div :title="$t('pages.settings.file.title')" class="row-label">{{ $t("pages.settings.file.title") }}</div>
       <div class="row-control">
         <el-input v-model="savePath" :title="savePath" readonly resize="none" type="textarea" />
       </div>
@@ -23,7 +23,7 @@
       <div class="row-label">&nbsp;</div>
       <div class="row-control">
         <span class="hint-text">
-          {{ $t("settings.file.saveLocation") }}
+          {{ $t("pages.settings.file.saveLocation") }}
         </span>
       </div>
     </div>
@@ -33,13 +33,13 @@
       <div class="row-label">&nbsp;</div>
       <div class="row-control">
         <el-button type="primary" @click="handleChangePath">
-          {{ $t("settings.file.change") }}
+          {{ $t("common.actions.change") }}
         </el-button>
         <el-button @click="handleOpenFolder">
           <el-icon>
             <Folder />
           </el-icon>
-          {{ $t("settings.file.openFolder") }}
+          {{ $t("pages.settings.file.openFolder") }}
         </el-button>
       </div>
     </div>
@@ -47,12 +47,12 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed } from "vue";
-  import { ElMessage } from "element-plus";
-  import { useSettingStore } from "@/store/modules/setting";
-  import { Folder } from "@element-plus/icons-vue";
   import { useFile } from "@/hooks/useFile";
-  import ObjectUtils from "@/utils/ObjectUtils";
+import { useSettingStore } from "@/store/modules/setting";
+import ObjectUtils from "@/utils/ObjectUtils";
+import { Folder } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { computed } from "vue";
 
   const { file } = useSettingStore();
   const { openLocalPath, selectFolder } = useFile();

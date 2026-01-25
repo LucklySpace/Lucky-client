@@ -39,11 +39,11 @@
 </template>
 
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
 import System from "@/components/System/index.vue";
+import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const { addShortcut } = useGlobalShortcut();
 //import { StoresEnum } from "@/constants";

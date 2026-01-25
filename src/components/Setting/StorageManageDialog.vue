@@ -10,10 +10,10 @@
     <div class="storage-container no-select">
       <!-- 存储空间概览 -->
       <div class="storage-overview">
-        <div class="storage-title">{{ $t("settings.general.storage.used") }}</div>
+        <div class="storage-title">{{ $t("pages.settings.general.storage.used") }}</div>
         <div class="storage-size">{{ formatBytes(info.used) }}</div>
         <div class="storage-desc">
-          {{ $t("settings.general.storage.desc", { percent: info.usedPercent.toFixed(1) }) }}
+          {{ $t("pages.settings.general.storage.description", { percent: info.usedPercent.toFixed(1) }) }}
         </div>
 
         <!-- 存储空间进度条 -->
@@ -25,11 +25,11 @@
           <div class="progress-legend">
             <div class="legend-item">
               <span class="legend-color used"></span>
-              <span>{{ $t("settings.general.storage.diskUsed") }}</span>
+              <span>{{ $t("pages.settings.general.storage.diskUsed") }}</span>
             </div>
             <div class="legend-item">
               <span class="legend-color free"></span>
-              <span>{{ $t("settings.general.storage.diskFree") }}</span>
+              <span>{{ $t("pages.settings.general.storage.diskFree") }}</span>
             </div>
           </div>
         </div>
@@ -37,43 +37,43 @@
 
       <!-- 存储明细 -->
       <div class="storage-details">
-        <div class="details-title">{{ $t("settings.general.storage.details") }}</div>
+        <div class="details-title">{{ $t("pages.settings.general.storage.details") }}</div>
 
         <!-- 聊天数据 -->
         <div class="detail-item">
           <div class="item-header">
             <div class="item-info">
-              <div class="item-title">{{ $t("settings.general.storage.chat") }}</div>
+              <div class="item-title">{{ $t("pages.settings.general.storage.chat.title") }}</div>
               <div class="item-size">{{ info.details.data.formatted }}</div>
             </div>
             <el-button size="small" type="primary" @click="handleManageChat"
-            >{{ $t("settings.general.storage.manage") }}
+            >{{ $t("pages.settings.general.storage.chat.manage") }}
             </el-button>
           </div>
-          <div class="item-desc">{{ $t("settings.general.storage.chatDataDesc") }}</div>
+          <div class="item-desc">{{ $t("pages.settings.general.storage.chat.description") }}</div>
         </div>
 
         <!-- 缓存 -->
         <div class="detail-item">
           <div class="item-header">
             <div class="item-info">
-              <div class="item-title">{{ $t("settings.general.storage.diskFree") }}</div>
+              <div class="item-title">{{ $t("pages.settings.general.storage.cache.title") }}</div>
               <div class="item-size">{{ info.details.cache.formatted }}</div>
             </div>
-            <el-button size="small" @click="handleClearCache"> {{ $t("settings.general.storage.clean") }}</el-button>
+            <el-button size="small" @click="handleClearCache"> {{ $t("pages.settings.general.storage.cache.clean") }}</el-button>
           </div>
-          <div class="item-desc">{{ $t("settings.general.storage.cacheDesc") }}</div>
+          <div class="item-desc">{{ $t("pages.settings.general.storage.cache.description") }}</div>
         </div>
 
         <!-- 其他 -->
         <div class="detail-item">
           <div class="item-header">
             <div class="item-info">
-              <div class="item-title">{{ $t("settings.general.storage.other") }}</div>
+              <div class="item-title">{{ $t("pages.settings.general.storage.other.title") }}</div>
               <div class="item-size">{{ info.details.other.formatted }}</div>
             </div>
           </div>
-          <div class="item-desc">{{ $t("settings.general.storage.otherDesc") }}</div>
+          <div class="item-desc">{{ $t("pages.settings.general.storage.other.description") }}</div>
         </div>
       </div>
     </div>
@@ -82,7 +82,7 @@
 
 <script lang="ts" setup>
   import { useStorageSpace } from "@/hooks/useStorageSpace";
-  import { ElMessage } from "element-plus";
+import { ElMessage } from "element-plus";
 
   const { info, refresh, formatBytes } = useStorageSpace();
 

@@ -2,21 +2,21 @@
 // use tauri::image::JsImage;
 // use tauri::tray::TrayIcon;
 use crate::AppState;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use enigo::Enigo;
 use screenshots::Screen;
 use serde::Serialize;
-use tauri::image::Image;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tauri::State;
+use tauri::image::Image;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_clipboard_manager::Error as ClipboardError;
 use tauri_plugin_http::reqwest;
 
 use std::{
-    sync::atomic::{AtomicBool, Ordering},
     sync::Arc,
+    sync::atomic::{AtomicBool, Ordering},
     thread,
     time::{Duration, Instant},
 };
@@ -412,7 +412,6 @@ pub fn screenshot(x: &str, y: &str, width: &str, height: &str) -> String {
     let base64_str = general_purpose::STANDARD_NO_PAD.encode(buffer);
     base64_str
 }
-
 
 #[derive(Serialize)]
 pub struct DisplayInfo {

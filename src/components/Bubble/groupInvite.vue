@@ -8,7 +8,7 @@
         <Avatar v-if="parsedBody?.groupAvatar" :avatar="parsedBody.groupAvatar" :border-radius="8"
           :name="parsedBody.groupName" :width="48" class="invite-bubble__avatar" />
         <div class="invite-bubble__info">
-          <h3 class="invite-bubble__name" v-text="parsedBody?.groupName || $t('invite.unknownGroup')" />
+          <h3 class="invite-bubble__name" v-text="parsedBody?.groupName || $t('business.group.title')" />
         </div>
       </div>
 
@@ -19,14 +19,14 @@
           <div v-if="isInvitee" class="invite-bubble__actions">
             <el-button class="invite-bubble__btn invite-bubble__btn--primary" size="small" type="primary"
               @click.stop="handleApprove(true)">
-              {{ $t("invite.accept") }}
+              {{ $t("business.invite.status.accepted") }}
             </el-button>
             <el-button class="invite-bubble__btn" size="small" @click.stop="handleApprove(false)">
-              {{ $t("invite.decline") }}
+              {{ $t("business.invite.status.declined") }}
             </el-button>
           </div>
           <span v-else class="invite-bubble__status invite-bubble__status--pending">
-            {{ $t("invite.status.pending") }}
+            {{ $t("business.invite.status.pending") }}
           </span>
         </template>
 
@@ -46,13 +46,13 @@
 </template>
 
 <script lang="ts" setup>
+import Avatar from "@/components/Avatar/index.vue";
+import { FriendRequestStatus } from "@/constants";
+import { useChatStore } from "@/store/modules/chat";
+import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessage } from "element-plus";
-import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
-import { useChatStore } from "@/store/modules/chat";
-import { FriendRequestStatus } from "@/constants";
-import Avatar from "@/components/Avatar/index.vue";
 
 // ===================== 类型定义 =====================
 
@@ -121,9 +121,9 @@ const statusClass = computed(() => ({
 
 /** 状态文本 */
 const statusText = computed(() => {
-  if (isAccepted.value) return t("invite.status.accepted");
-  if (isDeclined.value) return t("invite.status.declined");
-  return t("invite.status.pending");
+  if (isAccepted.value) return t("business.invite.status.accepted");
+  if (isDeclined.value) return t("business.invite.status.declined");
+  return t("business.invite.status.pending");
 });
 
 // ===================== 方法 =====================
@@ -144,8 +144,8 @@ async function handleApprove(accept: boolean) {
 
     // 提示语
     const successMsg = accept
-      ? t("invite.msg.joined", { name: body.groupName || body.groupId })
-      : t("invite.msg.declined");
+      ? t("business.invite.messages.joined", { name: body.groupName || body.groupId })
+      : t("business.invite.messages.declined");
     ElMessage.success(successMsg);
 
     // 更新本地消息显示
@@ -154,7 +154,7 @@ async function handleApprove(accept: boolean) {
     });
   } catch (err) {
     console.error("Group invite approval failed:", err);
-    ElMessage.error(accept ? t("invite.err.accept") : t("invite.err.decline"));
+    ElMessage.error(accept ? t("business.invite.errors.acceptFailed") : t("business.invite.errors.declineFailed"));
   }
 }
 </script>

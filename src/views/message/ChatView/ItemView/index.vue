@@ -63,10 +63,10 @@
    *  - 简易 HTML 清理函数（非完全安全，请在生产中考虑 DOMPurify）
    */
 
-  import { computed } from "vue";
-  import { useTimeFormat } from "@/hooks/useTimeFormat";
-  import { MessageType } from "@/constants";
   import Avatar from "@/components/Avatar/index.vue";
+import { MessageType } from "@/constants";
+import { useTimeFormat } from "@/hooks/useTimeFormat";
+import { computed } from "vue";
 
   const { useFriendlyTime } = useTimeFormat();
 

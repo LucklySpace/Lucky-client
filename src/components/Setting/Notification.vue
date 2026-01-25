@@ -3,18 +3,18 @@
     <el-form label-width="0">
       <!-- 通知声音提示 -->
       <el-form-item class="label-item">
-        <span class="notification-label">{{ $t("settings.notification.label") }}</span>
+        <span class="notification-label">{{ $t("pages.settings.notification.title") }}</span>
       </el-form-item>
 
       <!-- 新消息通知声音 -->
       <el-form-item class="switch-item">
-        <div class="switch-label">{{ $t("settings.notification.newMsg") }}</div>
+        <div class="switch-label">{{ $t("pages.settings.notification.newMessage") }}</div>
         <el-switch v-model="message" />
       </el-form-item>
 
       <!-- 语音/视频通话通知声音 -->
       <el-form-item class="switch-item">
-        <div class="switch-label">{{ $t("settings.notification.call") }}</div>
+        <div class="switch-label">{{ $t("pages.settings.notification.call") }}</div>
         <el-switch v-model="media" />
       </el-form-item>
     </el-form>

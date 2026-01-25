@@ -3,7 +3,7 @@
     <!-- 工具栏 -->
     <div class="chat-container-tool">
       <!-- 表情 -->
-      <div ref="emojiBtnRef" :title="$t('chat.toolbar.emoji')" class="icon-box" @click="toggleEmoji">
+      <div ref="emojiBtnRef" :title="$t('pages.chat.toolbar.emoji')" class="icon-box" @click="toggleEmoji">
         <i class="iconfont icon-biaoqing-xue"></i>
         <!-- 使用 v-model:visible 控制 popover 显示，避免直接调用底层 API -->
         <el-popover ref="emojiPopoverRef" v-model:visible="emojiVisible" :virtual-ref="emojiBtnRef" placement="top"
@@ -16,17 +16,17 @@
       <div class="icon-box">
         <!-- 主按钮：直接触发一次截图（快捷动作） -->
 
-        <i :title="$t('chat.toolbar.screenshot')" class="iconfont icon-jietu1" @click="handleScreenshot"></i>
+        <i :title="$t('pages.chat.toolbar.screenshot')" class="iconfont icon-jietu1" @click="handleScreenshot"></i>
 
         <!-- 小下拉按钮：展开更多截图/录屏/上传选项（向上弹出） -->
         <el-popover :close-on-click-modal="true" :popper-style="{ minWidth: '90px' }" :show-arrow="true" placement="top"
           trigger="click" width="90">
           <el-row :gutter="5" align="middle" justify="center" style="margin-bottom: 8px" type="flex">
-            <el-button link size="default" @click="handleScreenshot">{{ $t("chat.toolbar.screenshot") }}</el-button>
+            <el-button link size="default" @click="handleScreenshot">{{ $t("pages.chat.toolbar.screenshot") }}</el-button>
           </el-row>
 
           <el-row :gutter="5" align="middle" justify="center" type="flex">
-            <el-button link size="default" @click="handleRecord">{{ $t("chat.toolbar.recorder.label") }}</el-button>
+            <el-button link size="default" @click="handleRecord">{{ $t("pages.chat.toolbar.recorder.label") }}</el-button>
           </el-row>
 
           <!-- 触发器：使用一个小图标按钮（位于截图按钮右侧） -->
@@ -49,34 +49,34 @@
       </div> -->
 
       <!-- 视频通话 -->
-      <div :title="$t('actions.videoCall')" class="icon-box" @click="handleCall">
+      <div :title="$t('business.call.invite')" class="icon-box" @click="handleCall">
         <i class="iconfont icon-shipin1"></i>
       </div>
 
       <!-- 文件 -->
-      <div :title="$t('chat.toolbar.file')" class="icon-box" @click="openFileDialog">
+      <div :title="$t('pages.chat.toolbar.file')" class="icon-box" @click="openFileDialog">
         <i class="iconfont icon-wenjian"></i>
         <!-- 支持多选（按需改）-->
         <input ref="fileInputRef" style="display: none" type="file" @change="handleFileChange" />
       </div>
 
       <!-- 聊天历史 -->
-      <div :title="$t('chat.toolbar.history')" class="icon-box" @click="toggleHistoryDialog">
+      <div :title="$t('pages.chat.toolbar.history')" class="icon-box" @click="toggleHistoryDialog">
         <i class="iconfont icon-liaotianjilu"></i>
       </div>
     </div>
 
     <!-- 输入框：contenteditable -->
     <div ref="editorRef" :data-placeholder="chatStore.getCurrentType === MessageType.GROUP_MESSAGE.code
-      ? $t('chat.input.mentionHint', { at: '@' })
-      : $t('chat.input.placeholder')
+      ? $t('pages.chat.input.mentionHint', { at: '@' })
+      : $t('pages.chat.input.placeholder')
       " class="chat-container-input" contenteditable="true" spellcheck="false" @click="handleInteraction"
       @input="handleInteraction" @keydown="handleKeyDown" @keyup="handleKeyUp" @paste.prevent="handlePaste"></div>
 
     <!-- 发送按钮 -->
     <div class="chat-container-button">
       <button :title="settingStore.getShortcut('sendMessage')" class="button" @click="handleSend">
-        {{ $t("actions.send") }}
+        {{ $t("common.actions.send") }}
       </button>
     </div>
 
@@ -100,20 +100,20 @@
  * - @ 提及功能
  */
 
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import emoji from "@/components/Emoji/index.vue";
 import AtDialog from "@/components/Atdialog/index.vue";
+import emoji from "@/components/Emoji/index.vue";
 import HistoryDialog from "@/components/History/index.vue";
-import { useChatStore } from "@/store/modules/chat";
-import { useSettingStore } from "@/store/modules/setting";
-import { useCallStore } from "@/store/modules/call";
-import { storage } from "@/utils/Storage";
-import onPaste from "@/utils/Paste";
-import { useLogger } from "@/hooks/useLogger";
 import { MessageType } from "@/constants";
+import { useAtMention } from "@/hooks/useAtMention";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { useInputEditor } from "@/hooks/useInputEditor";
-import { useAtMention } from "@/hooks/useAtMention";
+import { useLogger } from "@/hooks/useLogger";
+import { useCallStore } from "@/store/modules/call";
+import { useChatStore } from "@/store/modules/chat";
+import { useSettingStore } from "@/store/modules/setting";
+import onPaste from "@/utils/Paste";
+import { storage } from "@/utils/Storage";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 // ==================== Store & Hooks ====================
 
