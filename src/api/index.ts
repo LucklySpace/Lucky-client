@@ -61,14 +61,21 @@ Http.interceptors.request.use(async (config: HttpParams) => {
   return config;
 });
 
+type Response = {
+  code: number;
+  message: string;
+  timestamp: number;
+  data: any;
+};
+
 // 添加响应拦截器（全局错误处理）
-Http.interceptors.response.use(async (data: any) => {
-  const code = data.code as number;
-  const msg = data.message as string;
+Http.interceptors.response.use(async (data: Response) => {
+  const code = data.code;
+  const msg = data.message;
 
   // 1. 成功
   if (code === MessageCode.SUCCESS) {
-    return data.data;
+    return data.data ?? data;
   }
 
   // 2. 权限/鉴权相关
@@ -201,6 +208,36 @@ export default {
 
   /** 邀请群成员 */
   InviteGroupMember: (data: any) => Http.post("/service/api/v1/group/invite", data),
+
+  /** 获取群信息 */
+  GetGroupInfo: (data: any) => Http.post("/service/api/v1/group/info", data),
+
+  /** 踢出群成员 */
+  KickGroupMember: (data: any) => Http.post("/service/api/v1/group/member/kick", data),
+
+  /** 设置/取消管理员 */
+  SetGroupAdmin: (data: any) => Http.post("/service/api/v1/group/member/setAdmin", data),
+
+  /** 移交群主 */
+  TransferGroupOwner: (data: any) => Http.post("/service/api/v1/group/transferOwner", data),
+
+  /** 设置群加入方式 */
+  SetGroupJoinMode: (data: any) => Http.post("/service/api/v1/group/setJoinMode", data),
+
+  /** 禁言/取消禁言成员 */
+  MuteGroupMember: (data: any) => Http.post("/service/api/v1/group/member/mute", data),
+
+  /** 更新群成员信息（群昵称/备注） */
+  UpdateGroupMember: (data: any) => Http.post("/service/api/v1/group/member/update", data),
+
+  /** 全员禁言/取消全员禁言 */
+  MuteAllGroupMembers: (data: any) => Http.post("/service/api/v1/group/muteAll", data),
+
+  /** 解散群组 */
+  DismissGroup: (data: any) => Http.post("/service/api/v1/group/dismiss", data),
+
+  /** 设置群公告 */
+  SetGroupAnnouncement: (data: any) => Http.post("/service/api/v1/group/announcement", data),
 
   /** 获取消息列表 */
   GetMessageList: (data: any) => Http.post("/service/api/v1/message/list", data),

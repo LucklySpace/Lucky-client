@@ -141,9 +141,9 @@ export const useCallStore = defineStore(StoresEnum.CALL, {
         await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_FAILED.code, data });
       });
 
-      handlers.set(MessageType.RTC_HANDUP.code, async () => {
+      handlers.set(MessageType.RTC_HANGUP.code, async () => {
         ElMessage.error("对方已挂断");
-        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_HANDUP.code, data });
+        await this._emitSafe(CALL_LOADED_EVENT, { type: MessageType.RTC_HANGUP.code, data });
       });
 
       handlers.set(MessageType.RTC_CANCEL.code, async () => {

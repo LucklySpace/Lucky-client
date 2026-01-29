@@ -1,5 +1,4 @@
 // ========== 导出新的常量模块 ==========
-export * from "./MessageActionType";
 export * from "./MessageCode";
 export * from "./MessageContentType";
 export * from "./MessageType";
@@ -78,6 +77,8 @@ export enum StoresEnum {
   HISTORY = "history",
   /** 聊天列表 */
   CHAT = "chat",
+  /** 群组管理 */
+  GROUP = "group",
   /** 预览 */
   PREVIEW_MEDIA = "preview_media",
   PREVIEW_FILE = "preview_file",
@@ -100,6 +101,52 @@ export enum StoresEnum {
   /** 媒体缓存 */
   MEDIA_CACHE = "mediaCache"
 }
+
+/**
+ * 群成员角色枚举
+ */
+export const GroupMemberRole = {
+  /** 群主 */
+  OWNER: { code: 0, label: "群主" },
+  /** 管理员 */
+  ADMIN: { code: 1, label: "管理员" },
+  /** 普通成员 */
+  MEMBER: { code: 2, label: "普通成员" },
+  /** 禁言成员 */
+  MUTED: { code: 3, label: "禁言成员" }
+} as const;
+
+/**
+ * 群加入方式枚举
+ */
+export const GroupJoinMode = {
+  /** 禁止申请 */
+  FORBIDDEN: { code: 0, label: "禁止申请" },
+  /** 需要审批 */
+  APPROVAL: { code: 1, label: "需要审批" },
+  /** 自由加入 */
+  FREE: { code: 2, label: "自由加入" }
+} as const;
+
+/**
+ * 群禁言状态枚举
+ */
+export const GroupMuteStatus = {
+  /** 禁言 */
+  MUTED: { code: 0, label: "禁言" },
+  /** 正常 */
+  NORMAL: { code: 1, label: "正常" }
+} as const;
+
+/**
+ * 群状态枚举
+ */
+export const GroupStatus = {
+  /** 已解散 */
+  DISMISSED: { code: 0, label: "已解散" },
+  /** 正常 */
+  NORMAL: { code: 1, label: "正常" }
+} as const;
 
 export enum CacheEnum {
   IMAGE_CACHE = "image_cache",

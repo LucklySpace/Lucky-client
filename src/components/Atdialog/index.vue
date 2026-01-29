@@ -33,8 +33,8 @@
  * 使用方式与之前相同，UI 更美观，键盘/鼠标交互更流畅
  */
 
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import Avatar from "@/components/Avatar/index.vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 // 简单 User 接口（按需扩展）
 type User = { userId: string; name: string; avatar?: string | null };

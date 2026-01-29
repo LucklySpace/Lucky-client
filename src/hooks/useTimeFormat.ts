@@ -9,6 +9,10 @@ export function useTimeFormat() {
 
   const { t } = useI18n();
 
+  // 刷新间隔：30s，更新"刚刚/分钟/小时"之类
+  // 必须在 setup 顶层调用，确保生命周期钩子正确注册
+  const now = useNow({ interval: 30_000 });
+
   /**
    * 响应式时间展示
    * @param timestamp 毫秒时间戳（或日期对象/ISO字符串）
@@ -21,9 +25,6 @@ export function useTimeFormat() {
     dateFmt = "yyyy/MM/dd",
     withTime = false
   ) {
-    // 刷新间隔：30s，更新“刚刚/分钟/小时”之类
-    const now = useNow({ interval: 30_000 });
-
     return computed(() => {
       const nowVal = new Date(toValue(now));
       const srcVal = toValue(timestamp);
@@ -57,8 +58,8 @@ export function useTimeFormat() {
 
       if (src >= sevenDaysAgo) {
         const weekday = src.getDay(); // 0-6，0 是 星期日
-        const key = weekday === 0 ? "weekday7" : `weekday${weekday}`;
-        return t(`time.${key}`) + (appendTime ? ` ${timeStr}` : "");
+        const key = weekday === 0 ? "weekdays.0" : `weekdays.${weekday}`;
+        return t(`common.time.${key}`) + (appendTime ? ` ${timeStr}` : "");
       }
 
       // 其它情况：按 dateFmt 格式化，只有当 dateFmt 不包含时间时才会追加时间

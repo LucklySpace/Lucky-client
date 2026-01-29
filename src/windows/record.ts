@@ -1,6 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Window } from "@tauri-apps/api/window";
 import { StoresEnum } from "@/constants/index";
+import { closeWindow, getWindow, showAndFocus, withWindow } from "@/windows/utils";
 
 /**
  * 创建截屏界面
@@ -9,14 +9,14 @@ import { StoresEnum } from "@/constants/index";
  */
 export async function CreateRecordWindow(width: number, height: number) {
   try {
-    const mainWindow = await Window.getByLabel(StoresEnum.MAIN);
-    const existingWindow = await Window.getByLabel(StoresEnum.RECORD);
+    const [mainWindow, existingWindow] = await Promise.all([
+      getWindow(StoresEnum.MAIN),
+      getWindow(StoresEnum.RECORD)
+    ]);
 
     // 关闭已有窗口，防止重复创建
     if (existingWindow) {
-      await existingWindow.close();
-      // 等待窗口完全关闭
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await closeWindow(StoresEnum.RECORD);
     }
 
     // 最小化主窗口
@@ -62,9 +62,7 @@ export async function CreateRecordWindow(width: number, height: number) {
       console.log("录屏窗口正在关闭");
       try {
         // 恢复主窗口
-        await mainWindow?.unminimize();
-        await mainWindow?.show();
-        await mainWindow?.setFocus();
+        await showAndFocus(StoresEnum.MAIN);
         console.log("主窗口已恢复");
       } catch (restoreError) {
         console.error("恢复主窗口失败:", restoreError);
@@ -88,24 +86,13 @@ export async function CreateRecordWindow(width: number, height: number) {
  */
 export const CloseRecordWindow = async () => {
   try {
-    const recordWindow = await Window.getByLabel(StoresEnum.RECORD);
-    const mainWindow = await Window.getByLabel(StoresEnum.MAIN);
-
-    if (recordWindow) {
-      console.log("正在关闭录屏窗口...");
-      await recordWindow.close();
-
-      // 恢复主窗口
-      if (mainWindow) {
-        await mainWindow.unminimize();
-        await mainWindow.show();
-        await mainWindow.setFocus();
-      }
-
+    const closed = await closeWindow(StoresEnum.RECORD);
+    if (closed) {
+      await showAndFocus(StoresEnum.MAIN);
       console.log("录屏窗口已关闭，主窗口已恢复");
-    } else {
-      console.warn("录屏窗口不存在或已关闭");
+      return;
     }
+    console.warn("录屏窗口不存在或已关闭");
   } catch (error) {
     console.error("关闭录屏窗口失败:", error);
   }
@@ -116,13 +103,8 @@ export const CloseRecordWindow = async () => {
  */
 export const HideRecordWindow = async () => {
   try {
-    const recordWindow = await Window.getByLabel(StoresEnum.RECORD);
-    if (recordWindow) {
-      console.log("隐藏录屏窗口");
-      await recordWindow.hide();
-    } else {
-      console.warn("录屏窗口不存在，无法隐藏");
-    }
+    const ok = await withWindow(StoresEnum.RECORD, win => win.hide());
+    if (!ok) console.warn("录屏窗口不存在，无法隐藏");
   } catch (error) {
     console.error("隐藏录屏窗口失败:", error);
   }
@@ -133,15 +115,12 @@ export const HideRecordWindow = async () => {
  */
 export const ShowRecordWindow = async () => {
   try {
-    const recordWindow = await Window.getByLabel(StoresEnum.RECORD);
-    if (recordWindow) {
-      console.log("显示录屏窗口");
-      await recordWindow.show();
-      await recordWindow.setFocus();
-      await recordWindow.setAlwaysOnTop(true);
-    } else {
-      console.warn("录屏窗口不存在，无法显示");
-    }
+    const ok = await withWindow(StoresEnum.RECORD, async win => {
+      await win.show();
+      await win.setFocus();
+      await win.setAlwaysOnTop(true);
+    });
+    if (!ok) console.warn("录屏窗口不存在，无法显示");
   } catch (error) {
     console.error("显示录屏窗口失败:", error);
   }

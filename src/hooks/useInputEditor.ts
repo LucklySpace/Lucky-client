@@ -1,12 +1,25 @@
 /**
  * 输入编辑器核心逻辑
- * 处理光标、选区、内容解析、草稿管理等
+ * 处理光标、选区、内容解析、草稿管理、文件队列等
  */
 
-import { ref, Ref, nextTick } from "vue";
+import { ref, Ref, nextTick, reactive, computed } from "vue";
 import { IMessagePart } from "@/models";
 import { FileType, fromFileName } from "@/constants";
 import { storage } from "@/utils/Storage";
+
+// ==================== 文件队列项类型 ====================
+
+export interface PendingFile {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  type: string;
+  preview?: string;
+  uploading?: boolean;
+  progress?: number;
+}
 
 // 零宽字符正则
 const ZERO_WIDTH_REGEX = /[\u200B\uFEFF\u200C\u200D]/g;
@@ -141,6 +154,110 @@ export function useInputEditor(options: UseInputEditorOptions) {
   // 存储粘贴的文件（用于映射 <img data-file-index>）
   const fileList = ref<File[]>([]);
 
+  // ==================== 文件队列管理 ====================
+
+  const pendingFiles = ref<PendingFile[]>([]);
+  const MAX_FILE_COUNT = 9;
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+  /** 生成唯一 ID */
+  const generateFileId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  /** 创建文件预览 URL */
+  const createPreview = async (file: File): Promise<string | undefined> => {
+    if (!file.type.startsWith("image/")) return undefined;
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  /** 添加文件到队列 */
+  const addFiles = async (files: FileList | File[]): Promise<{ added: number; skipped: number; errors: string[] }> => {
+    const errors: string[] = [];
+    let added = 0;
+    let skipped = 0;
+
+    for (const file of Array.from(files)) {
+      // 检查数量限制
+      if (pendingFiles.value.length >= MAX_FILE_COUNT) {
+        errors.push(`最多只能添加 ${MAX_FILE_COUNT} 个文件`);
+        skipped++;
+        continue;
+      }
+
+      // 检查大小限制
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`文件 "${file.name}" 超过 100MB 限制`);
+        skipped++;
+        continue;
+      }
+
+      // 检查重复
+      const isDuplicate = pendingFiles.value.some(
+        (f) => f.name === file.name && f.size === file.size
+      );
+      if (isDuplicate) {
+        skipped++;
+        continue;
+      }
+
+      const preview = await createPreview(file);
+      pendingFiles.value.push({
+        id: generateFileId(),
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        preview,
+      });
+      added++;
+    }
+
+    return { added, skipped, errors };
+  };
+
+  /** 从队列移除文件 */
+  const removeFile = (index: number): void => {
+    if (index >= 0 && index < pendingFiles.value.length) {
+      const file = pendingFiles.value[index];
+      // 释放预览 URL
+      if (file.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(file.preview);
+      }
+      pendingFiles.value.splice(index, 1);
+    }
+  };
+
+  /** 清空文件队列 */
+  const clearFiles = (): void => {
+    pendingFiles.value.forEach((f) => {
+      if (f.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(f.preview);
+      }
+    });
+    pendingFiles.value = [];
+  };
+
+  /** 获取待发送的文件部分 */
+  const getFileParts = (): IMessagePart[] => {
+    return pendingFiles.value.map((item) => {
+      const fileType = fromFileName(item.name);
+      if (fileType === FileType.Image) {
+        return { type: "image" as const, content: "", file: item.file };
+      } else if (fileType === FileType.Video) {
+        return { type: "video" as const, content: "", file: item.file };
+      } else {
+        return { type: "file" as const, content: "", file: item.file };
+      }
+    });
+  };
+
+  /** 文件队列是否为空 */
+  const hasFiles = computed(() => pendingFiles.value.length > 0);
+
   // ==================== 光标操作 ====================
 
   /** 将光标移动到编辑器末尾 */
@@ -239,12 +356,13 @@ export function useInputEditor(options: UseInputEditorOptions) {
     }
   };
 
-  /** 清空编辑器内容 */
+  /** 清空编辑器内容（包括文件队列） */
   const clearContent = () => {
     if (editorRef.value) {
       editorRef.value.innerHTML = "";
     }
     fileList.value = [];
+    clearFiles();
   };
 
   /** 设置编辑器内容 */
@@ -259,10 +377,14 @@ export function useInputEditor(options: UseInputEditorOptions) {
 
   // ==================== 内容解析 ====================
 
-  /** 解析编辑器内容为消息部分 */
+  /** 解析编辑器内容为消息部分（包含文件队列） */
   const extractParts = (): IMessagePart[] => {
     const out: IMessagePart[] = [];
     const el = editorRef.value;
+
+    // 先添加文件队列中的文件
+    out.push(...getFileParts());
+
     if (!el) return out;
 
     let textBuf = "";
@@ -446,7 +568,13 @@ export function useInputEditor(options: UseInputEditorOptions) {
     saveDraftNow,
     restoreDraft,
     cleanup,
-    // 文件
+    // 文件队列管理
+    pendingFiles,
+    hasFiles,
+    addFiles,
+    removeFile,
+    clearFiles,
+    getFileParts,
     createPartsFromFiles,
   };
 }

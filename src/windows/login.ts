@@ -1,17 +1,12 @@
-import { Window } from "@tauri-apps/api/window";
 import { StoresEnum } from "@/constants/index";
+import { closeWindow, hideWindow, showAndFocus } from "@/windows/utils";
 
 
 /**
  * 创建窗口
  */
 export const ShowLoginWindow = async () => {
-  const loginWindow = await Window.getByLabel(StoresEnum.LOGIN);
-  if (loginWindow) {
-    loginWindow.show();
-    loginWindow.unminimize();
-    loginWindow.setFocus();
-  }
+  await showAndFocus(StoresEnum.LOGIN);
 };
 
 
@@ -19,10 +14,7 @@ export const ShowLoginWindow = async () => {
  * 隐藏窗口
  */
 export const HideLoginWindow = async () => {
-  let loginWindow = await Window.getByLabel(StoresEnum.LOGIN);
-  if (loginWindow) {
-    loginWindow.hide();
-  }
+  await hideWindow(StoresEnum.LOGIN);
 };
 
 
@@ -30,9 +22,6 @@ export const HideLoginWindow = async () => {
  * 关闭窗口
  */
 export const CloseLoginWindow = async () => {
-  let loginWindow = await Window.getByLabel(StoresEnum.LOGIN);
-  if (loginWindow) {
-    loginWindow.close();
-  }
+  await closeWindow(StoresEnum.LOGIN);
 };
 

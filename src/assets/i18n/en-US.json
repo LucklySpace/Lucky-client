@@ -42,13 +42,13 @@
         "yesterday": "Yesterday",
         "dayBeforeYesterday": "2 days ago",
         "weekdays": {
-          "mon": "Monday",
-          "tue": "Tuesday",
-          "wed": "Wednesday",
-          "thu": "Thursday",
-          "fri": "Friday",
-          "sat": "Saturday",
-          "sun": "Sunday"
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday",
+          "0": "Sunday"
         }
       },
       "errors": {
@@ -119,6 +119,7 @@
           "history": "History",
           "pin": "Pin Chat",
           "mute": "Do Not Disturb",
+          "dropHint": "Drop files here",
           "recorder": {
             "label": "Record",
             "start": "Start",

@@ -1,17 +1,34 @@
-import { Entity, FTS5 } from "../orm/annotation/Decorators";
+import { Column, Entity, FTS5, PrimaryKey } from "../orm/annotation/Decorators";
 import BaseEntity from "../orm/BaseEntity";
 
 /**
- * 群组关系表
+ * 群组实体
  *
- * @tableName groups
+ * @table groups - 群组主表
+ * @fts5 groups_virtual - 全文检索虚拟表（索引 groupName 字段）
  */
-@FTS5({
-  virtual_name: "groups_virtual", // 虚拟表名
-  fields: ["userId", "friendId", "name", "location", "sequence"], // 数据库字段
-  match_field: "name" // 默认搜索字段
-})
-@Entity("friends")
+@FTS5({ virtual_name: "groups_virtual", fields: ["groupId", "groupName", "ownerId"], match_field: "groupName" })
+@Entity("groups")
 export default class Groups extends BaseEntity {
+  @PrimaryKey(false)
+  @Column("groupId", "TEXT")
+  groupId!: string;
 
+  @Column("groupName", "TEXT")
+  groupName!: string;
+
+  @Column("ownerId", "TEXT")
+  ownerId!: string;
+
+  @Column("avatar", "TEXT", true)
+  avatar?: string;
+
+  @Column("introduction", "TEXT", true)
+  introduction?: string;
+
+  @Column("notification", "TEXT", true)
+  notification?: string;
+
+  @Column("sequence", "INTEGER")
+  sequence?: number;
 }

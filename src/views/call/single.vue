@@ -62,7 +62,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import System from "@/components/System/index.vue";
 import Avatar from "@/components/Avatar/index.vue";
-import { ConnectionStatus, StoresEnum, ActionType, MessageType } from "@/constants";
+import { ConnectionStatus, StoresEnum, MessageType } from "@/constants";
 import { emit, listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import WebRTC from "@/views/call/services/WebRTC";
@@ -240,7 +240,7 @@ async function replyFailed() {
 }
 
 async function replyCancelOrHangUp(isHangup = false) {
-  const type = isHangup ? MessageType.RTC_HANDUP.code : MessageType.RTC_CANCEL.code;
+  const type = isHangup ? MessageType.RTC_HANGUP.code : MessageType.RTC_CANCEL.code;
   const payload = {
     fromId: userStore.userId,
     toId: callStore.friendInfo.id,
@@ -382,7 +382,7 @@ async function handleMessage(videoMessage: any) {
       break;
     }
 
-    case MessageType.RTC_HANDUP.code: {
+    case MessageType.RTC_HANGUP.code: {
       callStore.state = ConnectionStatus.CONNECTION_LOST.code;
       await closeCallWindow();
       break;

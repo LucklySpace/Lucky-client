@@ -1,15 +1,17 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Window } from "@tauri-apps/api/window";
 import { StoresEnum } from "@/constants/index";
+import { closeWindow, getWindow, showAndFocus, withWindow } from "@/windows/utils";
 
 export async function CreateScreenWindow(width: number, height: number) {
   try {
-    const mainWindow = await Window.getByLabel(StoresEnum.MAIN);
-    const existingWindow = await Window.getByLabel(StoresEnum.SCREEN);
+    const [mainWindow, existingWindow] = await Promise.all([
+      getWindow(StoresEnum.MAIN),
+      getWindow(StoresEnum.SCREEN)
+    ]);
 
     // 关闭已有窗口，防止重复创建
     if (existingWindow) {
-      await existingWindow.close();
+      await closeWindow(StoresEnum.SCREEN);
     }
 
     await mainWindow?.minimize();
@@ -39,9 +41,7 @@ export async function CreateScreenWindow(width: number, height: number) {
     });
 
     webview.once("tauri://webview-close", async () => {
-      await mainWindow?.maximize();
-      await mainWindow?.show();
-      await mainWindow?.setFocus();
+      await showAndFocus(StoresEnum.MAIN);
     });
   } catch (error) {
     console.error("Error creating screen window:", error);
@@ -53,12 +53,8 @@ export async function CreateScreenWindow(width: number, height: number) {
  */
 export const CloseScreenWindow = async () => {
   try {
-    const screenWindow = await Window.getByLabel(StoresEnum.SCREEN);
-    if (screenWindow) {
-      await screenWindow.close();
-    } else {
-      console.warn("Screen window is not available to close.");
-    }
+    const closed = await closeWindow(StoresEnum.SCREEN);
+    if (!closed) console.warn("Screen window is not available to close.");
   } catch (error) {
     console.error("Error closing screen window:", error);
   }
@@ -69,12 +65,8 @@ export const CloseScreenWindow = async () => {
  */
 export const HideScreenWindow = async () => {
   try {
-    const screenWindow = await Window.getByLabel(StoresEnum.SCREEN);
-    if (screenWindow) {
-      await screenWindow.hide();
-    } else {
-      console.warn("Screen window is not available to hide.");
-    }
+    const ok = await withWindow(StoresEnum.SCREEN, win => win.hide());
+    if (!ok) console.warn("Screen window is not available to hide.");
   } catch (error) {
     console.error("Error hiding screen window:", error);
   }
@@ -85,13 +77,11 @@ export const HideScreenWindow = async () => {
  */
 export const ShowScreenWindow = async () => {
   try {
-    const screenWindow = await Window.getByLabel(StoresEnum.SCREEN);
-    if (screenWindow) {
-      await screenWindow.show();
-      await screenWindow.setFocus();
-    } else {
-      console.warn("Screen window is not available to show.");
-    }
+    const ok = await withWindow(StoresEnum.SCREEN, async win => {
+      await win.show();
+      await win.setFocus();
+    });
+    if (!ok) console.warn("Screen window is not available to show.");
   } catch (error) {
     console.error("Error showing screen window:", error);
   }

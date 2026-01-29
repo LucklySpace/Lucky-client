@@ -1,14 +1,31 @@
 // src/hooks/useMappers.ts
 import { markRaw, readonly, shallowReactive } from "vue";
 import ChatsMapper from "./mapper/ChatsMapper";
-import SingleMessageMapper from "./mapper/SingleMessageMapper";
-import GroupMessageMapper from "./mapper/GroupMessageMapper";
 import FriendsMapper from "./mapper/FriendsMapper";
-import { QueryBuilder } from "./orm/query/QueryBuilder";
-import { FTSQueryBuilder } from "./orm/query/FTSQueryBuilder";
+import GroupMessageMapper from "./mapper/GroupMessageMapper";
+import SingleMessageMapper from "./mapper/SingleMessageMapper";
 import { PageResult } from "./orm/BaseMapper";
-import Segmenter from "./orm/core/Segmenter";
 import { DatabaseManager } from "./orm/core/DatabaseManager";
+import Segmenter from "./orm/core/Segmenter";
+import { FTSQueryBuilder } from "./orm/query/FTSQueryBuilder";
+import { QueryBuilder } from "./orm/query/QueryBuilder";
+
+type InitDatabaseOptions = {
+  deferFTS?: boolean;
+};
+
+const log = useLogger();
+
+let ftsInitKey = "";
+let ftsInitPromise: Promise<void> | null = null;
+
+const scheduleIdle = (fn: () => void, delay = 0) => {
+  if (typeof (window as any).requestIdleCallback === "function") {
+    (window as any).requestIdleCallback(fn);
+    return;
+  }
+  setTimeout(fn, delay);
+};
 
 /**
  * 全局 Mapper 上下文接口
@@ -43,7 +60,7 @@ export function useMappers(): Readonly<MapperContext> {
  * 初始化数据库（支持用户隔离）
  * @param userId 用户ID
  */
-export async function initDatabase(userId: string) {
+export async function initDatabase(userId: string, opts?: InitDatabaseOptions) {
   // 0. 参数校验（禁止空 userId 初始化）
   if (!userId || !String(userId).trim()) {
     throw new Error("initDatabase: invalid userId");
@@ -62,15 +79,43 @@ export async function initDatabase(userId: string) {
       if (typeof (mapper as any).ensureTable === "function") {
         await (mapper as any).ensureTable();
       }
-      // 初始化 FTS 表 (全文搜索)
-      if (typeof (mapper as any).createFTSTable === "function") {
+    }
+  }
+
+  const ensureFTS = async () => {
+    for (const mapper of mappers) {
+      if (mapper && typeof (mapper as any).createFTSTable === "function") {
         await (mapper as any).createFTSTable();
       }
     }
+  };
+
+  if (opts?.deferFTS) {
+    if (ftsInitKey !== userId || !ftsInitPromise) {
+      ftsInitKey = userId;
+      ftsInitPromise = new Promise<void>((resolve, reject) => {
+        scheduleIdle(() => {
+          (async () => {
+            try {
+              await ensureFTS();
+              resolve();
+            } catch (err) {
+              log?.prettyWarn?.("db", "FTS 初始化失败（不影响基础功能）", err);
+              reject(err);
+            }
+          })();
+        }, 200);
+      });
+    }
+    void ftsInitPromise.catch(() => { });
+    return;
   }
+
+  await ensureFTS();
 }
 
 
-export { QueryBuilder, FTSQueryBuilder, Segmenter };
+export { FTSQueryBuilder, QueryBuilder, Segmenter };
 
 export type { PageResult };
+

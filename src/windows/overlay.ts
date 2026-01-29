@@ -1,6 +1,9 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { closeWindow } from "@/windows/utils";
 
-export function openOverlay(x: number, y: number) {
+export async function openOverlay(x: number, y: number) {
+  await closeWindow("overlay");
+
   const overlay = new WebviewWindow("overlay", {
     url: "/overlay", // 你的 Vue 页面
     width: 300,
@@ -15,7 +18,9 @@ export function openOverlay(x: number, y: number) {
     shadow: false // 不要窗口阴影（更像浮层）
   });
 
-  overlay.once("tauri://created", () => {
+  overlay.once("tauri://webview-created", () => {
     console.log("Overlay created");
   });
+
+  return overlay;
 }

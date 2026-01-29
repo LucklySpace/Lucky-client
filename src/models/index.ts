@@ -1,5 +1,5 @@
 // src/models/message.ts
-import { MessageType, MessageContentType } from "@/constants";
+import { MessageContentType, MessageType } from "@/constants";
 
 
 /** 表情条目请求/响应对象  */
@@ -170,6 +170,47 @@ class GroupInviteMessageBody extends MessageBody {
     this.userId = init.userId;
     this.userName = init.userName;
     this.approveStatus = init.approveStatus;
+  }
+}
+
+class GroupOperationMessageBody extends MessageBody {
+  operationType: number;
+  groupId: string;
+  groupName?: string;
+  groupAvatar?: string;
+  operatorId: string;
+  operatorName?: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  operationTime: number;
+  extra?: Record<string, any>;
+  description?: string;
+
+  constructor(init: {
+    operationType: number;
+    groupId: string;
+    operatorId: string;
+    operationTime: number;
+    groupName?: string;
+    groupAvatar?: string;
+    operatorName?: string;
+    targetUserId?: string;
+    targetUserName?: string;
+    extra?: Record<string, any>;
+    description?: string;
+  }) {
+    super();
+    this.operationType = init.operationType;
+    this.groupId = init.groupId;
+    this.groupName = init.groupName;
+    this.groupAvatar = init.groupAvatar;
+    this.operatorId = init.operatorId;
+    this.operatorName = init.operatorName;
+    this.targetUserId = init.targetUserId;
+    this.targetUserName = init.targetUserName;
+    this.operationTime = init.operationTime;
+    this.extra = init.extra;
+    this.description = init.description;
   }
 }
 
@@ -612,10 +653,11 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
       return new FileMessageBody(parsedRaw);
     case MessageContentType.TIP.code:
       return new SystemMessageBody(parsedRaw);
+    case MessageType.GROUP_OPERATION.code:
+      return new GroupOperationMessageBody(parsedRaw);
     case MessageContentType.GROUP_INVITE.code:
       return new GroupInviteMessageBody(parsedRaw);
-    case MessageContentType.GROUP_JOIN_APPROVE.code:
-      // GroupJoinApproveMessageBody 与 GroupInviteMessageBody 类似
+    case MessageContentType.GROUP_APPROVE.code:
       return new GroupInviteMessageBody(parsedRaw);
     case MessageContentType.LOCATION.code:
       return new LocationMessageBody(parsedRaw);
@@ -627,22 +669,8 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
 }
 
 export {
-  MessageBody,
-  TextMessageBody,
-  ImageMessageBody,
-  VideoMessageBody,
-  AudioMessageBody,
-  FileMessageBody,
-  SystemMessageBody,
-  GroupInviteMessageBody,
-  LocationMessageBody,
-  ComplexMessageBody,
-  RecallMessageBody,
-  EditMessageBody,
-  IMessage,
-  IMSingleMessage,
-  IMGroupMessage,
-  createMessageBody
+  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMGroupMessage, IMSingleMessage, LocationMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
 };
 
 export type { IMessagePart };
+

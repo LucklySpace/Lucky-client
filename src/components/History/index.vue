@@ -10,7 +10,7 @@
     </div>
 
     <div class="history-container">
-      <div v-for="item in data" :key="item.id">
+      <div v-for="item in data" :key="item.messageId">
         <HistoryItem :data="item"></HistoryItem>
       </div>
     </div>
@@ -23,11 +23,11 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive } from "vue";
-import HistoryItem from "./item.vue";
 import { useChatStore } from "@/store/modules/chat";
+import { reactive, ref, shallowRef, watch } from "vue";
+import HistoryItem from "./item.vue";
 
-const chatMessageStore = useChatStore();
+const chatStore = useChatStore();
 
 const emit = defineEmits(["handleClose"]);
 
@@ -44,13 +44,10 @@ const props = defineProps({
   }
 });
 
-// 历史数据
-const data = shallowRef();
-
-// 搜索关键词
+const data = shallowRef<any[]>([]);
 const searchStr = ref("");
+const loading = ref(false);
 
-// 分页
 const pageInfo = reactive({
   currentPage: 1,
   pageSize: 10,
@@ -61,38 +58,41 @@ watch(
   () => props.visible,
   val => {
     if (val) {
-      // 打开时重置分页（可按需去掉）
       pageInfo.currentPage = 1;
       getList();
     } else {
       searchStr.value = "";
       data.value = [];
+      pageInfo.total = 0;
     }
   }
 );
 
-const handlePage = (val: any) => {
+const handlePage = (val: { page: number; limit: number }) => {
   pageInfo.currentPage = val.page;
   pageInfo.pageSize = val.limit;
   getList();
 };
 
-const handleSearch = (val: any) => {
+const handleSearch = () => {
   pageInfo.currentPage = 1;
-  pageInfo.pageSize = 10;
   getList();
 };
 
 const getList = async () => {
-  let res: any = await chatMessageStore.handleHistoryMessage(
-    {
-      page: pageInfo.currentPage,
-      size: pageInfo.pageSize
-    },
-    searchStr.value
-  );
-  data.value = res.list;
-  pageInfo.total = res.total;
+  if (loading.value) return;
+
+  loading.value = true;
+  try {
+    const res = await chatStore.handleHistoryMessage(
+      { page: pageInfo.currentPage, size: pageInfo.pageSize },
+      searchStr.value
+    );
+    data.value = res?.list ?? [];
+    pageInfo.total = res?.total ?? 0;
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleClose = () => {

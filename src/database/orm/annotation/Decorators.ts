@@ -46,7 +46,7 @@ export function Column(columnName?: string, type: "INTEGER" | "TEXT" | "REAL" = 
  * @param config 虚拟表信息
  */
 export function FTS5(config: FTS5Config) {
-  return function(constructor: Function) {
+  return function (constructor: Function) {
     Reflect.defineMetadata(
       META_FTS5,
       {
@@ -61,10 +61,10 @@ export function FTS5(config: FTS5Config) {
 }
 
 export interface FTS5Config {
-  virtual_name: string; // 虚拟表名
-  fields: string[]; // 虚拟表字段
-  match_field: string; // 匹配字段
-  nested_match_field: string; // 内嵌分词字段
+  virtual_name: string;// 虚拟表名
+  fields: string[];   // 虚拟表字段
+  match_field: string;// 匹配字段
+  nested_match_field?: string;// 内嵌分词字段
 }
 
 // 导出 metadata keys

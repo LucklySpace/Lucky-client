@@ -1,6 +1,6 @@
 import api from "@/api/index";
-import { ActionType, Events, MessageContentType, MessageType, StoresEnum } from "@/constants";
-import { FTSQueryBuilder, PageResult, QueryBuilder, Segmenter, useMappers } from "@/database";
+import { Events, isTextType, MessageContentType, MessageType, StoresEnum } from "@/constants";
+import { PageResult, QueryBuilder, useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
 import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useChatInput } from "@/hooks/useChatInput";
@@ -11,28 +11,25 @@ import { draftManager } from "@/hooks/useInputEditor";
 import { IMessage, IMessagePart } from "@/models";
 import { safeExecute } from "@/utils/ExceptionHandler";
 import { storage } from "@/utils/Storage";
-import { highlightTextByTokens } from "@/utils/Strings";
 import { ShowMainWindow } from "@/windows/main";
 import { CreateRecordWindow } from "@/windows/record";
 import { CreateScreenWindow } from "@/windows/screen";
 import { defineStore } from "pinia";
 import { computed, reactive } from "vue";
-import { useFriendsStore } from "./friends";
+import { useGroupStore } from "./group";
+import { useSearchStore } from "./search";
 import { useSettingStore } from "./setting";
 import { useUserStore } from "./user";
 
 // ==================== 类型定义 ====================
 
-interface Member { userId: string; name: string; avatar: string | null }
 interface ChatState {
   chatList: Chats[];
   messageList: IMessage[];
   currentChat: Chats | null;
-  groupMembers: Record<string, Member>;
   isShowDetail: boolean;
   ignoreList: string[];
   historyList: IMessage[];
-  groupInfo: Record<string, any>;
   currentUrls: string[];
   loading: boolean;
   error: string | null;
@@ -61,15 +58,20 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     chatList: [],
     messageList: [],
     currentChat: null,
-    groupMembers: {},
     isShowDetail: false,
     ignoreList: [],
     historyList: [],
-    groupInfo: {},
     currentUrls: [],
     loading: false,
     error: null
   });
+
+  // 群组 Store（延迟初始化避免循环依赖）
+  let _groupStore: ReturnType<typeof useGroupStore> | null = null;
+  const getGroupStore = () => {
+    if (!_groupStore) _groupStore = useGroupStore();
+    return _groupStore;
+  };
 
   const page = reactive({ num: 1, size: 20, total: 0 });
 
@@ -88,14 +90,10 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     isGroup: computed(() => state.currentChat?.chatType === MessageType.GROUP_MESSAGE.code),
     remaining: computed(() => Math.max(0, page.total - page.num * page.size)),
     unreadChats: computed(() => state.chatList.filter(c => c.unread > 0)),
-    membersExcludeSelf: computed((): Member[] => {
-      const members = Object.values(state.groupMembers || {});
-      return members.filter(m => m?.userId !== ownerId.value).map(m => ({
-        userId: String(m.userId ?? m),
-        name: m.name ?? String(m.userId),
-        avatar: m.avatar ?? null
-      }));
-    }),
+    /** 群成员（排除自己），委托给 groupStore */
+    membersExcludeSelf: computed(() => getGroupStore().getMembersExcludeSelf),
+    /** 群成员 Map，委托给 groupStore */
+    groupMembers: computed(() => getGroupStore().members)
   };
 
   // ==================== 内部工具 ====================
@@ -159,7 +157,8 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     const isOwner = String(ownerId.value) === String(fromId);
     if (Number(msg?.messageContentType) === MessageContentType.TIP.code) return { ...msg, messageBody: body };
 
-    const member = !isOwner && fromId ? state.groupMembers?.[String(fromId)] : undefined;
+    const groupStore = getGroupStore();
+    const member = !isOwner && fromId ? groupStore.getMember(String(fromId)) : undefined;
     const user = userStore.userInfo ?? {};
     return {
       ...msg,
@@ -238,9 +237,10 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     resetMessages();
     state.currentChat = chat;
 
+    // 群聊：加载群成员
     if (getters.isGroup.value && chat) {
-      const res: any = await exec(() => api.GetGroupMember({ groupId: chat!.toId }), { op: "getGroupMembers" });
-      state.groupMembers = res ?? {};
+      const groupStore = getGroupStore();
+      await groupStore.loadMembers(String(chat.toId));
     }
     emitChange();
   };
@@ -333,7 +333,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (state.currentChat?.chatId === chat?.chatId) {
       state.currentChat = null;
       resetMessages();
-      state.groupMembers = {};
+      getGroupStore().reset();
     }
     draftManager.clear(chat?.chatId);
   };
@@ -372,7 +372,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     state.messageList = [];
     state.historyList = [];
     state.currentUrls = [];
-    state.groupInfo = {};
     Object.assign(page, { num: 1, total: 0 });
   };
 
@@ -453,8 +452,11 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     const m = mapper(messageType);
     addTask(() => {
       m.insert(record);
-      const text = message.messageBody?.text;
-      if (text) m.insertOrUpdateFTS({ ...record, messageBody: text });
+      // 仅文本类消息插入 FTS 索引
+      const contentType = Number(message.messageContentType);
+      if (isTextType(contentType) && message.messageBody?.text) {
+        m.insertOrUpdateFTS({ ...record, messageBody: message.messageBody.text });
+      }
     });
   };
 
@@ -515,69 +517,32 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     state.currentUrls = await exec(() => mapper(msg.messageType).findMessageUrl(msg.fromId || msg.groupId, msg.toId), { fallback: [] }) || [];
   };
 
+  /**
+   * 搜索当前会话的历史消息（委托给 searchStore）
+   */
   const searchHistory = async (pageInfo: PageResult<any>, searchStr?: string | string[]): Promise<{ list: any[]; total: number }> => {
     const chat = state.currentChat;
     if (!chat?.toId) return { list: [], total: 0 };
 
-    const single = isSingle(chat);
-    const m = single ? singleMessageMapper : groupMessageMapper;
-    const params: (string | number)[] = single ? [ownerId.value, chat.toId, chat.toId, ownerId.value] : [ownerId.value, chat.toId];
+    const searchStore = useSearchStore();
 
-    const qb = new FTSQueryBuilder<any>();
-    qb.raw(single ? "((fromId = ? AND toId = ?) OR (fromId = ? AND toId = ?))" : "ownerId = ? AND groupId = ?", ...params).orderByAsc("sequence");
+    // 构建会话上下文
+    const chatContext = {
+      toId: chat.toId,
+      chatType: chat.chatType,
+      name: chat.name,
+      avatar: chat.avatar
+    };
 
-    // 分词
-    let tokens: string[] = [];
-    if (Array.isArray(searchStr)) {
-      tokens = searchStr.map(String);
-    } else if (searchStr?.trim()) {
-      if (searchStr.includes(" ")) {
-        tokens = searchStr.trim().split(/\s+/);
-      } else {
-        const segmented = await exec(() => Segmenter.segment(searchStr));
-        tokens = segmented || (/[\p{Script=Han}]/u.test(searchStr) ? Array.from(searchStr) : searchStr.split(/\s+/).filter(Boolean));
-      }
-    }
-    tokens = tokens.map(t => t.trim().replace(/["']/g, "")).filter(Boolean);
+    // 构建用户上下文
+    const memberMap = new Map(getters.membersExcludeSelf.value.map(m => [m.userId, m]));
+    const userContext = {
+      ownerId: ownerId.value,
+      userInfo: userStore.userInfo ?? {},
+      groupMembers: memberMap
+    };
 
-    if (tokens.length) {
-      qb.setMatchColumn("messageBody").matchKeyword(tokens.join(" "), "and")
-        .addSnippetSelect("excerpt", "snippet({table}, 0, '<b>', '</b>', '...', 10)")
-        .setRankingExpr("bm25({table})", "DESC");
-    } else {
-      qb.isNotNull("messageBody");
-    }
-
-    const ftsPage: any = await exec(() => (m as any).searchFTS5Page(qb, pageInfo.page, pageInfo.size), { fallback: { records: [], total: 0 } }) || { records: [], total: 0 };
-    const ids = ftsPage.records?.map((i: any) => i.messageId).filter(Boolean) ?? [];
-    if (!ids.length) return { list: [], total: ftsPage.total ?? 0 };
-
-    const records: any[] = await exec(() => (m as any).selectByIds(ids, "messageTime", "desc"), { fallback: [] }) || [];
-    if (!records.length) return { list: [], total: ftsPage.total ?? 0 };
-
-    const memberMap = new Map(getters.membersExcludeSelf.value.map(mb => [mb.userId, mb]));
-    const user = userStore.userInfo ?? {};
-
-    const list = records.map(item => {
-      if (!item) return null;
-      let body = typeof item.messageBody === "string"
-        ? exec(() => JSON.parse(item.messageBody), { fallback: { text: String(item.messageBody ?? "") } })
-        : item.messageBody;
-
-      if (tokens.length && body?.text) body.text = highlightTextByTokens(body.text, tokens);
-      const isOwner = ownerId.value === item.fromId;
-      const member = single ? null : memberMap.get(item.fromId);
-
-      return {
-        ...item,
-        messageBody: body,
-        name: isOwner ? user.name : single ? chat.name : member?.name ?? "未知",
-        avatar: isOwner ? user.avatar : single ? chat.avatar : member?.avatar ?? "",
-        isOwner
-      };
-    }).filter(Boolean);
-
-    return { list, total: ftsPage.total ?? 0 };
+    return searchStore.searchChatHistory(chatContext, userContext, pageInfo, searchStr);
   };
 
   const updateMessage = (message: any, update: any) => {
@@ -623,73 +588,68 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (preview) upsert({ chatId, message: preview, messageTime: Date.now() } as any);
   };
 
-  // ==================== 群组操作 ====================
+  // ==================== 群组操作（委托给 groupStore） ====================
+
+  /**
+   * 邀请群成员
+   */
   const addGroupMember = async (memberIds: string[], isInvite = false) => {
-    if (!memberIds?.length) return;
-    await exec(() => api.InviteGroupMember({
-      groupId: state.currentChat?.toId ?? "",
-      userId: storage.get("userId") || "",
+    if (!memberIds?.length || !state.currentChat?.toId) return;
+    await getGroupStore().inviteMembers({
+      groupId: String(state.currentChat.toId),
       memberIds,
-      type: isInvite ? ActionType.INVITE_TO_GROUP.code : ActionType.CREATE_GROUP.code
-    }), { op: "addGroupMember" });
+      type: isInvite ? 1 : 0
+    });
   };
 
-  const approveInvite = async (info: any) => {
-    await exec(() => api.ApproveGroup({
-      requestId: info.requestId,
-      groupId: info.groupId ?? "",
-      userId: storage.get("userId") || "",
-      inviterId: info.inviterId,
-      approveStatus: info.approveStatus
-    }), { op: "approveGroupInvite" });
-  };
+  /**
+   * 更新群信息（同步更新本地 chatList 状态）
+   */
+  const updateGroup = async (dto: {
+    groupId: string;
+    chatId?: string;
+    groupName?: string;
+    avatar?: string;
+    introduction?: string;
+    notification?: string;
+  }) => {
+    const chatKey = dto.chatId ?? dto.groupId;
+    const result = await getGroupStore().updateGroupInfo({
+      groupId: dto.groupId,
+      groupName: dto.groupName,
+      avatar: dto.avatar,
+      introduction: dto.introduction,
+      notification: dto.notification
+    }, chatKey);
 
-  const updateGroup = async (dto: { groupId: string; chatId?: string; userId?: string; groupName?: string; avatar?: string; introduction?: string; notification?: string }) => {
-    const payload: any = { groupId: dto.groupId, userId: dto.userId ?? ownerId.value };
-    if (dto.groupName) payload.groupName = dto.groupName;
-    if (dto.avatar) payload.avatar = dto.avatar;
-    if (dto.introduction) payload.introduction = dto.introduction;
-    if (dto.notification) payload.notification = dto.notification;
-
-    const result = await api.updateGroupInfo(payload);
     if (!result) throw new Error("UPDATE_GROUP_INFO_FAILED");
 
-    const chatKey = dto.chatId ?? dto.groupId;
-    const friendsStore = useFriendsStore();
-
-    // 更新群名
+    // 同步更新本地 chatList 状态
+    const idx = findIdx(chatKey);
     if (dto.groupName) {
-      const idx = findIdx(chatKey);
-      if (idx !== -1) {
-        state.chatList[idx].name = dto.groupName as any;
-        await chatsMapper.updateById(chatKey, { name: dto.groupName } as Chats);
-        await chatsMapper.insertOrUpdateFTS({ chatId: chatKey, name: dto.groupName } as any);
-      }
+      if (idx !== -1) state.chatList[idx].name = dto.groupName as any;
       if (state.currentChat?.chatId === chatKey) (state.currentChat as any).name = dto.groupName;
-
-      const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(dto.groupId));
-      if (gIdx !== -1) friendsStore.groups[gIdx].groupName = dto.groupName;
-      if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(dto.groupId)) {
-        (friendsStore.shipInfo as any).groupName = dto.groupName;
-      }
     }
-
-    // 更新群公告
     if (dto.notification) {
-      const idx = findIdx(chatKey);
-      if (idx !== -1) {
-        (state.chatList[idx] as any).notification = dto.notification;
-        await chatsMapper.updateById(chatKey, { notification: dto.notification } as any);
-      }
+      if (idx !== -1) (state.chatList[idx] as any).notification = dto.notification;
       if (state.currentChat?.chatId === chatKey) (state.currentChat as any).notification = dto.notification;
-
-      const gIdx = friendsStore.groups.findIndex((g: any) => String(g.groupId) === String(dto.groupId));
-      if (gIdx !== -1) (friendsStore.groups[gIdx] as any).notification = dto.notification;
-      if (friendsStore.shipInfo && String((friendsStore.shipInfo as any).groupId) === String(dto.groupId)) {
-        (friendsStore.shipInfo as any).notification = dto.notification;
-      }
     }
+    return result;
+  };
 
+  /**
+   * 退出或解散群组
+   */
+  const leaveOrDismissGroup = async (groupId: string): Promise<boolean> => {
+    const groupStore = getGroupStore();
+    const result = groupStore.getIsOwner
+      ? await groupStore.dismissGroup(groupId)
+      : await groupStore.quitGroup(groupId);
+
+    if (result) {
+      const idx = findIdx(groupId);
+      if (idx !== -1) await deleteChat(state.chatList[idx]);
+    }
     return result;
   };
 
@@ -707,11 +667,11 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     chatList: computed({ get: () => state.chatList, set: v => { state.chatList = v; } }),
     messageList: computed({ get: () => state.messageList, set: v => { state.messageList = v; } }),
     currentChat: computed({ get: () => state.currentChat, set: v => { state.currentChat = v; } }),
-    currentChatGroupMemberMap: computed({ get: () => state.groupMembers, set: v => { state.groupMembers = v; } }),
+    currentChatGroupMemberMap: computed({ get: () => getGroupStore().members, set: v => { getGroupStore().members = v; } }),
     isShowDetail: computed({ get: () => state.isShowDetail, set: v => { state.isShowDetail = v; } }),
     ignoreAllList: computed({ get: () => state.ignoreList, set: v => { state.ignoreList = v; } }),
     historyMessageList: computed({ get: () => state.historyList, set: v => { state.historyList = v; } }),
-    groupInfo: computed({ get: () => state.groupInfo, set: v => { state.groupInfo = v; } }),
+    groupInfo: computed({ get: () => getGroupStore().info, set: v => { getGroupStore().info = v; } }),
     currentUrls: computed({ get: () => state.currentUrls, set: v => { state.currentUrls = v; } }),
     loading: computed({ get: () => state.loading, set: v => { state.loading = v; } }),
     error: computed({ get: () => state.error, set: v => { state.error = v; } }),
@@ -777,10 +737,11 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     handleClearMessage: clearMessages,
     handleDeleteMessageFromList: deleteMessage,
 
-    // 群组操作
+    // 群组操作（委托给 groupStore）
     handleAddGroupMember: addGroupMember,
-    handleApproveGroupInvite: approveInvite,
     updateGroupInfo: updateGroup,
+    handleLeaveOrDismissGroup: leaveOrDismissGroup,
+    getGroupStore,
 
     // 工具
     handleShowScreenshot: showScreenshot,
@@ -796,7 +757,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   };
 }, {
   persist: [
-    { key: `${StoresEnum.CHAT}_local`, paths: ["state.groupMembers", "state.ignoreList"], storage: localStorage },
+    { key: `${StoresEnum.CHAT}_local`, paths: ["state.ignoreList"], storage: localStorage },
     { key: `${StoresEnum.CHAT}_session_chat`, paths: ["state.chatList", "state.currentChat"], storage: sessionStorage },
     { key: `${StoresEnum.CHAT}_session_message`, paths: ["state.messageList"], storage: sessionStorage }
   ],

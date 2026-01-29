@@ -80,6 +80,9 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     if (isLoading.value) return;
 
     status.value = LoginStatus.LOGGING_IN;
+    token.value = "";
+    userInfo.value = {};
+    storage.remove("token");
 
     try {
       // 1. 网络请求
@@ -99,6 +102,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
         }),
         (async () => {
           token.value = res.accessToken;
+          storage.set("userId", res.userId);
           storage.set("token", res.accessToken);
           userInfo.value.userId = res.userId; // 先设置 ID 以便后续请求使用
         })()
@@ -110,8 +114,6 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
       // 先加载数据，同时切换窗口，提升感知速度
       handleGetUserInfo();
       await switchWindowToMain();
-
-      ElMessage.success(`欢迎回来，${name.value}`);
 
     } catch (e: any) {
       status.value = LoginStatus.IDLE;
@@ -245,9 +247,8 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     uploadAvatar,
 
     // Low-level Access (如果拦截器需要)
-    getAccess: () => token.value,
+    getAccess: () => tokenManager.getAccess(),
     refreshToken,
-    checkToken: () => tokenManager.getAccess(), // 给 Axios 拦截器用的检查方法
   };
 }, {
   // Pinia 持久化配置 (仅存储非敏感 UI 数据)

@@ -13,6 +13,8 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
   protected fts5MatchField: string;
   protected fts5NestedMatchField?: string;
   protected entity: any;
+  private ftsEnsured = false;
+  private ftsEnsuring: Promise<void> | null = null;
 
   constructor(protected ctor: new () => T) {
     super(ctor);
@@ -32,11 +34,25 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     return GlobalDB ? GlobalDB.getInstance({ database: "index" }) : DatabaseManager.getInstance({ database: "index" });
   }
 
+  protected async ensureFTSReady(): Promise<void> {
+    if (this.ftsEnsured) return;
+    if (this.ftsEnsuring) return this.ftsEnsuring;
+    this.ftsEnsuring = this.createFTSTable()
+      .then(() => {
+        this.ftsEnsured = true;
+      })
+      .finally(() => {
+        this.ftsEnsuring = null;
+      });
+    return this.ftsEnsuring;
+  }
+
 
   /***
    * 查询 xml 中 sql
    */
   async queryFTS5Sql(sqlName: string, params?: any): Promise<any> {
+    await this.ensureFTSReady();
     if (this.sqlMap.size === 0) {
       await new Promise(resolve => setTimeout(resolve, 1500));
       return this.queryFTS5Sql(sqlName, params);
@@ -54,6 +70,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    * @returns 执行结果
    */
   async executeFTS5Sql(sqlName: string, params?: any): Promise<any> {
+    await this.ensureFTSReady();
     if (this.sqlMap.size === 0) {
       await new Promise(resolve => setTimeout(resolve, 1500));
       return this.executeFTS5Sql(sqlName, params);
@@ -69,6 +86,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    */
   async searchFTS5(keyword: string | undefined): Promise<T[] | undefined> {
     if (!keyword) return undefined;
+    await this.ensureFTSReady();
     const sql = `SELECT * FROM ${this.fts5TableName} WHERE ${this.fts5MatchField} like %?%`;
     try {
       return await this.fts5database.query<T>(sql, [keyword]);
@@ -84,6 +102,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    *   本方法会尊重 builder 生成的 SELECT/WHERE/ORDER 等并执行分页与计数。
    */
   async searchFTSByBuilder(qb: QueryBuilder<T>): Promise<PageResult<T>> {
+    await this.ensureFTSReady();
     // 直接使用 qb.build(table)
     const frag = qb.build(this.fts5TableName);
     const paginatedSql = `${frag.sql}`;
@@ -107,6 +126,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    * 分页搜索：使用 QueryBuilder 构建基础 SQL，然后对虚表执行分页查询
    */
   async searchFTS5Page(qb: QueryBuilder<T>, page: number = 1, size: number = 15): Promise<PageResult<T>> {
+    await this.ensureFTSReady();
     const frag = qb.build(this.fts5TableName);
     const offset = (page - 1) * size;
     const paginatedSql = `${frag.sql} LIMIT ? OFFSET ?`;
@@ -135,6 +155,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     keyword: string | undefined,
     mode: "and" | "or" | "phrase" = "and"
   ): Promise<PageResult<T>> {
+    await this.ensureFTSReady();
     const frag = qb.build(this.fts5TableName); // { sql, params }
     let baseSql = frag.sql;
     const baseParams = [...(frag.params || [])];
@@ -184,6 +205,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     size: number = 15,
     mode: "and" | "or" | "phrase" = "and"
   ): Promise<PageResult<T>> {
+    await this.ensureFTSReady();
     const frag = qb.build(this.fts5TableName); // { sql, params }
     let baseSql = frag.sql;
     const baseParams = [...(frag.params || [])];
@@ -235,6 +257,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
       metaTable?: string;
     }
   ): Promise<PageResult<T>> {
+    await this.ensureFTSReady();
     // 默认 snippet 参数
     const snippetStart = opts?.snippetStart ?? "<mark>";
     const snippetEnd = opts?.snippetEnd ?? "</mark>";
@@ -384,6 +407,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     executor?: { addTask: (cb: (deadline: IdleDeadline) => void | Promise<void>, opts?: any) => number }
   ): Promise<number> {
     if (!entities?.length) return 0;
+    await this.ensureFTSReady();
 
     // 目标列
     const ftsCols = this.fts5Fields.length > 0 ? this.fts5Fields.slice() : this.cols?.map(c => c.columnName) ?? [];
@@ -585,6 +609,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    * 插入或更新 FTS5（简洁版，参数化）
    */
   async insertOrUpdateFTS(insertData: T | Partial<T>): Promise<void> {
+    await this.ensureFTSReady();
     const data = { ...(insertData as Record<string, any>) };
 
     // 分词（记录警告但不阻塞）
@@ -669,6 +694,7 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
    */
   async deleteFTSById(idOrIds: string | number | Array<string | number>): Promise<void> {
     try {
+      await this.ensureFTSReady();
       const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
       if (ids.length === 0) return;
 

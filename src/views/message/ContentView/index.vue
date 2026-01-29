@@ -19,30 +19,37 @@
     <!-- 拖拽分隔条 -->
     <div class="drag-line" @mousedown.prevent="onDragStart" />
 
+    <!-- 文件预览区域 -->
+    <FilePreview
+      v-if="inputRef?.pendingFiles?.length"
+      :files="inputRef.pendingFiles"
+      @remove="inputRef?.removeFile"
+    />
+
     <!-- 下半区：输入框区域 -->
     <div ref="bottomRef" class="message-input">
-      <InputView v-show="chatMessageStore.currentChat" @trigger="onTrigger" />
+      <InputView ref="inputRef" v-show="chatMessageStore.currentChat" @trigger="onTrigger" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import { onBeforeUnmount, ref } from "vue";
-  import MessageView from "./MessageView/index.vue";
-  import InputView from "./InputView/index.vue";
-  import { useChatStore } from "@/store/modules/chat";
-  import EffectsManager from "@/components/EffectsManager/index.vue";
   import GroupNoticeBanner from "@/components/ChatDetail/GroupNoticeBanner.vue";
+import EffectsManager from "@/components/EffectsManager/index.vue";
+import FilePreview from "@/components/FilePreview/index.vue";
+import { useChatStore } from "@/store/modules/chat";
+import { onBeforeUnmount, ref } from "vue";
+import InputView from "./InputView/index.vue";
+import MessageView from "./MessageView/index.vue";
 
   // stores
   const chatMessageStore = useChatStore();
-
 
   // DOM refs
   const containerRef = ref<HTMLElement | null>(null);
   const topRef = ref<HTMLElement | null>(null);
   const bottomRef = ref<HTMLElement | null>(null);
-
+  const inputRef = ref<InstanceType<typeof InputView> | null>(null);
   const effectsRef = ref();
 
   // 处理 trigger 事件（来自 InputView）

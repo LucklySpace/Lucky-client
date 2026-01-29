@@ -1,8 +1,8 @@
 import { Webview } from "@tauri-apps/api/webview";
 import { Window } from "@tauri-apps/api/window";
 
-export const createWeb = () => {
-  const appWindow = new Window("uniqueLabel");
+export const createWeb = async () => {
+  const appWindow = (await Window.getByLabel("uniqueLabel")) ?? new Window("uniqueLabel");
 
   // 创建并显示一个新的子 WebView
   const child = new Webview(appWindow, "child-label", {
@@ -15,4 +15,6 @@ export const createWeb = () => {
   child.once("tauri://created", () => {
     console.log("子 WebView 已创建");
   });
+
+  return child;
 };

@@ -1,6 +1,6 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { StoresEnum } from "@/constants/index";
 import { listen } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Window } from "@tauri-apps/api/window";
 
 type MaybeWindow = Window | null;
@@ -200,16 +200,17 @@ async function tryGetWindowByLabel(label: string): Promise<MaybeWindow> {
  */
 export async function waitForWindowReady(childLabel: string, timeout = 3000): Promise<void> {
   return new Promise(async (resolve, reject) => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const unlistenP = listen("call-ready", e => {
       const payload = e.payload as any;
       if (payload && payload.label === childLabel) {
-        // unlisten & resolve
         unlistenP.then(un => un());
+        if (timeoutId) clearTimeout(timeoutId);
         resolve();
       }
     });
 
-    setTimeout(async () => {
+    timeoutId = setTimeout(async () => {
       const un = await unlistenP;
       un();
       reject(new Error("timeout waiting for window ready"));
