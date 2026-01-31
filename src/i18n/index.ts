@@ -1,5 +1,6 @@
 import { useLogger } from "@/hooks/useLogger";
 import { useSettingStore } from "@/store/modules/setting";
+import { storage } from "@/utils/Storage";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { BaseDirectory, exists, mkdir, readDir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
@@ -39,7 +40,7 @@ const i18nOptions = {
 const i18n: I18n = createI18n(i18nOptions);
 
 /** 导出全局 i18n 实例，用于非组件环境（如 store、工具函数等） */
-export { useI18n, i18n as globalI18n };
+export { i18n as globalI18n, useI18n };
 
 /**
  * I18n 管理器（单例）
@@ -115,6 +116,7 @@ class I18nManager {
       this.locale.value = lang;
       this.meta.value = file.meta ?? null;
       this.settingStore.language = lang;
+      storage.set("lang", lang);
 
       this.logger.info(`成功加载语言: ${lang}`, file.meta);
     } catch (error) {
@@ -182,6 +184,7 @@ class I18nManager {
     } catch (error) {
       this.logger.warn("语言切换广播失败", error);
     }
+
   }
 
   /**

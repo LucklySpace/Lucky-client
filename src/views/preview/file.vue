@@ -26,17 +26,17 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-  import System from "@/components/System/index.vue";
-  import VueOfficePdf from "@vue-office/pdf";
-  import VueOfficeDocx from "@vue-office/docx";
-  import VueOfficeExcel from "@vue-office/excel";
   import MarkdownPreviw from "@/components/Markdown/index.vue";
-  import { emit, listen } from "@tauri-apps/api/event";
+  import System from "@/components/System/index.vue";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
+  import { emit, listen } from "@tauri-apps/api/event";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+  import VueOfficeDocx from "@vue-office/docx";
   import "@vue-office/docx/lib/index.css";
+  import VueOfficeExcel from "@vue-office/excel";
   import "@vue-office/excel/lib/index.css";
+  import VueOfficePdf from "@vue-office/pdf";
+  import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
   const { addShortcut } = useGlobalShortcut();
   //import { StoresEnum } from "@/constants";
@@ -57,7 +57,7 @@
     doc: VueOfficeDocx,
     xlsx: VueOfficeExcel,
     xls: VueOfficeExcel,
-    md: MarkdownPreviw
+    md: MarkdownPreviw,
   };
   const currentComponent = computed(() => componentMap[ext.value]);
 
@@ -73,10 +73,10 @@
           widthOffset: 10,
           heightOffset: 10,
           beforeTransformData: (data: any) => data,
-          transformData: (data: any) => data
+          transformData: (data: any) => data,
         },
         style: baseStyle,
-        class: "excel-scrollable"
+        class: "excel-scrollable",
       };
     }
     return { style: baseStyle };
@@ -107,7 +107,7 @@
           getCurrentWebviewWindow().hide();
           console.log("关闭预览弹窗");
         }
-      }
+      },
     });
   };
 

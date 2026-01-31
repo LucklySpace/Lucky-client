@@ -20,11 +20,7 @@
     <div class="drag-line" @mousedown.prevent="onDragStart" />
 
     <!-- 文件预览区域 -->
-    <FilePreview
-      v-if="inputRef?.pendingFiles?.length"
-      :files="inputRef.pendingFiles"
-      @remove="inputRef?.removeFile"
-    />
+    <FilePreview v-if="inputRef?.pendingFiles?.length" :files="inputRef.pendingFiles" @remove="inputRef?.removeFile" />
 
     <!-- 下半区：输入框区域 -->
     <div ref="bottomRef" class="message-input">
@@ -35,12 +31,12 @@
 
 <script lang="ts" setup>
   import GroupNoticeBanner from "@/components/ChatDetail/GroupNoticeBanner.vue";
-import EffectsManager from "@/components/EffectsManager/index.vue";
-import FilePreview from "@/components/FilePreview/index.vue";
-import { useChatStore } from "@/store/modules/chat";
-import { onBeforeUnmount, ref } from "vue";
-import InputView from "./InputView/index.vue";
-import MessageView from "./MessageView/index.vue";
+  import EffectsManager from "@/components/EffectsManager/index.vue";
+  import FilePreview from "@/components/FilePreview/index.vue";
+  import { useChatStore } from "@/store/modules/chat";
+  import { onBeforeUnmount, ref } from "vue";
+  import InputView from "./InputView/index.vue";
+  import MessageView from "./MessageView/index.vue";
 
   // stores
   const chatMessageStore = useChatStore();
@@ -62,7 +58,7 @@ import MessageView from "./MessageView/index.vue";
       keyword: "party",
       emojis: ["🎉"],
       count: 150,
-      duration: 3000
+      duration: 3000,
     });
   }
 
@@ -79,8 +75,7 @@ import MessageView from "./MessageView/index.vue";
       resizeRaf = null;
       try {
         effectsRef.value?.updateSize?.();
-      } catch {
-      }
+      } catch {}
     });
   }
 
@@ -119,8 +114,7 @@ import MessageView from "./MessageView/index.vue";
     }
     try {
       effectsRef.value?.updateSize?.();
-    } catch {
-    }
+    } catch {}
   }
 
   onBeforeUnmount(() => {

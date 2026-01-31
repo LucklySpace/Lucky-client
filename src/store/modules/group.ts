@@ -65,20 +65,43 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
     // ==================== 计算属性 ====================
     const getters = {
         /** 当前群成员列表 */
-        memberList: computed((): GroupMember[] => Object.values(state.members || {})),
+        memberList: computed((): GroupMember[] => {
+            const list = Object.values(state.members || {});
+            const roleRank = (r?: number) =>
+                r === GroupMemberRole.OWNER.code ? 0 :
+                    r === GroupMemberRole.ADMIN.code ? 1 : 2;
+            return list.sort((a, b) => {
+                const ra = roleRank(a.role);
+                const rb = roleRank(b.role);
+                if (ra !== rb) return ra - rb;
+                const na = (a.alias || a.name || String(a.userId)).toLowerCase();
+                const nb = (b.alias || b.name || String(b.userId)).toLowerCase();
+                return na.localeCompare(nb, "zh-CN");
+            });
+        }),
 
         /** 当前群成员（排除自己） */
         membersExcludeSelf: computed((): GroupMember[] => {
-            return Object.values(state.members || {})
-                .filter(m => m?.userId !== ownerId.value)
-                .map(m => ({
-                    userId: String(m.userId ?? m),
-                    name: m.name ?? String(m.userId),
-                    avatar: m.avatar ?? undefined,
-                    role: m.role,
-                    alias: m.alias,
-                    mute: m.mute
-                }));
+            const arr = Object.values(state.members || {}).filter(m => m?.userId !== ownerId.value);
+            const roleRank = (r?: number) =>
+                r === GroupMemberRole.OWNER.code ? 0 :
+                    r === GroupMemberRole.ADMIN.code ? 1 : 2;
+            arr.sort((a, b) => {
+                const ra = roleRank(a.role);
+                const rb = roleRank(b.role);
+                if (ra !== rb) return ra - rb;
+                const na = (a.alias || a.name || String(a.userId)).toLowerCase();
+                const nb = (b.alias || b.name || String(b.userId)).toLowerCase();
+                return na.localeCompare(nb, "zh-CN");
+            });
+            return arr.map(m => ({
+                userId: String(m.userId ?? m),
+                name: m.name ?? String(m.userId),
+                avatar: m.avatar ?? undefined,
+                role: m.role,
+                alias: m.alias,
+                mute: m.mute
+            }));
         }),
 
         /** 当前用户在群中的成员信息 */
@@ -113,7 +136,7 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
         groupName: computed((): string => state.info?.groupName || ""),
 
         /** 禁言状态 */
-        isMuted: computed((): boolean => getters.currentMember.value?.mute === GroupMuteStatus.MUTED.code),
+        isMuted: computed((): boolean => getters.currentMember.value?.mute === GroupMuteStatus.MUTED.code || state.info?.muteAll === GroupMuteStatus.MUTED.code),
 
         /** 全员禁言状态 */
         isMuteAll: computed((): boolean => state.info?.muteAll === GroupMuteStatus.MUTED.code),
@@ -684,6 +707,14 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
     };
 
     /**
+     * 检查是否存在指定成员
+     * @param userId 用户 ID
+     */
+    const hasMember = (userId: string): boolean => {
+        return !!state.members[String(userId)];
+    };
+
+    /**
      * 检查用户是否为管理员或群主
      * @param userId 用户 ID
      */
@@ -700,19 +731,23 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
     const isMuted = (userId: string): boolean => {
         const member = state.members[userId];
         if (!member) return false;
-        if (member.role === GroupMemberRole.OWNER.code || member.role === GroupMemberRole.ADMIN.code) {
-            return false;
-        }
+
+        // 检查全员禁言
         if (state.info?.muteAll === GroupMuteStatus.MUTED.code) {
-            return true;
+            // 管理员和群主不受全员禁言影响
+            if (!isAdminOrOwner(userId)) return true;
         }
+
+        // 检查个人禁言
         if (member.mute === GroupMuteStatus.MUTED.code) {
+            // 检查禁言是否过期
             if (member.muteEndTime && member.muteEndTime < Date.now()) {
                 member.mute = GroupMuteStatus.NORMAL.code;
                 return false;
             }
             return true;
         }
+
         return false;
     };
 
@@ -736,6 +771,7 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
         getHasAdminPermission: getters.hasAdminPermission,
         getNotification: getters.notification,
         getGroupName: getters.groupName,
+        getIsMuted: getters.isMuted,
         getIsMuteAll: getters.isMuteAll,
         getMemberCount: getters.memberCount,
         getOwnerId: ownerId,
@@ -763,6 +799,7 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
         reset,
         setMembers,
         getMember,
+        hasMember,
         isAdminOrOwner,
         isMuted,
         applyGroupOperation,

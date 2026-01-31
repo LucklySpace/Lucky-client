@@ -18,11 +18,17 @@
     </transition>
 
     <!-- 工具栏 -->
-    <div class="chat-container-tool" :class="{ disabled: isInputDisabled }">
+    <div class="chat-container-tool">
       <!-- 表情 -->
-      <div ref="emojiBtnRef" :title="$t('pages.chat.toolbar.emoji')" class="icon-box" @click="toggleEmoji">
+      <div
+        ref="emojiBtnRef"
+        :title="$t('pages.chat.toolbar.emoji')"
+        :class="['icon-box', { disabled: isInputDisabled }]"
+        @click="toggleEmoji"
+      >
         <i class="iconfont icon-biaoqing-xue"></i>
         <el-popover
+          v-if="!isInputDisabled"
           ref="emojiPopoverRef"
           v-model:visible="emojiVisible"
           :virtual-ref="emojiBtnRef"
@@ -36,9 +42,10 @@
       </div>
 
       <!-- 截图（带下拉弹窗） -->
-      <div class="icon-box">
+      <div :class="['icon-box', { disabled: isInputDisabled }]">
         <i :title="$t('pages.chat.toolbar.screenshot')" class="iconfont icon-jietu1" @click="handleScreenshot"></i>
         <el-popover
+          v-if="!isInputDisabled"
           :close-on-click-modal="true"
           :popper-style="{ minWidth: '90px' }"
           :show-arrow="true"
@@ -65,12 +72,16 @@
       </div>
 
       <!-- 视频通话 -->
-      <div :title="$t('business.call.invite')" class="icon-box" @click="handleCall">
+      <div :title="$t('business.call.invite')" :class="['icon-box', { disabled: isInputDisabled }]" @click="handleCall">
         <i class="iconfont icon-shipin1"></i>
       </div>
 
       <!-- 文件 -->
-      <div :title="$t('pages.chat.toolbar.file')" class="icon-box" @click="openFileDialog">
+      <div
+        :title="$t('pages.chat.toolbar.file')"
+        :class="['icon-box', { disabled: isInputDisabled }]"
+        @click="openFileDialog"
+      >
         <i class="iconfont icon-wenjian"></i>
         <input ref="fileInputRef" style="display: none" type="file" multiple @change="handleFileChange" />
       </div>
@@ -90,7 +101,6 @@
           : $t('pages.chat.input.placeholder')
       "
       class="chat-container-input"
-      :class="{ disabled: isInputDisabled }"
       :contenteditable="!isInputDisabled"
       spellcheck="false"
       @click="handleInteraction"
@@ -144,7 +154,6 @@
   import emoji from "@/components/Emoji/index.vue";
   import HistoryDialog from "@/components/History/index.vue";
   import { MessageType } from "@/constants";
-  import { useGroupStore } from "@/store/modules/group";
   import { useAtMention } from "@/hooks/useAtMention";
   import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
   import { useInputEditor } from "@/hooks/useInputEditor";
@@ -152,6 +161,7 @@
   import { useCallStore } from "@/store/modules/call";
   import { useChatStore } from "@/store/modules/chat";
   import { useSettingStore } from "@/store/modules/setting";
+  import { useGroupStore } from "@/store/modules/group";
   import onPaste from "@/utils/Paste";
   import { storage } from "@/utils/Storage";
   import { ElMessage } from "element-plus";
@@ -162,9 +172,13 @@
   const chatStore = useChatStore();
   const callStore = useCallStore();
   const settingStore = useSettingStore();
+  const groupStore = useGroupStore();
   const log = useLogger();
   const { addShortcut } = useGlobalShortcut();
-  const groupStore = useGroupStore();
+
+  const isInputDisabled = computed(() => {
+    return chatStore.getCurrentType === MessageType.GROUP_MESSAGE.code && groupStore.isMuted(groupStore.getOwnerId);
+  });
 
   // ==================== Refs ====================
 
@@ -195,6 +209,7 @@
   // ==================== 表情处理 ====================
 
   const toggleEmoji = () => {
+    if (isInputDisabled.value) return;
     /* popover 自动处理 */
   };
 
@@ -219,6 +234,10 @@
   const openFileDialog = () => fileInputRef.value?.click();
 
   const handleFileChange = async (event: Event) => {
+    if (isInputDisabled.value) {
+      ElMessage.warning("当前已被禁言，不能发送消息");
+      return;
+    }
     const input = event.target as HTMLInputElement;
     const files = input.files;
     if (!files?.length) return;
@@ -229,6 +248,10 @@
 
   /** 添加文件到队列 */
   const addFilesToQueue = async (files: FileList | File[]) => {
+    if (isInputDisabled.value) {
+      ElMessage.warning("当前已被禁言，不能发送消息");
+      return { added: 0, skipped: (files as any)?.length || 0, errors: [] } as any;
+    }
     const result = await editor.addFiles(files);
     if (result.errors.length) {
       result.errors.forEach(err => ElMessage.warning(err));
@@ -247,6 +270,7 @@
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
+    if (isInputDisabled.value) return;
     dragCounter++;
     if (e.dataTransfer?.types.includes("Files")) {
       isDragging.value = true;
@@ -255,6 +279,7 @@
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
+    if (isInputDisabled.value) return;
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = "copy";
     }
@@ -262,6 +287,7 @@
 
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
+    if (isInputDisabled.value) return;
     dragCounter--;
     if (dragCounter === 0) {
       isDragging.value = false;
@@ -270,6 +296,12 @@
 
   const handleDrop = async (e: DragEvent) => {
     e.preventDefault();
+    if (isInputDisabled.value) {
+      ElMessage.warning("当前已被禁言，不能发送消息");
+      isDragging.value = false;
+      dragCounter = 0;
+      return;
+    }
     isDragging.value = false;
     dragCounter = 0;
 
@@ -285,6 +317,10 @@
 
   const handlePaste = async (e: ClipboardEvent) => {
     e.preventDefault();
+    if (isInputDisabled.value) {
+      ElMessage.warning("当前已被禁言，不能发送消息");
+      return;
+    }
 
     try {
       const result: any = await onPaste(e as any);
@@ -350,7 +386,7 @@
 
   const handleSend = async () => {
     if (isInputDisabled.value) {
-      ElMessage.info($t("common.actions.send") + " - " + $t("business.group.type.default"));
+      ElMessage.warning("当前已被禁言，不能发送消息");
       return;
     }
     const parts = editor.extractParts();
@@ -385,9 +421,18 @@
 
   // ==================== 工具栏操作 ====================
 
-  const handleScreenshot = () => chatStore.handleShowScreenshot();
-  const handleRecord = () => chatStore.handleShowRecord?.();
-  const handleCall = () => callStore.handleCreateCallMessage?.();
+  const handleScreenshot = () => {
+    if (isInputDisabled.value) return;
+    chatStore.handleShowScreenshot();
+  };
+  const handleRecord = () => {
+    if (isInputDisabled.value) return;
+    chatStore.handleShowRecord?.();
+  };
+  const handleCall = () => {
+    if (isInputDisabled.value) return;
+    callStore.handleCreateCallMessage?.();
+  };
   const toggleHistoryDialog = () => {
     historyDialogVisible.value = !historyDialogVisible.value;
   };
@@ -400,6 +445,10 @@
     async chatId => {
       if (!chatId) return;
       await editor.restoreDraft(chatId);
+      if (chatStore.getCurrentType === MessageType.GROUP_MESSAGE.code) {
+        const gid = chatStore.currentChat?.toId;
+        if (gid) await groupStore.loadGroupInfo(String(gid));
+      }
     },
     { immediate: true }
   );
@@ -434,11 +483,6 @@
   defineExpose({
     pendingFiles: editor.pendingFiles,
     removeFile: handleRemoveFile,
-  });
-
-  // ==================== 禁言状态 ====================
-  const isInputDisabled = computed(() => {
-    return chatStore.getChatIsGroup && groupStore.isMuted(groupStore.getOwnerId);
   });
 </script>
 
@@ -546,6 +590,10 @@
           color: rgb(25, 166, 221);
         }
       }
+      &.disabled {
+        pointer-events: none;
+        opacity: 0.5;
+      }
     }
   }
 
@@ -576,13 +624,6 @@
 
     /* 可以伸缩，但只占所需空间 */
     @include scroll-bar();
-
-    &.disabled {
-      pointer-events: none;
-      opacity: 0.6;
-      background: rgba(0, 0, 0, 0.02);
-      cursor: not-allowed;
-    }
   }
 
   .chat-container-button .button {
@@ -605,10 +646,5 @@
     border-radius: 4px;
     padding: 0 4px;
     margin: 0 2px;
-  }
-
-  .chat-container-tool.disabled {
-    pointer-events: none;
-    opacity: 0.5;
   }
 </style>

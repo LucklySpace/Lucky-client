@@ -28,11 +28,6 @@
             >
               <div class="avatar-wrapper">
                 <Avatar class="member-avatar" :avatar="item.avatar" :name="item.name" :width="42" :borderRadius="6" />
-                <span v-if="item.role === 0" class="role-badge owner">主</span>
-                <span v-else-if="item.role === 1" class="role-badge admin">管</span>
-                <span v-else-if="isMemberMuted(item)" class="mute-badge">
-                  <el-icon><MuteNotification /></el-icon>
-                </span>
               </div>
               <div class="member-name" :title="item.name">{{ item.alias || item.name }}</div>
             </div>
@@ -217,6 +212,17 @@
               <div class="role-text">{{ getRoleText(selectedMember.role) }}</div>
             </div>
           </div>
+          <div
+            v-if="
+              selectedMember && canMuteMember(selectedMember) && selectedMember.mute === GroupMuteStatus.NORMAL.code
+            "
+            class="mute-duration"
+          >
+            <span class="mute-label">禁言时长</span>
+            <el-select v-model="ui.muteDurationSec" size="small" class="mute-select">
+              <el-option v-for="opt in muteOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+            </el-select>
+          </div>
           <div class="action-list">
             <!-- 设置管理员（仅群主可操作非群主成员） -->
             <div v-if="isOwner && selectedMember.role !== 0" class="action-item" @click="handleSetAdmin">
@@ -363,7 +369,18 @@
     switches: {} as any,
     selectedTransferMember: "",
     selectedRemoveMembers: [] as string[],
+    muteDurationSec: 2592000,
   });
+
+  const muteOptions = [
+    { value: 600, label: "10分钟" },
+    { value: 3600, label: "1小时" },
+    { value: 43200, label: "12小时" },
+    { value: 86400, label: "1天" },
+    { value: 259200, label: "3天" },
+    { value: 604800, label: "7天" },
+    { value: 2592000, label: "30天" },
+  ];
 
   const selectedMember = ref<GroupMember | null>(null);
   const chatHeight = computed(() => window.innerHeight - 60);
@@ -460,10 +477,6 @@
     // 管理员只能禁言普通成员
     if (currentRole === GroupMemberRole.ADMIN.code) return member.role === GroupMemberRole.MEMBER.code;
     return false;
-  };
-
-  const isMemberMuted = (member: GroupMember) => {
-    return groupStore.isMuted(member.userId);
   };
 
   const getRoleText = (role?: number) => {
@@ -600,7 +613,7 @@
       groupId: String(groupId),
       targetUserId: selectedMember.value.userId,
       mute: (isMuted ? GroupMuteStatus.NORMAL.code : GroupMuteStatus.MUTED.code) as number,
-      muteDuration: isMuted ? 0 : 86400 * 30, // 默认禁言30天
+      muteDuration: isMuted ? 0 : ui.muteDurationSec,
     });
 
     if (result) {
@@ -918,40 +931,6 @@
 
         .avatar-wrapper {
           position: relative;
-
-          .role-badge {
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            font-size: 10px;
-            padding: 1px 3px;
-            border-radius: 3px;
-            color: #fff;
-
-            &.owner {
-              background: linear-gradient(135deg, #f5af19, #f12711);
-            }
-
-            &.admin {
-              background: linear-gradient(135deg, #667eea, #764ba2);
-            }
-          }
-          .mute-badge {
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: transparent;
-            .el-icon {
-              font-size: 14px;
-              color: rgba(0, 0, 0, 0.45);
-            }
-          }
         }
 
         .member-name {
@@ -1140,6 +1119,20 @@
       }
     }
 
+    .mute-duration {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 8px 0;
+      .mute-label {
+        font-size: 13px;
+        color: #666;
+        white-space: nowrap;
+      }
+      .mute-select {
+        width: 160px;
+      }
+    }
     .action-list {
       padding-top: 8px;
 

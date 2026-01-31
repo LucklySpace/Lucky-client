@@ -14,7 +14,8 @@ const Http = HttpClient.create({
 // 添加请求拦截器（注入 Token 和签名）
 Http.interceptors.request.use(async (config: HttpParams) => {
   // 获取 Token（自动处理过期检测）
-  let accessToken = storage.get("token");
+  const accessToken = storage.get("token");
+  const lang = storage.get("lang")
 
   // 如果 Token 为空，尝试获取原始 Token（可能需要刷新）
   // if (!accessToken) {
@@ -48,6 +49,14 @@ Http.interceptors.request.use(async (config: HttpParams) => {
     config.headers = {
       ...config.headers,
       Authorization: `Bearer ${accessToken}`,
+    };
+  }
+
+  // 语言
+  if (lang) {
+    config.headers = {
+      ...config.headers,
+      "Accept-Language": lang,
     };
   }
 

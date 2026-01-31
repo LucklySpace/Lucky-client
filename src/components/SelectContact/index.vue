@@ -28,7 +28,7 @@
                   top: (startIndex + idx) * rowHeight + 'px',
                   padding: '0 8px',
                 }"
-                :class="{ 'vl-box-item': true, selected: !!selectedContacts[row.friendId] }"
+                :class="{ 'vl-box-item': true, selected: !!selectedContacts[row.friendId], disabled: isDisabled(row) }"
                 @click="e => onCheckboxToggle(row, e)"
               >
                 <div class="selection-item">
@@ -39,6 +39,7 @@
                       <el-checkbox
                         :aria-label="$t('components.selectContact.actions.select')"
                         :model-value="!!selectedContacts[row.friendId]"
+                        :disabled="isDisabled(row)"
                         @change="val => onCheckboxToggle(row, val)"
                         @click.stop
                       />
@@ -99,9 +100,12 @@
 
 <script lang="ts" setup>
   import Avatar from "@/components/Avatar/index.vue";
-import { useFriendsStore } from "@/store/modules/friends";
-import { useDebounceFn } from "@vueuse/core";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+  import { useFriendsStore } from "@/store/modules/friends";
+  import { useChatStore } from "@/store/modules/chat";
+  import { useGroupStore } from "@/store/modules/group";
+  import { MessageType } from "@/constants";
+  import { useDebounceFn } from "@vueuse/core";
+  import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
   const emit = defineEmits<{
     (e: "handleAddGroupMember", payload: string[]): void;
@@ -110,6 +114,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
   // store
   const friendsStore = useFriendsStore();
+  const chatStore = useChatStore();
+  const groupStore = useGroupStore();
 
   // 搜索（原始输入与防抖后的值）
   const rawSearchText = ref<string>("");
@@ -170,6 +176,18 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
     return friendList.value.slice(s, end);
   });
 
+  // 是否为当前群聊上下文
+  const inGroupContext = computed(() => chatStore.currentChat?.chatType === MessageType.GROUP_MESSAGE.code);
+
+  // 当前项是否已在群中（应禁用选择）
+  const isDisabled = (item: any): boolean => {
+    if (!item) return false;
+    if (!inGroupContext.value) return false;
+    const uid = String(item.userId ?? "");
+    if (!uid) return false;
+    return groupStore.hasMember(uid);
+  };
+
   // 滚动监听（使用 requestAnimationFrame 节流渲染）
   let rafId: number | null = null;
 
@@ -185,6 +203,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
   // 当用户点击复选框或 el-checkbox 变化时切换选中状态（统一入口）
   function onCheckboxToggle(item: any, checked?: any) {
+    if (isDisabled(item)) return;
     const id = item.friendId;
     // 如果 change 事件传入明确的布尔值则以该值为准；否则直接根据friendId对其选中状态取反
     const newVal = typeof checked === "boolean" ? checked : !selectedContacts.value[id];
@@ -314,6 +333,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
     // 选中后的高亮样式
     &.selected .selection-item {
       background-color: #e2e8f0;
+    }
+    &.disabled .selection-item {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
   }
 
