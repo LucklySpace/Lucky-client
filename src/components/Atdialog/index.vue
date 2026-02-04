@@ -1,162 +1,255 @@
 <template>
   <!-- At 列表弹窗（fixed 定位） -->
-  <div v-if="visible" :aria-activedescendant="activeDescId" :style="wrapperStyle" class="at-wrapper no-select"
-    role="listbox" tabindex="-1">
-    <div v-if="filteredUsers.length === 0" class="empty">无结果</div>
+  <Teleport to="body">
+    <Transition name="at-fade">
+      <div v-if="visible" ref="wrapperRef" :aria-activedescendant="activeDescId" :style="wrapperStyle"
+        class="at-wrapper no-select" role="listbox" tabindex="-1">
+        <!-- @所有人 选项 -->
+        <div v-if="showMentionAll" :id="`at-item-${MENTION_ALL_ID}`" :ref="el => setItemRef(el, 0)"
+          :aria-selected="highlightIndex === 0" :class="{ active: highlightIndex === 0 }" class="item item--all"
+          role="option" @click="handleSelectAll" @mouseenter="hoverAt(0)">
+          <div class="avatar-wrap">
+            <span class="avatar avatar--all">
+              <i class="iconfont icon-renqun" />
+            </span>
+          </div>
+          <div class="meta">
+            <div class="name">{{ mentionAllText }}</div>
+            <div class="sub">{{ $t('pages.chat.mention.allHint') || '通知群内所有人' }}</div>
+          </div>
+        </div>
 
-    <div v-for="(item, i) in filteredUsers" :id="`at-item-${item.userId}`" :key="item.userId"
-      :ref="el => setItemRef(el, i)" :aria-selected="i === highlightIndex" :class="{ active: i === highlightIndex }"
-      class="item" role="option" @click="clickAt(item)" @mouseenter="hoverAt(i)">
-      <div class="avatar-wrap">
-        <span class="avatar">
-          <Avatar :avatar="item.avatar || '无'" :name="item.name" :width="30" :borderRadius="3" />
-        </span>
-      </div>
+        <!-- 分隔线 -->
+        <div v-if="showMentionAll && displayUsers.length > 0" class="divider" />
 
-      <div class="meta">
-        <div class="name">{{ item.name }}</div>
+        <!-- 空状态 -->
+        <div v-if="displayUsers.length === 0 && !showMentionAll" class="empty">
+          {{ $t('common.empty') || '无结果' }}
+        </div>
+
+        <!-- 用户列表 -->
+        <div v-for="(item, i) in displayUsers" :id="`at-item-${item.userId}`" :key="item.userId"
+          :ref="el => setItemRef(el, actualIndex(i))" :aria-selected="highlightIndex === actualIndex(i)"
+          :class="{ active: highlightIndex === actualIndex(i) }" class="item" role="option"
+          @click="handleSelectUser(item)" @mouseenter="hoverAt(actualIndex(i))">
+          <div class="avatar-wrap">
+            <Avatar :avatar="item.avatar || ''" :name="item.name" :width="30" :borderRadius="4" />
+          </div>
+          <div class="meta">
+            <div class="name">{{ item.name }}</div>
+            <div v-if="item.role" class="sub">{{ getRoleText(item.role) }}</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script lang="ts" setup>
 /**
- * 优化版 AtDialog（带头像、漂亮 UI）
+ * AtDialog - @ 提及用户选择弹窗
  *
- * 说明：
- * - props.users 中每项建议包含：{ userId, name, avatar}
- * - 组件发出事件：
- *    - handlePickUser (user) 选中行
- *    - handleHide () 关闭弹窗
+ * 功能：
+ * - 展示可 @ 的用户列表
+ * - 支持 @所有人（群聊场景）
+ * - 支持键盘导航（上下箭头、Enter、Escape）
+ * - 支持搜索过滤
+ * - 自适应位置（避免超出视口）
  *
- * 使用方式与之前相同，UI 更美观，键盘/鼠标交互更流畅
+ * Props:
+ * - users: 用户列表
+ * - visible: 是否可见
+ * - position: 弹窗位置
+ * - queryString: 搜索关键词
+ * - showAllOption: 是否显示 @所有人选项（默认 true）
+ *
+ * Emits:
+ * - handleHide: 隐藏弹窗
+ * - handlePickUser: 选中用户
  */
 
 import Avatar from "@/components/Avatar/index.vue";
+import { GroupMemberRole } from "@/constants";
+import { MENTION_ALL_ID, MENTION_ALL_NAME, createMentionAllOption, type AtAllOption, type AtUser } from "@/hooks/useAtMention";
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 
-// 简单 User 接口（按需扩展）
-type User = { userId: string; name: string; avatar?: string | null };
+// ==================== 类型定义 ====================
 
-const props = defineProps<{
-  users: User[];
-  visible: boolean;
-  position: { x: number; y: number };
-  queryString: string;
-}>();
+interface UserItem extends AtUser {
+  role?: string | number;
+}
+
+type SelectableItem = UserItem | AtAllOption;
+
+// ==================== Props & Emits ====================
+
+const props = withDefaults(
+  defineProps<{
+    users: UserItem[];
+    visible: boolean;
+    position: { x: number; y: number };
+    queryString: string;
+    showAllOption?: boolean;
+  }>(),
+  {
+    showAllOption: true,
+  }
+);
 
 const emit = defineEmits<{
   (e: "handleHide"): void;
-  (e: "handlePickUser", user: User): void;
+  (e: "handlePickUser", user: SelectableItem): void;
 }>();
 
-/* ---------- 本地状态 ---------- */
-const highlightIndex = ref<number>(0);
-// items 按索引存放 dom 节点（保证顺序一致）
-const items = ref<HTMLElement[]>([]);
+// ==================== i18n ====================
 
-/* ---------- 设置 item ref（按索引写入） ---------- */
-const setItemRef = (el: HTMLElement | null | any, i: number) => {
-  if (!items.value) items.value = [];
-  if (el) items.value[i] = el;
-  else if (typeof i === "number") items.value[i] = undefined as any;
+const { t } = useI18n();
+
+const mentionAllText = computed(() => t("pages.chat.mention.all") || MENTION_ALL_NAME);
+
+const getRoleText = (role?: string | number): string => {
+  if (!role) return "";
+  if (role === "owner" || role === GroupMemberRole.OWNER.code) return t("pages.chat.group.owner") || "群主";
+  if (role === "admin" || role === GroupMemberRole.ADMIN.code) return t("pages.chat.group.admin") || "管理员";
+  return "";
 };
 
-/* ---------- 过滤逻辑（本地） ---------- */
-const filteredUsers = computed<User[]>(() => {
-  const q = String(props.queryString || "")
-    .trim()
-    .toLowerCase();
-  if (!q) return props.users || [];
-  return (props.users || []).filter(u =>
-    String(u.name || "")
-      .toLowerCase()
-      .includes(q)
+// ==================== 本地状态 ====================
+
+const wrapperRef = ref<HTMLElement | null>(null);
+const highlightIndex = ref(0);
+const items = ref<(HTMLElement | null)[]>([]);
+
+// ==================== 过滤逻辑 ====================
+
+const filteredUsers = computed<UserItem[]>(() => {
+  const query = String(props.queryString || "").trim().toLowerCase();
+  if (!query) return props.users || [];
+
+  return (props.users || []).filter((u) =>
+    String(u.name || "").toLowerCase().includes(query)
   );
 });
 
-/* ---------- 辅助 computed / aria ---------- */
+/** 是否显示 @所有人 选项 */
+const showMentionAll = computed(() => {
+  if (!props.showAllOption) return false;
+
+  const query = String(props.queryString || "").trim().toLowerCase();
+  if (!query) return true;
+
+  // 匹配 "所有人"、"all" 等关键词
+  const allKeywords = [
+    MENTION_ALL_NAME.toLowerCase(),
+    "all",
+    "everyone",
+    mentionAllText.value.toLowerCase(),
+  ];
+
+  return allKeywords.some((kw) => kw.includes(query) || query.includes(kw));
+});
+
+/** 实际显示的用户列表 */
+const displayUsers = computed(() => filteredUsers.value);
+
+/** 总条目数（包含 @所有人） */
+const totalItems = computed(() => {
+  const userCount = displayUsers.value.length;
+  return showMentionAll.value ? userCount + 1 : userCount;
+});
+
+/** 计算用户在列表中的实际索引（考虑 @所有人 偏移） */
+const actualIndex = (userIndex: number): number => {
+  return showMentionAll.value ? userIndex + 1 : userIndex;
+};
+
+// ==================== Aria 辅助 ====================
+
 const activeDescId = computed(() => {
-  const user = filteredUsers.value[highlightIndex.value];
+  if (highlightIndex.value === 0 && showMentionAll.value) {
+    return `at-item-${MENTION_ALL_ID}`;
+  }
+  const userIndex = showMentionAll.value
+    ? highlightIndex.value - 1
+    : highlightIndex.value;
+  const user = displayUsers.value[userIndex];
   return user ? `at-item-${user.userId}` : undefined;
 });
 
-/* ---------- 位置修正（防止超出视口） ---------- */
-const adjustedPosition = ref({ x: props.position?.x || 0, y: props.position?.y || 0 });
+// ==================== Ref 管理 ====================
+
+const setItemRef = (el: HTMLElement | null | unknown, index: number) => {
+  if (!items.value) items.value = [];
+  items.value[index] = el as HTMLElement | null;
+};
+
+const clearRefs = () => {
+  items.value = [];
+};
+
+// ==================== 位置计算 ====================
+
+const adjustedPosition = ref({ x: 0, y: 0 });
 const MARGIN = 8;
 
-// ---------- 优先在传入 y 的上方显示，如果放不下则回退到下方 ----------
 const measureAndAdjust = async () => {
   await nextTick();
-  const wrapper = document.querySelector(".at-wrapper") as HTMLElement | null;
+  const wrapper = wrapperRef.value;
   if (!wrapper) return;
+
   const rect = wrapper.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let x = props.position?.x ?? 0;
   let y = props.position?.y ?? 0;
 
-  // 横向处理（同原逻辑）
+  // 横向：防止超出右边界
   if (x + rect.width + MARGIN > vw) {
     x = Math.max(MARGIN, vw - rect.width - MARGIN);
   } else {
     x = Math.max(MARGIN, x);
   }
 
-  // 纵向：优先放在传入 y 的上方（即 y - height - margin）
+  // 纵向：优先在上方显示
   const yAbove = (props.position?.y ?? 0) - rect.height - MARGIN;
   const yBelow = (props.position?.y ?? 0) + MARGIN;
 
   if (yAbove >= MARGIN) {
-    // 上方有足够空间 -> 放在上方
     y = yAbove;
   } else if (yBelow + rect.height + MARGIN <= vh) {
-    // 上方不够，但下方够 -> 放在下方（紧贴传入 y 的下侧）
     y = yBelow;
   } else {
-    // 两边都不够，尽量靠近视口边缘
-    // 优先尝试放上方的最大位置，否则放到视口底部留 margin
-    y = Math.max(MARGIN, Math.min(Math.max(MARGIN, vh - rect.height - MARGIN), yAbove));
+    y = Math.max(MARGIN, Math.min(vh - rect.height - MARGIN, yAbove));
   }
 
   adjustedPosition.value = { x, y };
 };
 
-watch(
-  [() => props.visible, () => props.position?.x, () => props.position?.y, filteredUsers],
-  async () => {
-    if (props.visible) {
-      // 重新清理 refs 数组（确保索引一致）
-      items.value = new Array(filteredUsers.value.length).fill(null) as any;
-      await nextTick();
-      await measureAndAdjust();
-      // 重置高亮索引并滚动（若有结果）
-      highlightIndex.value =
-        filteredUsers.value.length > 0 ? Math.min(highlightIndex.value, filteredUsers.value.length - 1) : 0;
-      scrollActiveIntoView();
-    } else {
-      items.value = [];
-    }
-  },
-  { immediate: true }
-);
+const wrapperStyle = computed(() => ({
+  position: "fixed" as const,
+  left: `${adjustedPosition.value.x}px`,
+  top: `${adjustedPosition.value.y}px`,
+  zIndex: "9999",
+}));
 
-/* ---------- 滚动到高亮项 ---------- */
+// ==================== 滚动到高亮项 ====================
+
 const scrollActiveIntoView = () => {
   nextTick(() => {
     const idx = highlightIndex.value;
-    if (!items.value || idx < 0 || idx >= items.value.length) return;
+    if (idx < 0 || idx >= items.value.length) return;
     const el = items.value[idx];
-    if (!el) return;
-    el.scrollIntoView({ block: "nearest", behavior: "auto" });
+    el?.scrollIntoView({ block: "nearest", behavior: "auto" });
   });
 };
 
-/* ---------- 键盘事件处理（在 visible 时全局监听） ---------- */
-const keyDownHandler = (e: KeyboardEvent) => {
+// ==================== 键盘事件 ====================
+
+const handleKeyDown = (e: KeyboardEvent) => {
   if (!props.visible) return;
-  const len = filteredUsers.value.length;
+
+  const len = totalItems.value;
   if (len === 0) {
     if (e.key === "Escape") emit("handleHide");
     return;
@@ -165,77 +258,106 @@ const keyDownHandler = (e: KeyboardEvent) => {
   switch (e.key) {
     case "ArrowDown":
       e.preventDefault();
+      e.stopPropagation();
       highlightIndex.value = (highlightIndex.value + 1) % len;
       scrollActiveIntoView();
       break;
+
     case "ArrowUp":
       e.preventDefault();
+      e.stopPropagation();
       highlightIndex.value = (highlightIndex.value - 1 + len) % len;
       scrollActiveIntoView();
       break;
+
     case "Enter":
       e.preventDefault();
-      {
-        const user = filteredUsers.value[highlightIndex.value];
-        if (user) emit("handlePickUser", user);
-      }
+      e.stopPropagation();
+      selectCurrentItem();
       break;
+
     case "Escape":
       e.preventDefault();
+      e.stopPropagation();
       emit("handleHide");
       break;
   }
 };
 
+// ==================== 选择逻辑 ====================
+
+const selectCurrentItem = () => {
+  const idx = highlightIndex.value;
+
+  // 选择 @所有人
+  if (idx === 0 && showMentionAll.value) {
+    emit("handlePickUser", createMentionAllOption());
+    return;
+  }
+
+  // 选择具体用户
+  const userIndex = showMentionAll.value ? idx - 1 : idx;
+  const user = displayUsers.value[userIndex];
+  if (user) {
+    emit("handlePickUser", user);
+  }
+};
+
+const handleSelectAll = () => {
+  emit("handlePickUser", createMentionAllOption());
+};
+
+const handleSelectUser = (user: UserItem) => {
+  emit("handlePickUser", user);
+};
+
+const hoverAt = (index: number) => {
+  highlightIndex.value = index;
+};
+
+// ==================== 生命周期 ====================
+
+watch(
+  [() => props.visible, () => props.position?.x, () => props.position?.y, displayUsers],
+  async () => {
+    if (props.visible) {
+      // 重置状态
+      const len = totalItems.value;
+      items.value = new Array(len).fill(null);
+      highlightIndex.value = len > 0 ? 0 : -1;
+
+      await nextTick();
+      await measureAndAdjust();
+      scrollActiveIntoView();
+    } else {
+      clearRefs();
+    }
+  },
+  { immediate: true }
+);
+
 watch(
   () => props.visible,
-  visible => {
-    if (visible) window.addEventListener("keydown", keyDownHandler);
-    else {
-      window.removeEventListener("keydown", keyDownHandler);
-      items.value = [];
+  (visible) => {
+    if (visible) {
+      window.addEventListener("keydown", handleKeyDown, true);
+    } else {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      clearRefs();
     }
   },
   { immediate: true }
 );
 
 onBeforeUnmount(() => {
-  window.removeEventListener("keydown", keyDownHandler);
+  window.removeEventListener("keydown", handleKeyDown, true);
 });
-
-/* ---------- 鼠标交互 ---------- */
-const hoverAt = (i: number) => {
-  highlightIndex.value = i;
-};
-const clickAt = (item: User) => {
-  emit("handlePickUser", item);
-};
-
-/* ---------- 公共方法：生成 wrapper style、头像首字母 ---------- */
-const wrapperStyle = computed(() => {
-  return {
-    position: "fixed",
-    left: `${adjustedPosition.value.x}px`,
-    top: `${adjustedPosition.value.y - 10}px`,
-    zIndex: "999"
-  } as Record<string, string>;
-});
-
-const getInitials = (name?: string) => {
-  if (!name) return "";
-  const s = name.trim();
-  // 返回第一个汉字或字母的大写首字母
-  const first = s.charAt(0);
-  // 若是英文，取大写；否则直接返回首个字符
-  return /[a-zA-Z]/.test(first) ? first.toUpperCase() : first;
-};
 </script>
 
 <style lang="scss" scoped>
-/* 美观的 AtDialog 样式（带头像） */
+/* @ 弹窗样式 */
 
-/* 滚动条混入 */
-@mixin scroll-bar($width: 8px) {
+@mixin scroll-bar($width: 6px) {
   &::-webkit-scrollbar-track {
     border-radius: 10px;
     background-color: transparent;
@@ -243,69 +365,110 @@ const getInitials = (name?: string) => {
 
   &::-webkit-scrollbar {
     width: $width;
-    height: 10px;
+    height: 8px;
     background-color: transparent;
   }
 
   &::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.15);
+    }
   }
 }
 
 .at-wrapper {
-  width: 180px;
-  max-height: 300px;
+  width: 220px;
+  max-height: 320px;
   overflow-y: auto;
-  border: 1px solid #cbd3db;
-  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
   background-color: #ffffff;
-  box-shadow: 0 8px 24px rgba(23, 135, 200, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
-  padding: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  padding: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   @include scroll-bar();
+}
+
+/* 过渡动画 */
+.at-fade-enter-active,
+.at-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.at-fade-enter-from,
+.at-fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
 /* 空状态 */
 .empty {
   font-size: 13px;
-  padding: 12px 16px;
-  color: #9aa6b2;
+  padding: 16px;
+  color: #999;
   text-align: center;
 }
 
-/* 每一行 item */
+/* 分隔线 */
+.divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 4px 8px;
+}
+
+/* 列表项 */
 .item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 6px;
-  border-radius: 5px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 120ms ease, transform 80ms ease;
-  color: #2b2f33;
+  transition: background 0.1s ease;
+  color: #2c3e50;
 
   &:hover {
-    background: #f6fbff;
-    transform: translateY(-1px);
+    background: rgba(0, 0, 0, 0.04);
   }
 
   &.active {
-    background: var(--content-active-color);
+    background: var(--content-active-color, #1890ff);
     color: #ffffff;
 
-    .avatar {
-      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12) inset;
+    .sub {
+      color: rgba(255, 255, 255, 0.8);
     }
 
-    .sub {
-      color: rgba(255, 255, 255, 0.9);
+    .avatar {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  /* @所有人 特殊样式 */
+  &--all {
+    .avatar--all {
+      background: linear-gradient(135deg, #ff9a56 0%, #ff6b3d 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .iconfont {
+        font-size: 16px;
+        color: #fff;
+      }
+    }
+
+    &.active .avatar--all {
+      background: rgba(255, 255, 255, 0.2);
     }
   }
 
   .avatar-wrap {
-    flex: 0 0 40px;
+    flex: 0 0 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -316,77 +479,73 @@ const getInitials = (name?: string) => {
     height: 30px;
     border-radius: 4px;
     object-fit: cover;
-    background: #e6eef5;
-    display: inline-block;
-    font-weight: 600;
-    color: #0b66a3;
-    text-align: center;
-    line-height: 40px;
-  }
-
-  .avatar-fallback {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(180deg, #d9ecf8, #eaf6fc);
-    color: #0b66a3;
+    overflow: hidden;
   }
 
   .meta {
     flex: 1;
     min-width: 0;
-    /* 允许溢出隐藏 */
     display: flex;
     flex-direction: column;
     gap: 2px;
 
     .name {
-      font-size: 12px;
-      font-weight: 400;
-      line-height: 1;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.3;
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;
     }
 
     .sub {
-      font-size: 12px;
-      color: #7f8a93;
+      font-size: 11px;
+      color: #909399;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
   }
+}
 
-  .hint {
-    flex: 0 0 44px;
-    font-size: 12px;
-    text-align: right;
-    color: rgba(43, 47, 51, 0.6);
-    opacity: 0;
-    transition: opacity 120ms ease;
+/* 暗色主题适配 */
+:root[data-theme="dark"] {
+  .at-wrapper {
+    background-color: #2c2c2c;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   }
 
-  &:hover .hint {
-    opacity: 1;
+  .item {
+    color: #e0e0e0;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &.active {
+      background: var(--content-active-color, #1890ff);
+    }
+
+    .sub {
+      color: #888;
+    }
   }
 
-  &.active .hint {
-    opacity: 1;
-    color: rgba(255, 255, 255, 0.95);
+  .divider {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .empty {
+    color: #888;
   }
 }
 
-/* 小屏适配 */
+/* 响应式 */
 @media (max-width: 480px) {
   .at-wrapper {
-    width: 260px;
-    max-height: 240px;
-  }
-
-  .avatar {
-    width: 36px;
-    height: 36px;
+    width: 200px;
+    max-height: 260px;
   }
 }
 </style>

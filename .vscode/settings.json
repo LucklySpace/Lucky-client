@@ -5,13 +5,7 @@
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "explicit"
   },
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact",
-    "vue"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact", "vue"],
   "typescript.tsdk": "node_modules/typescript/lib",
   "volar.takeOverMode.enabled": true,
   "files.associations": {
@@ -21,7 +15,7 @@
     "editor.defaultFormatter": "redhat.vscode-xml"
   },
   "[vue]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "Vue.volar"
   },
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"

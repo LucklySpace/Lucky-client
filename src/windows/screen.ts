@@ -1,12 +1,29 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { StoresEnum } from "@/constants/index";
+import type { MultiScreenInfo } from "@/views/screen/hooks/types";
 import { closeWindow, getWindow, showAndFocus, withWindow } from "@/windows/utils";
+import { invoke } from "@tauri-apps/api/core";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
-export async function CreateScreenWindow(width: number, height: number) {
+// 重新导出类型以便外部使用
+export type { DisplayInfo, MultiScreenInfo } from "@/views/screen/hooks/types";
+
+/**
+ * 获取多屏幕信息
+ */
+export async function getMultiScreenInfo(): Promise<MultiScreenInfo> {
+  return await invoke<MultiScreenInfo>("get_display_info");
+}
+
+/**
+ * 创建截图窗口（根据鼠标所在屏幕）
+ */
+export async function CreateScreenWindow(width?: number, height?: number) {
   try {
-    const [mainWindow, existingWindow] = await Promise.all([
+    const [mainWindow, existingWindow, screenInfo, mousePos] = await Promise.all([
       getWindow(StoresEnum.MAIN),
-      getWindow(StoresEnum.SCREEN)
+      getWindow(StoresEnum.SCREEN),
+      getMultiScreenInfo(),
+      invoke<[number, number]>("get_mouse_position")
     ]);
 
     // 关闭已有窗口，防止重复创建
@@ -16,28 +33,42 @@ export async function CreateScreenWindow(width: number, height: number) {
 
     await mainWindow?.minimize();
 
+    // 选择鼠标所在屏幕
+    const [mx, my] = mousePos;
+    const target =
+      screenInfo.screens.find(s => mx >= s.x && mx < s.x + s.width && my >= s.y && my < s.y + s.height) ||
+      screenInfo.screens.find(s => s.is_primary) ||
+      screenInfo.screens[0];
+
+    // 按目标屏幕创建窗口
+    const windowWidth = width ?? target.width;
+    const windowHeight = height ?? target.height;
+    const windowX = target.x;
+    const windowY = target.y;
+
     const webview = new WebviewWindow(StoresEnum.SCREEN, {
       url: "/screen",
-      width: width,
+      width: windowWidth,
+      height: windowHeight,
+      x: windowX,
+      y: windowY,
       title: StoresEnum.SCREEN,
-      height: height,
-      center: true,
       resizable: false,
       decorations: false,
-      alwaysOnTop: false,
+      alwaysOnTop: true,
       transparent: true,
-      fullscreen: true,
-      maximized: true,
+      fullscreen: false,
+      maximized: false,
       shadow: false,
-      skipTaskbar: false,
+      skipTaskbar: true,
       focus: true,
       visible: false
     });
 
     webview.once("tauri://webview-created", async () => {
-      console.log("Webview created");
-      await webview.show(); // 确保窗口显示
-      await webview.setFocus(); // 确保窗口聚焦
+      console.log("Webview created for multi-screen capture");
+      await webview.show();
+      await webview.setFocus();
     });
 
     webview.once("tauri://webview-close", async () => {

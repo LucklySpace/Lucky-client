@@ -60,10 +60,18 @@ abstract class MessageBody {
 /** 文本 */
 class TextMessageBody extends MessageBody {
   text: string;
+  replyMessage?: ReplyMessageInfo;
+  mentionedUserIds?: string[];
+  mentionAll?: boolean;
 
-  constructor(init: { text: string }) {
+  constructor(init: { text: string; replyMessage?: ReplyMessageInfo; mentionedUserIds?: string[]; mentionAll?: boolean; }) {
     super();
     this.text = init.text;
+    this.replyMessage = init.replyMessage;
+    this.mentionedUserIds = Array.isArray(init.mentionedUserIds)
+      ? init.mentionedUserIds.map(v => String(v)).filter(Boolean)
+      : [];
+    this.mentionAll = Boolean(init.mentionAll);
   }
 }
 
@@ -72,12 +80,14 @@ class ImageMessageBody extends MessageBody {
   path: string;
   name?: string;
   size?: number;
+  replyMessage?: ReplyMessageInfo;
 
-  constructor(init: { path: string; name?: string; size?: number }) {
+  constructor(init: { path: string; name?: string; size?: number; replyMessage?: ReplyMessageInfo; }) {
     super();
     this.path = init.path;
     this.name = init.name;
     this.size = init.size;
+    this.replyMessage = init.replyMessage;
   }
 }
 
@@ -87,8 +97,9 @@ class VideoMessageBody extends MessageBody {
   name?: string;
   duration?: number;
   size?: number;
+  replyMessage?: ReplyMessageInfo;
 
-  constructor(init: { path: string; name?: string; duration?: number; size?: number }) {
+  constructor(init: { path: string; name?: string; duration?: number; size?: number; replyMessage?: ReplyMessageInfo }) {
     super();
     this.path = init.path;
     this.name = init.name;
@@ -102,8 +113,9 @@ class AudioMessageBody extends MessageBody {
   path: string;
   duration?: number;
   size?: number;
+  replyMessage?: ReplyMessageInfo;
 
-  constructor(init: { path: string; duration?: number; size?: number }) {
+  constructor(init: { path: string; duration?: number; size?: number; replyMessage?: ReplyMessageInfo; }) {
     super();
     this.path = init.path;
     this.duration = init.duration;
@@ -117,8 +129,9 @@ class FileMessageBody extends MessageBody {
   name?: string;
   suffix?: string;
   size?: number;
+  replyMessage?: ReplyMessageInfo;
 
-  constructor(init: { path: string; name?: string; suffix?: string; size?: number }) {
+  constructor(init: { path: string; name?: string; suffix?: string; size?: number; replyMessage?: ReplyMessageInfo; }) {
     super();
     this.path = init.path;
     this.name = init.name;
@@ -332,6 +345,19 @@ export interface ReplyMessageInfo {
    IMessage + Single/Group
    ------------------------- */
 
+/** IMessage 构造函数参数 */
+interface IMessageInit<T extends MessageBody = MessageBody> {
+  fromId: string;
+  messageTempId: string;
+  messageContentType: number;
+  messageTime: number;
+  messageBody: T;
+  messageId?: string;
+  readStatus?: number;
+  sequence?: number;
+  extra?: Record<string, any>
+}
+
 /** 通用消息 DTO，messageBody 可用泛型指定 */
 class IMessage<T extends MessageBody = MessageBody> {
   fromId: string;
@@ -342,25 +368,9 @@ class IMessage<T extends MessageBody = MessageBody> {
   readStatus?: number;
   sequence?: number;
   extra?: Record<string, any>;
-  replyMessage?: ReplyMessageInfo;
-  mentionedUserIds: string[] = [];
-  mentionAll?: boolean = false;
   messageBody: T;
 
-  constructor(init: {
-    fromId: string;
-    messageTempId: string;
-    messageContentType: number;
-    messageTime: number;
-    messageBody: T;
-    messageId?: string;
-    readStatus?: number;
-    sequence?: number;
-    extra?: Record<string, any>;
-    replyMessage?: ReplyMessageInfo;
-    mentionedUserIds?: string[];
-    mentionAll?: boolean;
-  }) {
+  constructor(init: IMessageInit<T>) {
     this.fromId = init.fromId;
     this.messageTempId = init.messageTempId;
     this.messageContentType = init.messageContentType;
@@ -370,17 +380,16 @@ class IMessage<T extends MessageBody = MessageBody> {
     this.readStatus = init.readStatus;
     this.sequence = init.sequence;
     this.extra = init.extra;
-    this.replyMessage = init.replyMessage;
-    this.mentionedUserIds = init.mentionedUserIds ?? [];
-    this.mentionAll = init.mentionAll ?? false;
   }
 
-  static fromPlainByType<T extends MessageBody = MessageBody>(obj: any): IMSingleMessage<T> | IMGroupMessage<T> {
+  static fromPlainByType<T extends MessageBody = MessageBody>(obj: any): IMessage<T> {
     if (!obj) throw new Error("empty object");
     if (obj.messageType === MessageType.SINGLE_MESSAGE.code) {
       return IMSingleMessage.fromPlain(obj);
     } else if (obj.messageType === MessageType.GROUP_MESSAGE.code) {
       return IMGroupMessage.fromPlain(obj);
+    } else if (obj.messageType === MessageType.MESSAGE_OPERATION.code) {
+      return IMessageAction.fromPlain(obj);
     } else {
       throw new Error(`Unknown messageType: ${obj.messageType}`);
     }
@@ -388,22 +397,7 @@ class IMessage<T extends MessageBody = MessageBody> {
 
   static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMessage<T> {
     if (!obj) throw new Error("empty object");
-    const bodyRaw = obj.messageBody ?? {};
-    const body = createMessageBody(bodyRaw, obj.messageContentType) as T;
-    return new IMessage<T>({
-      fromId: obj.fromId,
-      messageTempId: obj.messageTempId,
-      messageContentType: obj.messageContentType,
-      messageTime: obj.messageTime,
-      messageBody: body,
-      messageId: obj.messageId,
-      readStatus: obj.readStatus,
-      sequence: obj.sequence,
-      extra: obj.extra,
-      replyMessage: obj.replyMessage,
-      mentionedUserIds: obj.mentionedUserIds,
-      mentionAll: obj.mentionAll
-    });
+    return new IMessage<T>(createMessageInitFromPlain(obj));
   }
 
   toPlain() {
@@ -416,9 +410,6 @@ class IMessage<T extends MessageBody = MessageBody> {
       readStatus: this.readStatus,
       sequence: this.sequence,
       extra: this.extra,
-      replyMessage: this.replyMessage,
-      mentionedUserIds: this.mentionedUserIds,
-      mentionAll: this.mentionAll,
       messageBody: this.messageBody
     };
   }
@@ -429,59 +420,19 @@ class IMSingleMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
   toId: string;
   messageType: number;
 
-  constructor(init: {
-    fromId: string;
-    messageTempId: string;
-    messageContentType: number;
-    messageTime: number;
-    messageBody: T;
-    toId: string;
-    messageId?: string;
-    readStatus?: number;
-    sequence?: number;
-    extra?: Record<string, any>;
-    replyMessage?: ReplyMessageInfo;
-    mentionedUserIds?: string[];
-    mentionAll?: boolean;
-    messageType?: number;
-  }) {
-    super({
-      fromId: init.fromId,
-      messageTempId: init.messageTempId,
-      messageContentType: init.messageContentType,
-      messageTime: init.messageTime,
-      messageBody: init.messageBody,
-      messageId: init.messageId,
-      readStatus: init.readStatus,
-      sequence: init.sequence,
-      extra: init.extra,
-      replyMessage: init.replyMessage,
-      mentionedUserIds: init.mentionedUserIds,
-      mentionAll: init.mentionAll
-    });
+  constructor(init: IMessageInit<T> & { toId: string; messageType?: number }) {
+    super(init);
     this.toId = init.toId;
     this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.SINGLE_MESSAGE.code;
   }
 
   static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMSingleMessage<T> {
     if (!obj) throw new Error("empty object");
-    const bodyRaw = obj.messageBody ?? {};
-    const body = createMessageBody(bodyRaw, obj.messageContentType) as T;
+    const init = createMessageInitFromPlain<T>(obj);
     return new IMSingleMessage<T>({
-      fromId: obj.fromId,
-      messageTempId: obj.messageTempId,
-      messageContentType: obj.messageContentType,
-      messageTime: obj.messageTime,
-      messageBody: body,
-      messageId: obj.messageId,
-      readStatus: obj.readStatus,
-      sequence: obj.sequence,
-      extra: obj.extra,
-      replyMessage: obj.replyMessage,
-      mentionedUserIds: obj.mentionedUserIds,
-      mentionAll: obj.mentionAll,
+      ...init,
       toId: obj.toId,
-      messageType: obj.messageType ?? MessageType.SINGLE_MESSAGE
+      messageType: obj.messageType ?? MessageType.SINGLE_MESSAGE.code,
     });
   }
 
@@ -500,37 +451,8 @@ class IMGroupMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
   toList?: string[];
   messageType: number;
 
-  constructor(init: {
-    fromId: string;
-    messageTempId: string;
-    messageContentType: number;
-    messageTime: number;
-    messageBody: T;
-    groupId: string;
-    toList?: string[];
-    messageId?: string;
-    readStatus?: number;
-    sequence?: number;
-    extra?: Record<string, any>;
-    replyMessage?: ReplyMessageInfo;
-    mentionedUserIds?: string[];
-    mentionAll?: boolean;
-    messageType?: number;
-  }) {
-    super({
-      fromId: init.fromId,
-      messageTempId: init.messageTempId,
-      messageContentType: init.messageContentType,
-      messageTime: init.messageTime,
-      messageBody: init.messageBody,
-      messageId: init.messageId,
-      readStatus: init.readStatus,
-      sequence: init.sequence,
-      extra: init.extra,
-      replyMessage: init.replyMessage,
-      mentionedUserIds: init.mentionedUserIds,
-      mentionAll: init.mentionAll
-    });
+  constructor(init: IMessageInit<T> & { groupId: string; toList?: string[]; messageType?: number }) {
+    super(init);
     this.groupId = init.groupId;
     this.toList = init.toList;
     this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.GROUP_MESSAGE.code;
@@ -538,24 +460,12 @@ class IMGroupMessage<T extends MessageBody = MessageBody> extends IMessage<T> {
 
   static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMGroupMessage<T> {
     if (!obj) throw new Error("empty object");
-    const bodyRaw = obj.messageBody ?? {};
-    const body = createMessageBody(bodyRaw, obj.messageContentType) as T;
+    const init = createMessageInitFromPlain<T>(obj);
     return new IMGroupMessage<T>({
-      fromId: obj.fromId,
-      messageTempId: obj.messageTempId,
-      messageContentType: obj.messageContentType,
-      messageTime: obj.messageTime,
-      messageBody: body,
+      ...init,
       groupId: obj.groupId,
       toList: obj.toList,
-      messageId: obj.messageId,
-      readStatus: obj.readStatus,
-      sequence: obj.sequence,
-      extra: obj.extra,
-      replyMessage: obj.replyMessage,
-      mentionedUserIds: obj.mentionedUserIds,
-      mentionAll: obj.mentionAll,
-      messageType: obj.messageType ?? MessageType.GROUP_MESSAGE
+      messageType: obj.messageType ?? MessageType.GROUP_MESSAGE.code,
     });
   }
 
@@ -610,15 +520,98 @@ export class IMVideoMessageModel implements IMVideoMessage {
   }
 }
 
+
+/** 消息操作（撤回/编辑等，messageType = MESSAGE_OPERATION） */
+class IMessageAction<T extends MessageBody = MessageBody> extends IMessage<T> {
+  toId?: string;
+  groupId?: string;
+  messageType: number;
+
+  constructor(init: IMessageInit<T> & { toId?: string; groupId?: string; messageType?: number }) {
+    super(init);
+    this.toId = init.toId;
+    this.groupId = init.groupId;
+    this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.MESSAGE_OPERATION.code;
+  }
+
+  static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMessageAction<T> {
+    if (!obj) throw new Error("empty object");
+    const init = createMessageInitFromPlain<T>(obj);
+    return new IMessageAction<T>({
+      ...init,
+      toId: obj.toId,
+      groupId: obj.groupId,
+      messageType: obj.messageType ?? MessageType.MESSAGE_OPERATION.code,
+    });
+  }
+
+  toPlain() {
+    return {
+      ...super.toPlain(),
+      toId: this.toId,
+      groupId: this.groupId,
+      messageType: this.messageType
+    };
+  }
+}
+
+
+
+/** 群操作（messageType = MESSAGE_OPERATION） */
+class IMGroupAction<T extends MessageBody = MessageBody> extends IMessage<T> {
+  toList?: string[];
+  groupId?: string;
+  messageType: number;
+
+  constructor(init: IMessageInit<T> & { toList?: string[]; groupId?: string; messageType?: number }) {
+    super(init);
+    this.toList = init.toList;
+    this.groupId = init.groupId;
+    this.messageType = typeof init.messageType === "number" ? init.messageType : MessageType.MESSAGE_OPERATION.code;
+  }
+
+  static fromPlain<T extends MessageBody = MessageBody>(obj: any): IMGroupAction<T> {
+    if (!obj) throw new Error("empty object");
+    const init = createMessageInitFromPlain<T>(obj);
+    return new IMGroupAction<T>({
+      ...init,
+      toList: obj.toList,
+      groupId: obj.groupId,
+      messageType: obj.messageType ?? MessageType.MESSAGE_OPERATION.code,
+    });
+  }
+
+  toPlain() {
+    return {
+      ...super.toPlain(),
+      toList: this.toList,
+      groupId: this.groupId,
+      messageType: this.messageType
+    };
+  }
+}
+
+/**
+ * 消息组成部分
+ * 用于编辑器解析和消息发送
+ */
 type IMessagePart = {
+  /** 部分类型 */
   type: "text" | "at" | "image" | "file" | "video";
+  /** 内容（文本内容或资源路径） */
   content: string;
+  /** 用户/资源 ID */
   id?: string;
+  /** 用户名/文件名 */
   name?: string;
+  /** 附件文件 */
   file?: File;
+  /** 引用消息信息 */
+  replyMessage?: ReplyMessageInfo;
+  /** 被 @ 的用户 ID 列表 */
   mentionedUserIds?: string[];
+  /** 是否 @所有人 */
   mentionAll?: boolean;
-  replyMessage?: any;
 };
 
 /**
@@ -653,11 +646,15 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
       return new FileMessageBody(parsedRaw);
     case MessageContentType.TIP.code:
       return new SystemMessageBody(parsedRaw);
+    case MessageContentType.RECALL_MESSAGE.code:
+      return new RecallMessageBody(parsedRaw);
+    case MessageContentType.EDIT_MESSAGE.code:
+      return new EditMessageBody(parsedRaw);
     case MessageType.GROUP_OPERATION.code:
       return new GroupOperationMessageBody(parsedRaw);
-    case MessageContentType.GROUP_INVITE.code:
+    case MessageContentType.INVITE_TO_GROUP.code:
       return new GroupInviteMessageBody(parsedRaw);
-    case MessageContentType.GROUP_APPROVE.code:
+    case MessageContentType.JOIN_APPROVE_GROUP.code:
       return new GroupInviteMessageBody(parsedRaw);
     case MessageContentType.LOCATION.code:
       return new LocationMessageBody(parsedRaw);
@@ -668,8 +665,27 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
   }
 }
 
+/** 从普通对象创建 IMessageInit */
+function createMessageInitFromPlain<T extends MessageBody>(obj: any): IMessageInit<T> {
+  if (!obj) throw new Error("empty object for createMessageInitFromPlain");
+  const bodyRaw = obj.messageBody ?? {};
+  const body = createMessageBody(bodyRaw, obj.messageContentType) as T;
+
+  return {
+    fromId: obj.fromId,
+    messageTempId: obj.messageTempId,
+    messageContentType: obj.messageContentType,
+    messageTime: obj.messageTime,
+    messageBody: body,
+    messageId: obj.messageId,
+    readStatus: obj.readStatus,
+    sequence: obj.sequence,
+    extra: obj.extra
+  };
+}
+
 export {
-  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMGroupMessage, IMSingleMessage, LocationMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
+  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMessageAction, IMGroupMessage, IMSingleMessage, LocationMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
 };
 
 export type { IMessagePart };

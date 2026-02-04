@@ -35,7 +35,13 @@
         "reset": "恢复默认设置",
         "download": "下载",
         "update": "更新",
-        "clear": "清空"
+        "clear": "清空",
+        "copy": "复制",
+        "copyLink": "复制链接",
+        "saveAs": "另存为…",
+        "preview": "预览",
+        "showInFolder": "在文件夹中显示",
+        "recall": "撤回"
       },
       "time": {
         "justNow": "刚刚",
@@ -145,7 +151,13 @@
         },
         "mention": {
           "you": "[有人{'@'}你]",
-          "all": "[{'@'}所有人]"
+          "all": "[{'@'}所有人]",
+          "allHint": "通知群内所有人"
+        },
+        "group": {
+          "owner": "群主",
+          "admin": "管理员",
+          "member": "成员"
         },
         "draft": "[草稿]",
         "preview": {
@@ -320,6 +332,13 @@
         "clearChat": {
           "title": "清空聊天记录",
           "confirm": "确定要清空所有聊天记录吗？此操作不可恢复"
+        },
+        "deleteMessage": {
+          "confirm": "确定删除这条消息吗？"
+        },
+        "deleteSession": {
+          "title": "删除会话",
+          "confirm": "确定删除与 {name} 的会话?"
         }
       },
 
@@ -386,7 +405,24 @@
       "bubble": {
         "downloadButton": "下载按钮（当本地无路径时显示）",
         "handlePreview": "处理预览",
-        "handleText": "处理文本消息"
+        "handleText": "处理文本消息",
+        "tip": {
+          "recall": {
+            "self": "你撤回了一条消息",
+            "user": "{name} 撤回了一条消息"
+          }
+        },
+        "reply": {
+          "unknown": "未知用户",
+          "image": "[图片]",
+          "video": "[视频]",
+          "audio": "[语音]",
+          "file": "[文件]",
+          "location": "[位置]",
+          "message": "[消息]",
+          "action": "回复",
+          "replyTo": "回复 {name}"
+        }
       }
     },
 

@@ -1,5 +1,5 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)" v-memo="[message, message.isOwner]"
+  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)" v-memo="[message, message.isOwner, replyInfo?.messageId]"
     :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble video-bubble">
     <div class="video-wrapper" @click="handlePreview(message.messageBody?.path)">
       <video ref="videoRef" :src="localPath" preload="metadata" @loadedmetadata="handleMetadata"></video>
@@ -8,6 +8,8 @@
       </div>
       <div v-if="duration" class="video-duration">{{ formatDuration(duration) }}</div>
     </div>
+    <!-- 引用消息显示（在视频下方） -->
+    <ReplyQuote v-if="replyInfo" :replyMessage="replyInfo" :senderName="replySenderName" />
   </div>
 </template>
 
@@ -19,6 +21,10 @@ import { globalEventBus } from "@/hooks/useEventBus";
 import { useFile } from "@/hooks/useFile";
 import { useLogger } from "@/hooks/useLogger";
 import ClipboardManager from "@/utils/Clipboard";
+import ReplyQuote from "./ReplyQuote.vue";
+import { useChatStore } from "@/store/modules/chat";
+import { useI18n } from "vue-i18n";
+import { Events, MessageContentType } from "@/constants";
 
 const props = defineProps({
   message: {
@@ -28,6 +34,27 @@ const props = defineProps({
       return {};
     }
   }
+});
+
+const { t } = useI18n();
+const chatStore = useChatStore();
+
+// 从 messageBody 获取引用消息
+const replyInfo = computed(() => props.message.messageBody?.replyMessage);
+
+// 获取被引用消息的发送者名称
+const replySenderName = computed(() => {
+  const replyFromId = replyInfo.value?.fromId;
+  if (!replyFromId) return "";
+
+  const currentUserId = storage.get("userId");
+  if (String(replyFromId) === String(currentUserId)) {
+    return t("components.message.me");
+  }
+
+  const membersMap = chatStore.currentChatGroupMemberMap;
+  const member = membersMap?.[String(replyFromId)];
+  return member?.name || replyFromId;
 });
 
 const store = useMediaCacheStore();
@@ -78,6 +105,17 @@ function isWithinTwoMinutes(timestamp: number): boolean {
   return diff <= (import.meta.env.VITE_MESSAGE_RECALL_TIME || 120000);
 }
 
+/** 处理回复消息 */
+function handleReply(msg: any): void {
+  globalEventBus.emit(Events.MESSAGE_REPLY, {
+    messageId: msg.messageId,
+    fromId: msg.fromId,
+    previewText: t("components.bubble.reply.video"),
+    messageContentType: MessageContentType.VIDEO.code,
+    senderName: msg.name || msg.fromId
+  });
+}
+
 /**
  * 构造右键菜单配置
  */
@@ -90,13 +128,13 @@ const getMenuConfig = (item: any) => {
 
   watchEffect(() => {
     const options = [
-      // { label: "复制链接", value: "copyLink" },
-      { label: "另存为...", value: "saveAs" },
-      { label: "删除", value: "delete" }
+      { label: t("components.bubble.reply.action"), value: "reply" },
+      { label: t("common.actions.saveAs"), value: "saveAs" },
+      { label: t("common.actions.delete"), value: "delete" }
     ];
 
     if (isOwnerOfMessage(item) && isWithinTwoMinutes(item.messageTime)) {
-      options.splice(2, 0, { label: "撤回", value: "recall" });
+      options.splice(2, 0, { label: t("common.actions.recall"), value: "recall" });
     }
 
     config.options = options;
@@ -104,18 +142,25 @@ const getMenuConfig = (item: any) => {
 
   config.callback = async (action: any) => {
     try {
-      if (action === "copyLink") {
+      if (action === "reply") {
+        handleReply(item);
+      } else if (action === "copyLink") {
         await ClipboardManager.writeText(item.messageBody?.path);
         logger.prettySuccess("copy link success");
       } else if (action === "saveAs") {
         const fileName = item.messageBody?.name || `video_${Date.now()}.mp4`;
         await downloadFile(fileName, item.messageBody?.path);
       } else if (action === "delete") {
-        await ElMessageBox.confirm("确定删除这条消息吗?", "提示", {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning"
-        });
+        await ElMessageBox.confirm(
+          t("components.dialog.deleteMessage.confirm"),
+          t("components.dialog.title.warning"),
+          {
+            distinguishCancelAndClose: true,
+            confirmButtonText: t("components.dialog.buttons.confirm"),
+            cancelButtonText: t("components.dialog.buttons.cancel"),
+            type: "warning"
+          }
+        );
       } else if (action === "recall") {
         globalEventBus.emit("message:recall", item);
       }
@@ -134,6 +179,13 @@ const getMenuConfig = (item: any) => {
   padding: 0;
   max-width: 300px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  // 包含引用时的样式
+  :deep(.reply-quote) {
+    max-width: 280px;
+  }
 
   .video-wrapper {
     position: relative;

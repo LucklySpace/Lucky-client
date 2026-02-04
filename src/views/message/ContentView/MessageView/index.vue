@@ -4,8 +4,9 @@
       :buffer="200" class="message-records__list" key-field="messageId" @scroll="handleScroll">
       <template #default="{ item, index, active }">
         <DynamicScrollerItem :active="active" :index="index" :item="item" :size-dependencies="[item.messageBody]">
-          <Message :message="item" :more="isFirstItem(index) && active && hasMoreMessages"
-            :time="shouldDisplayTime(index)" @handleMoreMessage="loadMoreMessages" />
+          <Message :message="item" :id="`message-${item.messageId}`"
+            :more="isFirstItem(index) && active && hasMoreMessages" :time="shouldDisplayTime(index)"
+            @handleMoreMessage="loadMoreMessages" />
         </DynamicScrollerItem>
       </template>
     </DynamicScroller>
@@ -23,14 +24,14 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useDebounceFn } from "@vueuse/core";
-import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
 import GroupDetail from "@/components/ChatDetail/group.vue";
 import SingleDetail from "@/components/ChatDetail/single.vue";
 import { MessageType } from "@/constants";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
+import { useDebounceFn } from "@vueuse/core";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { DynamicScroller, DynamicScrollerItem } from "vue-virtual-scroller";
 
 // ========================= 类型定义 =========================
 interface MessageItem {

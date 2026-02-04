@@ -3,7 +3,7 @@ import {
     Events,
     GroupMemberRole,
     GroupMuteStatus,
-    MessageType,
+    MessageContentType,
     StoresEnum
 } from "@/constants";
 import { useMappers } from "@/database";
@@ -194,7 +194,7 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
             groupId: params.groupId ?? currentGroupId.value ?? "",
             userId: ownerId.value,
             memberIds: params.memberIds,
-            type: params.type ?? MessageType.INVITE_TO_GROUP.code,
+            type: params.type ?? MessageContentType.INVITE_TO_GROUP.code,
             message: params.message,
             groupName: params.groupName
         }), { op: "inviteGroupMembers" });
@@ -527,22 +527,22 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
         if (!op || !op.groupId) return;
 
         const handlers: Record<number, (o: GroupOperationMessageBody) => void> = {
-            [MessageType.KICK_FROM_GROUP.code]: (o) => {
+            [MessageContentType.KICK_FROM_GROUP.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     delete state.members[o.targetUserId];
                 }
             },
-            [MessageType.PROMOTE_TO_ADMIN.code]: (o) => {
+            [MessageContentType.PROMOTE_TO_ADMIN.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     state.members[o.targetUserId].role = GroupMemberRole.ADMIN.code;
                 }
             },
-            [MessageType.DEMOTE_FROM_ADMIN.code]: (o) => {
+            [MessageContentType.DEMOTE_FROM_ADMIN.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     state.members[o.targetUserId].role = GroupMemberRole.MEMBER.code;
                 }
             },
-            [MessageType.TRANSFER_GROUP_OWNER.code]: (o) => {
+            [MessageContentType.TRANSFER_GROUP_OWNER.code]: (o) => {
                 const prevOwner = o.operatorId;
                 if (prevOwner && state.members[prevOwner]) {
                     state.members[prevOwner].role = GroupMemberRole.MEMBER.code;
@@ -551,64 +551,64 @@ export const useGroupStore = defineStore(StoresEnum.GROUP, () => {
                     state.members[o.targetUserId].role = GroupMemberRole.OWNER.code;
                 }
             },
-            [MessageType.MUTE_MEMBER.code]: (o) => {
+            [MessageContentType.MUTE_MEMBER.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     state.members[o.targetUserId].mute = GroupMuteStatus.MUTED.code;
                     const dur = Number((o.extra?.muteDuration as any) ?? 0);
                     state.members[o.targetUserId].muteEndTime = dur > 0 ? Date.now() + dur * 1000 : undefined;
                 }
             },
-            [MessageType.UNMUTE_MEMBER.code]: (o) => {
+            [MessageContentType.UNMUTE_MEMBER.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     state.members[o.targetUserId].mute = GroupMuteStatus.NORMAL.code;
                     state.members[o.targetUserId].muteEndTime = undefined;
                 }
             },
-            [MessageType.MUTE_ALL.code]: (o) => {
+            [MessageContentType.MUTE_ALL.code]: (o) => {
                 if (state.info && state.info.groupId === o.groupId) {
                     state.info.muteAll = GroupMuteStatus.MUTED.code;
                 }
             },
-            [MessageType.UNMUTE_ALL.code]: (o) => {
+            [MessageContentType.UNMUTE_ALL.code]: (o) => {
                 if (state.info && state.info.groupId === o.groupId) {
                     state.info.muteAll = GroupMuteStatus.NORMAL.code;
                 }
             },
-            [MessageType.SET_MEMBER_ROLE.code]: (o) => {
+            [MessageContentType.SET_MEMBER_ROLE.code]: (o) => {
                 const newRole = Number((o.extra?.newRole as any) ?? GroupMemberRole.MEMBER.code);
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     state.members[o.targetUserId].role = newRole;
                 }
             },
-            [MessageType.SET_GROUP_INFO.code]: (o) => {
+            [MessageContentType.SET_GROUP_INFO.code]: (o) => {
                 if (state.info && state.info.groupId === o.groupId) {
                     if (o.groupName) state.info.groupName = o.groupName;
                     if (o.groupAvatar) state.info.avatar = o.groupAvatar;
                 }
             },
-            [MessageType.SET_GROUP_ANNOUNCEMENT.code]: (o) => {
+            [MessageContentType.SET_GROUP_ANNOUNCEMENT.code]: (o) => {
                 const content = String((o.extra?.announcement as any) ?? o.description ?? "");
                 if (state.info && state.info.groupId === o.groupId && content) {
                     state.info.notification = content;
                 }
             },
-            [MessageType.SET_GROUP_JOIN_MODE.code]: (o) => {
+            [MessageContentType.SET_GROUP_JOIN_MODE.code]: (o) => {
                 const mode = Number((o.extra?.joinMode as any) ?? state.info?.applyJoinType ?? 0);
                 if (state.info && state.info.groupId === o.groupId) {
                     state.info.applyJoinType = mode;
                 }
             },
-            [MessageType.REMOVE_GROUP.code]: (o) => {
+            [MessageContentType.REMOVE_GROUP.code]: (o) => {
                 if (state.info && state.info.groupId === o.groupId) {
                     state.members = {};
                     state.info = null;
                     currentGroupId.value = null;
                 }
             },
-            [MessageType.JOIN_GROUP.code]: (o) => {
+            [MessageContentType.JOIN_GROUP.code]: (o) => {
                 void loadMembers(o.groupId);
             },
-            [MessageType.LEAVE_GROUP.code]: (o) => {
+            [MessageContentType.LEAVE_GROUP.code]: (o) => {
                 if (o.targetUserId && state.members[o.targetUserId]) {
                     delete state.members[o.targetUserId];
                 }

@@ -8,9 +8,10 @@ import useCrypo from "@/hooks/useCrypo";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { draftManager } from "@/hooks/useInputEditor";
-import { IMessage, IMessagePart } from "@/models";
+import { IMessage, IMessageAction, IMessagePart, IMGroupMessage, IMSingleMessage, RecallMessageBody } from "@/models";
 import { safeExecute } from "@/utils/ExceptionHandler";
 import { storage } from "@/utils/Storage";
+import { textReplaceMention } from "@/utils/Strings";
 import { ShowMainWindow } from "@/windows/main";
 import { CreateRecordWindow } from "@/windows/record";
 import { CreateScreenWindow } from "@/windows/screen";
@@ -143,6 +144,9 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     } catch { return { text: raw }; }
   };
 
+  /**
+   * 转换为 JSON 字符串
+   */
   const stringifyBody = (raw: unknown): string => {
     if (raw == null) return "{}";
     if (typeof raw === "string") {
@@ -151,6 +155,9 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     return JSON.stringify(raw);
   };
 
+  /**
+   * 归一化消息（填充缺失字段）
+   */
   const normalizeMsg = (msg: any, chat: any) => {
     const body = parseBody(msg?.messageBody);
     const fromId = msg?.fromId ?? msg?.userId;
@@ -160,12 +167,18 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     const groupStore = getGroupStore();
     const member = !isOwner && fromId ? groupStore.getMember(String(fromId)) : undefined;
     const user = userStore.userInfo ?? {};
+    const mentionAll = Boolean((body as any)?.mentionAll);
+    const mentionedUserIds = Array.isArray((body as any)?.mentionedUserIds)
+      ? (body as any).mentionedUserIds.map((v: any) => String(v)).filter(Boolean)
+      : [];
     return {
       ...msg,
       messageBody: body,
       name: isOwner ? user.name ?? chat?.name : member?.name ?? chat?.name ?? "",
       avatar: isOwner ? user.avatar ?? chat?.avatar : member?.avatar ?? chat?.avatar ?? "",
-      isOwner
+      isOwner,
+      mentionAll,
+      mentionedUserIds
     };
   };
 
@@ -175,29 +188,49 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   const buildPreview = (msg?: IMessage) => {
     if (!msg) return null;
     try {
-      return buildMessagePreview(msg, { currentUserId: ownerId.value, highlightClass: "mention-highlight", asHtml: true });
+      const prev = buildMessagePreview(msg, { currentUserId: ownerId.value, highlightClass: "mention-highlight", asHtml: true });
+      if (prev && Number((msg as any)?.messageContentType) === MessageContentType.TEXT.code) {
+        prev.html = textReplaceMention(prev.html || "", "#ee4628");
+      }
+      return prev;
     } catch { return null; }
   };
 
+  /**
+   * 转换为记录
+   */
   const toRecord = (msg: any) => {
     const r = { ...msg, ownerId: ownerId.value, messageBody: stringifyBody(msg?.messageBody) };
     delete r.messageTempId;
     return r;
   };
 
+  /**
+   * 构建消息发送参数
+   */
   const buildPayload = (content: any, chat: any, contentType: number, meta: any = {}) => {
+    // 将 replyMessage 放入 messageBody 中
+    const messageBody = { ...content };
+    if (meta.replyMessage) {
+      messageBody.replyMessage = meta.replyMessage;
+    }
+    if (meta.mentionedUserIds?.length) {
+      messageBody.mentionedUserIds = [...new Set(meta.mentionedUserIds)];
+    }
+    if (meta.mentionAll) {
+      messageBody.mentionAll = meta.mentionAll;
+    }
+
     const payload: any = {
       fromId: ownerId.value,
-      messageBody: content,
+      messageBody,
       messageTempId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       messageTime: Date.now(),
       messageContentType: contentType,
       messageType: chat?.chatType,
       [isSingle(chat) ? "toId" : "groupId"]: chat?.toId || ""
     };
-    if (meta.mentionedUserIds?.length) payload.mentionedUserIds = [...new Set(meta.mentionedUserIds)];
-    if (meta.mentionAll) payload.mentionAll = true;
-    if (meta.replyMessage) payload.replyMessage = meta.replyMessage;
+
     return payload;
   };
 
@@ -383,13 +416,19 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       if (["image", "video", "file"].includes(m.type) && m.file) {
         const contentType = m.type === "image" ? MessageContentType.IMAGE.code
           : m.type === "video" ? MessageContentType.VIDEO.code : MessageContentType.FILE.code;
-        await exec(() => uploadAndSend(m.file!, chat, contentType), { op: "sendFile" });
+        await exec(() => uploadAndSend(m.file!, chat, contentType, m.replyMessage), { op: "sendFile" });
       } else if (m.type === "text") {
-        const payload = buildPayload({ text: m.content }, chat, MessageContentType.TEXT.code, {
-          mentionedUserIds: m.mentionedUserIds || [],
-          mentionAll: m.mentionAll,
-          replyMessage: m.replyMessage
-        });
+        const payload = buildPayload(
+          {
+            text: m.content,
+          },
+          chat,
+          MessageContentType.TEXT.code,
+          {
+            replyMessage: m.replyMessage,
+            mentionedUserIds: m.mentionedUserIds || [],
+            mentionAll: m.mentionAll,
+          });
         await exec(() => send(payload, chat), { op: "sendText" });
       }
     });
@@ -402,7 +441,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     return res;
   };
 
-  const uploadAndSend = async (file: File, chat: any, contentType: number) => {
+  const uploadAndSend = async (file: File, chat: any, contentType: number, replyMessage?: any) => {
     const md5Str = await md5(file);
     const formData = new FormData();
     formData.append("identifier", md5Str.toString());
@@ -412,7 +451,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       ? await api.uploadImage(formData) : await api.UploadFile(formData);
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
-    const payload = buildPayload({ ...uploadRes, size: file.size, suffix: ext }, chat, contentType);
+    const payload = buildPayload({ ...uploadRes, size: file.size, suffix: ext }, chat, contentType, { replyMessage });
     await send(payload, chat);
     return uploadRes;
   };
@@ -460,42 +499,46 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     });
   };
 
-  const recallMessage = async (message: any, opts: { reason?: string; recallTime?: number } = {}) => {
+  const recallMessage = async (message: IMSingleMessage | IMGroupMessage, opts: { reason?: string; recallTime?: number } = {}) => {
     if (!message?.messageId) return { ok: false, msg: "invalid message" };
 
     const payload = {
-      actionType: 1,
-      operatorId: ownerId.value,
-      recallTime: opts.recallTime ?? Date.now(),
-      reason: opts.reason ?? "已撤回",
       fromId: ownerId.value,
       messageTempId: message.messageTempId ?? "",
       messageId: String(message.messageId),
-      messageContentType: Number(message.messageContentType ?? MessageContentType.TEXT.code),
-      messageTime: message.messageTime ?? Date.now(),
-      messageType: Number(message.messageType ?? MessageType.SINGLE_MESSAGE.code),
-      messageBody: {}
+      messageTime: Date.now(),
+      messageType: message.messageType,
+      messageContentType: MessageContentType.RECALL_MESSAGE.code,
+      messageBody: new RecallMessageBody({
+        messageId: message.messageId,
+        operatorId: ownerId.value,
+        recallTime: opts.recallTime ?? Date.now(),
+        chatType: message.messageType,
+      })
     };
 
     const result = await exec(() => api.RecallMessage(payload), { op: "recallMessage" });
     if (result !== undefined) {
-      await handleRecall(payload);
-      return { ok: true };
+      // await handleRecall(payload);
+      log.prettyDebug("消息已撤回", result);
     }
-    return { ok: false, msg: "撤回失败" };
   };
 
-  const handleRecall = async (data: any) => {
+  /**
+   * 处理撤回消息
+   */
+  const handleRecall = async (data: IMessageAction) => {
     if (!data?.messageId) return;
-    const messageId = String(data.messageId);
-    const m = mapper(Number(data.messageType ?? MessageType.SINGLE_MESSAGE.code));
+    const messageBody = data.messageBody as RecallMessageBody;
+    const messageId = data.messageId;
+    const m = mapper(Number(messageBody.chatType ?? MessageType.SINGLE_MESSAGE.code));
 
     const recallBody = {
       _recalled: true,
-      operatorId: data.operatorId ?? data.fromId ?? "",
-      recallTime: data.recallTime ?? Date.now(),
-      reason: data.reason ?? "",
-      text: "已撤回一条消息"
+      operatorId: messageBody.operatorId ?? "",
+      recallTime: messageBody.recallTime ?? Date.now(),
+      reason: messageBody.reason ?? "",
+      name: getUserNameByType(messageBody.operatorId ?? "", Number(messageBody.chatType ?? MessageType.SINGLE_MESSAGE.code)),
     };
 
     const idx = state.messageList.findIndex((msg: any) => String(msg.messageId) === messageId);
@@ -503,14 +546,24 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       state.messageList[idx] = {
         ...state.messageList[idx],
         messageBody: recallBody,
-        messageContentType: MessageContentType.TIP?.code ?? 99
+        messageContentType: MessageContentType.RECALL_MESSAGE?.code
       };
     }
 
     addTask(async () => {
-      await m.updateById(messageId, { messageBody: JSON.stringify(recallBody), messageContentType: MessageContentType.TIP?.code ?? 99 } as any);
+      await m.updateById(messageId, { messageBody: JSON.stringify(recallBody), messageContentType: MessageContentType.RECALL_MESSAGE?.code } as any);
       await m.deleteFTSById(messageId);
     });
+  };
+
+  const getUserNameByType = (id: string, type: number) => {
+    if (type === MessageType.SINGLE_MESSAGE.code) {
+      return getters.currentName;
+    }
+    if (type === MessageType.GROUP_MESSAGE.code) {
+      const member = getters.membersExcludeSelf.value.find(m => m.userId === id);
+      return member?.name || member?.userId;
+    }
   };
 
   const searchUrls = async (msg: any) => {

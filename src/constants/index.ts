@@ -10,6 +10,10 @@ export const Events = {
   GROUP_RENAMED: "group:renamed",
   GROUP_NOTICE_CHANGED: "group:noticeChanged",
   CHAT_CHANGED: "chat:changed",
+  /** 消息引用事件 */
+  MESSAGE_REPLY: "message:reply",
+  /** 取消引用事件 */
+  MESSAGE_REPLY_CANCEL: "message:replyCancel",
 };
 
 

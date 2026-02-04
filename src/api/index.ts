@@ -191,6 +191,43 @@ Http.interceptors.response.use(async (data: Response) => {
 });
 
 export default {
+
+  /** ================================================== 登录模块 =============================================================== */
+
+  /** 登录 */
+  Login: (data: any) => Http.post("/auth/api/v1/auth/login", data),
+
+  /** 退出登录 */
+  LoginOut: (data: any) => Http.post("/auth/api/v1/auth/logout", data),
+
+  /** 刷新token */
+  RefreshToken: (token: string) => Http.get("/auth/api/v1/auth/refresh/token", { headers: { "X-Refresh-Token": token } }),
+
+  /** 短信发送 */
+  Sms: (params: any) => Http.get("/auth/api/v1/auth/sms", { params }),
+
+  /** 获取二维码 */
+  GetQRCode: (params: any) => Http.get("/auth/api/v1/auth/qrcode", { params }),
+
+  /** 扫码登录 */
+  ScanQRCode: (data: any) => Http.post("/auth/api/v1/auth/qrcode/scan", data),
+
+  /** 检查二维码状态 */
+  CheckQRCodeStatus: (params: any) => Http.get("/auth/api/v1/auth/qrcode/status", { params }),
+
+  /** 获取公钥 */
+  GetPublicKey: () => Http.get("/auth/api/v1/auth/publickey"),
+
+  /** 是否在线 */
+  GetOnline: (params: any) => Http.get("/auth/api/v1/auth/online", { params }),
+
+  /** 获取个人信息 */
+  GetUserInfo: (params: any) => Http.get("/auth/api/v1/auth/info", { params }),
+
+
+
+  /** ================================================== 业务模块 =============================================================== */
+
   /** 发送单聊消息 */
   SendSingleMessage: (data: any) => Http.post("/service/api/v1/message/single", data),
 
@@ -269,36 +306,6 @@ export default {
   /** 创建会话 */
   CreateChat: (data: any) => Http.post("/service/api/v1/chat/create", data),
 
-  /** 登录 */
-  Login: (data: any) => Http.post("/auth/api/v1/auth/login", data),
-
-  /** 退出登录 */
-  LoginOut: (data: any) => Http.post("/auth/api/v1/auth/logout", data),
-
-  /** 刷新token */
-  RefreshToken: () => Http.get("/auth/api/v1/auth/refresh/token"),
-
-  /** 短信发送 */
-  Sms: (params: any) => Http.get("/auth/api/v1/auth/sms", { params }),
-
-  /** 获取二维码 */
-  GetQRCode: (params: any) => Http.get("/auth/api/v1/auth/qrcode", { params }),
-
-  /** 扫码登录 */
-  ScanQRCode: (data: any) => Http.post("/auth/api/v1/auth/qrcode/scan", data),
-
-  /** 检查二维码状态 */
-  CheckQRCodeStatus: (params: any) => Http.get("/auth/api/v1/auth/qrcode/status", { params }),
-
-  /** 获取公钥 */
-  GetPublicKey: () => Http.get("/auth/api/v1/auth/publickey"),
-
-  /** 是否在线 */
-  GetOnline: (params: any) => Http.get("/auth/api/v1/auth/online", { params }),
-
-  /** 获取个人信息 */
-  GetUserInfo: (params: any) => Http.get("/auth/api/v1/auth/info", { params }),
-
   /** 获取用户信息 */
   UpdateUserInfo: (data: any) => Http.post("/service/api/v1/user/update", data),
 
@@ -329,20 +336,32 @@ export default {
   /** 获取用户表情包 */
   GetUserEmojis: (params: any) => Http.get("/service/api/v1/emoji/list", { params }),
 
+
+
+  /** ================================================== 平台模块 =============================================================== */
+
   /** 获取表情包详情 */
   GetEmojiPackInfo: (id: string) => Http.get(`/plat/api/v1/emoji/pack/${id}`),
 
+
+
+  /** ================================================== 文件管理模块 =============================================================== */
+
   /** 文件上传 */
-  UploadFile: (data: any) => Http.upload("/upload/api/v1/file/upload", data),
+  UploadFile: (data: any) => Http.upload("/oss/api/v1/file/upload", data),
 
   /** 文件下载 */
-  DownloadFile: (params: any) => Http.get("/upload/api/v1/file/download", { params }),
+  DownloadFile: (params: any) => Http.get("/oss/api/v1/file/download", { params }),
 
   /** 图片上传 */
-  uploadImage: (data: FormData) => Http.upload("/upload/api/v1/media/image/upload", data),
+  uploadImage: (data: FormData) => Http.upload("/oss/api/v1/media/image/upload", data),
 
   /** 头像上传 */
-  uploadAvatar: (data: FormData) => Http.upload("/upload/api/v1/media/avatar/upload", data),
+  uploadAvatar: (data: FormData) => Http.upload("/oss/api/v1/media/avatar/upload", data),
+
+
+
+  /** ================================================== 日志模块 =============================================================== */
 
   /** 异常上报 */
   ExceptionReport: (params: any) => Http.get("/service/api/v1/tauri/exception/report", { params })

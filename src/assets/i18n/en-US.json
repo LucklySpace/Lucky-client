@@ -35,7 +35,13 @@
         "reset": "Reset to Defaults",
         "download": "Download",
         "update": "Update",
-        "clear": "Clear"
+        "clear": "Clear",
+        "copy": "Copy",
+        "copyLink": "Copy Link",
+        "saveAs": "Save As…",
+        "preview": "Preview",
+        "showInFolder": "Show in Folder",
+        "recall": "Recall"
       },
       "time": {
         "justNow": "Just now",
@@ -145,7 +151,13 @@
         },
         "mention": {
           "you": "[Someone mentioned you]",
-          "all": "[{'@'}All]"
+          "all": "[{'@'}All]",
+          "allHint": "Notify all members"
+        },
+        "group": {
+          "owner": "Owner",
+          "admin": "Admin",
+          "member": "Member"
         },
         "draft": "[Draft]",
         "preview": {
@@ -320,6 +332,13 @@
         "clearChat": {
           "title": "Clear Chat History",
           "confirm": "Are you sure you want to clear all chat history? This action cannot be undone"
+        },
+        "deleteMessage": {
+          "confirm": "Are you sure you want to delete this message?"
+        },
+        "deleteSession": {
+          "title": "Delete Session",
+          "confirm": "Are you sure to delete session with {name}?"
         }
       },
 
@@ -386,7 +405,24 @@
       "bubble": {
         "downloadButton": "Download button (shown when no local path)",
         "handlePreview": "Handle preview",
-        "handleText": "Handle text message"
+        "handleText": "Handle text message",
+        "tip": {
+          "recall": {
+            "self": "You recalled a message",
+            "user": "{name} recalled a message"
+          }
+        },
+        "reply": {
+          "unknown": "Unknown user",
+          "image": "[Image]",
+          "video": "[Video]",
+          "audio": "[Audio]",
+          "file": "[File]",
+          "location": "[Location]",
+          "message": "[Message]",
+          "action": "Reply",
+          "replyTo": "Reply to {name}"
+        }
       }
     },
 

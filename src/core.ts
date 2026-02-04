@@ -2,7 +2,7 @@
 
 // 常量和类型
 import { MessageContentType, MessageType } from "@/constants";
-import { IMessage, IMGroupMessage, IMSingleMessage } from "./models";
+import { IMessage, IMessageAction, IMGroupMessage, IMSingleMessage } from "./models";
 
 // 数据库
 import { initDatabase, useMappers } from "@/database";
@@ -536,6 +536,8 @@ class MainManager {
         return;
       }
 
+      if (!data) return;
+
       // 认证相关（高优先级已处理）
       if (code === MessageType.FORCE_LOGOUT.code) {
         return this.stores.user.forceLogout(data?.message || "您的账号在其他设备登录");
@@ -543,11 +545,10 @@ class MainManager {
       if (code === MessageType.LOGIN_EXPIRED.code) {
         return this.stores.user.forceLogout("登录已过期，请重新登录");
       }
+      // 刷新Token
       if (code === MessageType.REFRESH_TOKEN.code) {
         return this.stores.user.refreshToken();
       }
-
-      if (!data) return;
 
       // 聊天消息
       if (code === MessageType.SINGLE_MESSAGE.code || code === MessageType.GROUP_MESSAGE.code) {
@@ -560,10 +561,15 @@ class MainManager {
         this.stores.call.handleCallMessage(data);
       }
 
-
       // 群组操作
       if (code === MessageType.GROUP_OPERATION.code) {
         this.stores.group.applyGroupOperation(code, data);
+      }
+
+      // 消息操作
+      if (code === MessageType.MESSAGE_OPERATION.code) {
+        const message = IMessageAction.fromPlain(data);
+        this.stores.chat.handleReCallMessage(message);
       }
     });
   }
@@ -588,12 +594,6 @@ class MainManager {
 
   private async handleChatMessage(code: number, data: any): Promise<void> {
     const { chat, setting } = this.stores;
-
-    // 撤回消息
-    if (data?.actionType === MessageType.RECALL_MESSAGE.code) {
-      chat.handleReCallMessage(data);
-      return;
-    }
 
     const message = IMessage.fromPlainByType(data);
     const chatId =

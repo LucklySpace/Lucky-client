@@ -1,7 +1,7 @@
 <template>
   <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
-    v-memo="[message.messageId, message.isOwner, message.messageTime, linkMeta?.url]" :class="bubbleClass"
-    class="message-bubble" @click="handleLinkClick">
+    v-memo="[message.messageId, message.isOwner, message.messageTime, linkMeta?.url, replyInfo?.messageId]"
+    :class="bubbleClass" class="message-bubble" @click="handleLinkClick">
 
     <!-- 链接卡片模式 -->
     <div v-if="linkMeta" class="link-card" @click="openLink">
@@ -13,11 +13,7 @@
         <div v-if="linkMeta.description" class="link-card__desc" :title="linkMeta.description">
           {{ linkMeta.description }}
         </div>
-        <!-- <div class="link-card__url">{{ displayDomain }}</div> -->
       </div>
-      <!-- <div v-if="linkMeta.image" class="link-card__preview">
-        <img :src="linkMeta.image" alt="" @error="onPreviewError" />
-      </div> -->
     </div>
 
     <!-- 加载中 -->
@@ -33,18 +29,24 @@
 
     <!-- 普通文本模式 -->
     <div v-else v-dompurify="processedText" class="message-bubble__text" translate="yes" />
+
+    <!-- 引用消息显示（在消息下方） -->
+    <ReplyQuote v-if="replyInfo" :replyMessage="replyInfo" :senderName="replySenderName" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { MessageContentType } from "@/constants";
+import { Events, MessageContentType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { fetchLinkMeta, isPureUrl, type LinkMeta } from "@/hooks/useLinkPreview";
+import { useChatStore } from "@/store/modules/chat";
 import ClipboardManager from "@/utils/Clipboard";
 import { storage } from "@/utils/Storage";
 import { escapeHtml, extractMessageText, urlToLink } from "@/utils/Strings";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import ReplyQuote from "./ReplyQuote.vue";
 
 // ===================== 类型定义 =====================
 
@@ -53,11 +55,18 @@ interface MessageBody {
   [key: string]: unknown;
 }
 
+interface ReplyMessageInfo {
+  messageId?: string;
+  fromId?: string;
+  previewText?: string;
+  messageContentType?: number;
+}
+
 interface Message {
   messageId: string;
   messageTime: number;
   messageContentType?: number;
-  messageBody?: MessageBody;
+  messageBody?: MessageBody & { replyMessage?: ReplyMessageInfo };
   fromId?: string;
   isOwner?: boolean;
   type?: string;
@@ -74,6 +83,9 @@ interface MenuOption {
 const props = defineProps<{
   message: Message;
 }>();
+
+const { t } = useI18n();
+const chatStore = useChatStore();
 
 // ===================== 常量 =====================
 
@@ -124,6 +136,25 @@ const menuConfig = computed(() => ({
   options: buildMenuOptions(),
   callback: handleMenuAction
 }));
+
+// 从 messageBody 获取引用消息
+const replyInfo = computed(() => props.message.messageBody?.replyMessage);
+
+// 获取被引用消息的发送者名称
+const replySenderName = computed(() => {
+  const replyFromId = replyInfo.value?.fromId;
+  if (!replyFromId) return "";
+
+  const currentUserId = storage.get("userId");
+  if (String(replyFromId) === String(currentUserId)) {
+    return t("components.message.me");
+  }
+
+  // 从群成员中获取名称
+  const membersMap = chatStore.currentChatGroupMemberMap;
+  const member = membersMap?.[String(replyFromId)];
+  return member?.name || replyFromId;
+});
 
 // ===================== 链接预览加载 =====================
 
@@ -176,16 +207,17 @@ const openLink = async () => {
 
 function buildMenuOptions(): MenuOption[] {
   const options: MenuOption[] = [
-    { label: "复制", value: "copy" },
-    { label: "删除", value: "delete" }
+    { label: t("components.bubble.reply.action"), value: "reply" },
+    { label: t("common.actions.copy"), value: "copy" },
+    { label: t("common.actions.delete"), value: "delete" }
   ];
 
   if (linkMeta.value) {
-    options.unshift({ label: "复制链接", value: "copyLink" });
+    options.splice(1, 0, { label: t("common.actions.copyLink"), value: "copyLink" });
   }
 
   if (canRecall.value) {
-    options.splice(options.length - 1, 0, { label: "撤回", value: "recall" });
+    options.splice(options.length - 1, 0, { label: t("common.actions.recall"), value: "recall" });
   }
 
   return options;
@@ -196,6 +228,9 @@ async function handleMenuAction(action: string): Promise<void> {
 
   try {
     switch (action) {
+      case "reply":
+        handleReply(msg);
+        break;
       case "copy":
         await handleCopy(msg);
         break;
@@ -217,6 +252,18 @@ async function handleMenuAction(action: string): Promise<void> {
   }
 }
 
+/** 处理回复消息 */
+function handleReply(msg: Message): void {
+  const previewText = extractMessageText(msg.messageBody, "text") || "";
+  globalEventBus.emit(Events.MESSAGE_REPLY, {
+    messageId: msg.messageId,
+    fromId: msg.fromId,
+    previewText: previewText.length > 100 ? previewText.slice(0, 100) + "..." : previewText,
+    messageContentType: msg.messageContentType || MessageContentType.TEXT.code,
+    senderName: msg.name || msg.fromId
+  });
+}
+
 async function handleCopy(msg: Message): Promise<void> {
   await ClipboardManager.clear();
 
@@ -229,12 +276,12 @@ async function handleCopy(msg: Message): Promise<void> {
 
 async function confirmDelete(msg: Message): Promise<void> {
   await ElMessageBox.confirm(
-    `确定删除与 ${msg.name || "该用户"} 的会话?`,
-    "删除会话",
+    t("components.dialog.deleteSession.confirm", { name: msg.name || t("components.bubble.reply.unknown") }),
+    t("components.dialog.deleteSession.title"),
     {
       distinguishCancelAndClose: true,
-      confirmButtonText: "确认",
-      cancelButtonText: "取消"
+      confirmButtonText: t("components.dialog.buttons.confirm"),
+      cancelButtonText: t("components.dialog.buttons.cancel")
     }
   );
 }
@@ -285,7 +332,6 @@ async function openSafeUrl(raw: string): Promise<void> {
   color: #333;
   border-radius: 8px;
   word-wrap: break-word;
-  background-color: #e1f5fe;
   max-width: 100%;
 
   &.has-link-card {
@@ -314,9 +360,9 @@ async function openSafeUrl(raw: string): Promise<void> {
     background-color: #dcf8c6;
   }
 
-  &:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  }
+  // &:hover {
+  //   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  // }
 }
 
 // ===================== 链接卡片样式 =====================
@@ -324,46 +370,34 @@ async function openSafeUrl(raw: string): Promise<void> {
 .link-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  background: linear-gradient(135deg, #fafbfc 0%, #f0f4f8 100%);
-  // border: 1px solid #e4e7eb;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
   max-width: 240px;
   min-width: 240px;
 
   &:hover {
-    border-color: #c0c8d0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  &:active {
-    transform: translateY(0);
+    background: #eeeeee;
   }
 
   // 图标
   &__icon {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
     overflow: hidden;
     background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     img {
       width: 100%;
       height: 100%;
       object-fit: contain;
-    }
-
-    &-placeholder {
-      font-size: 20px;
     }
   }
 
@@ -373,14 +407,14 @@ async function openSafeUrl(raw: string): Promise<void> {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
   &__title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a2e;
-    line-height: 1.4;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--content-font-color, #333);
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -391,40 +425,11 @@ async function openSafeUrl(raw: string): Promise<void> {
 
   &__desc {
     font-size: 12px;
-    color: #666;
-    line-height: 1.4;
+    color: var(--content-message-font-color, #90969b);
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  &__url {
-    font-size: 11px;
-    color: #999;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &::before {
-      content: "🔗 ";
-      font-size: 10px;
-    }
-  }
-
-  // 预览图
-  &__preview {
-    flex-shrink: 0;
-    width: 80px;
-    height: 60px;
-    border-radius: 6px;
-    overflow: hidden;
-    background: #f0f0f0;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
   }
 
   // 加载状态
@@ -434,34 +439,32 @@ async function openSafeUrl(raw: string): Promise<void> {
 
   &__skeleton {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
   }
 }
 
 // 骨架屏动画
 .skeleton-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #e0e0e0;
+  animation: skeleton-pulse 1.5s infinite;
 }
 
 .skeleton-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .skeleton-line {
-  height: 14px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
+  height: 12px;
+  border-radius: 3px;
+  background: #e0e0e0;
+  animation: skeleton-pulse 1.5s infinite;
 
   &.skeleton-title {
     width: 80%;
@@ -469,70 +472,56 @@ async function openSafeUrl(raw: string): Promise<void> {
 
   &.skeleton-desc {
     width: 60%;
-    height: 12px;
+    height: 10px;
   }
 }
 
-@keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
+@keyframes skeleton-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
   }
 
-  100% {
-    background-position: -200% 0;
+  50% {
+    opacity: 0.5;
   }
 }
 
 // 自己发送的链接卡片
 .message-bubble.owner .link-card {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-  border-color: #a5d6a7;
+  background: rgba(255, 255, 255, 0.3);
 
   &:hover {
-    border-color: #81c784;
+    background: rgba(255, 255, 255, 0.4);
   }
 }
 
 // 暗色主题适配
 :root[data-theme="dark"] {
   .link-card {
-    background: linear-gradient(135deg, #2d2d3a 0%, #252532 100%);
-    border-color: #3d3d4a;
+    background: rgba(255, 255, 255, 0.08);
 
     &:hover {
-      border-color: #4d4d5a;
-    }
-
-    &__title {
-      color: #e0e0e0;
-    }
-
-    &__desc {
-      color: #a0a0a0;
-    }
-
-    &__url {
-      color: #808080;
+      background: rgba(255, 255, 255, 0.12);
     }
 
     &__icon {
-      background: #3d3d4a;
+      background: rgba(255, 255, 255, 0.1);
     }
   }
 
   .message-bubble.owner .link-card {
-    background: linear-gradient(135deg, #1b3d1b 0%, #1a331a 100%);
-    border-color: #2d4d2d;
+    background: rgba(0, 0, 0, 0.15);
 
     &:hover {
-      border-color: #3d5d3d;
+      background: rgba(0, 0, 0, 0.2);
     }
   }
 
   .skeleton-icon,
   .skeleton-line {
-    background: linear-gradient(90deg, #3d3d4a 25%, #4d4d5a 50%, #3d3d4a 75%);
-    background-size: 200% 100%;
+    background: rgba(255, 255, 255, 0.1);
   }
 }
 </style>

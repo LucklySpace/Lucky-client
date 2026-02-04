@@ -1,37 +1,67 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig" v-memo="[message.messageId, message.isOwner]"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
+    v-memo="[message.messageId, message.isOwner, replyInfo?.messageId]"
     :class="['image-bubble', { 'image-bubble--owner': message.isOwner }]">
     <div class="image-bubble__wrapper" @click="handlePreview">
       <img :src="src" class="image-bubble__img" alt="Image" @load="cacheOnLoad" />
     </div>
+    <!-- 引用消息显示（在图片下方） -->
+    <ReplyQuote v-if="replyInfo" :replyMessage="replyInfo" :senderName="replySenderName" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, shallowReactive, watchEffect } from "vue";
-import { ElMessageBox } from "element-plus";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { useImageCache } from "@/hooks/useImageCache";
-import { useFile } from "@/hooks/useFile";
-import { useLogger } from "@/hooks/useLogger";
+import { CacheEnum, Events, MessageContentType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { ShowPreviewWindow } from "@/windows/preview";
-import { CacheEnum } from "@/constants";
+import { useFile } from "@/hooks/useFile";
+import { useImageCache } from "@/hooks/useImageCache";
+import { useLogger } from "@/hooks/useLogger";
+import { ReplyMessageInfo } from "@/models";
+import { useChatStore } from "@/store/modules/chat";
+import ClipboardManager from "@/utils/Clipboard";
 import { getPath } from "@/utils/Image";
 import { storage } from "@/utils/Storage";
-import ClipboardManager from "@/utils/Clipboard";
+import { ShowPreviewWindow } from "@/windows/preview";
+import { readFile } from "@tauri-apps/plugin-fs";
+import { ElMessageBox } from "element-plus";
+import { computed, shallowReactive, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
+import ReplyQuote from "./ReplyQuote.vue";
 
 // ===================== Props =====================
 
 const props = defineProps<{
   message: {
     messageId: string;
-    messageBody?: { path?: string; name?: string };
+    messageBody?: { path?: string; name?: string; replyMessage?: ReplyMessageInfo };
     messageTime?: number;
     fromId?: string;
     isOwner?: boolean;
+    name?: string;
   };
 }>();
+
+const { t } = useI18n();
+const chatStore = useChatStore();
+
+// ===================== 引用消息 =====================
+
+// 从 messageBody 获取引用消息
+const replyInfo = computed(() => props.message.messageBody?.replyMessage);
+
+const replySenderName = computed(() => {
+  const replyFromId = replyInfo.value?.fromId;
+  if (!replyFromId) return "";
+
+  const currentUserId = storage.get("userId");
+  if (String(replyFromId) === String(currentUserId)) {
+    return t("components.message.me");
+  }
+
+  const membersMap = chatStore.currentChatGroupMemberMap;
+  const member = membersMap?.[String(replyFromId)];
+  return member?.name || replyFromId;
+});
 
 // ===================== 图片缓存 =====================
 
@@ -68,7 +98,9 @@ const menuConfig = shallowReactive({
     const body = item.messageBody;
 
     try {
-      if (action === "copy") {
+      if (action === "reply") {
+        handleReply(item);
+      } else if (action === "copy") {
         await ClipboardManager.clear();
         const path = await getPath(body?.path || "", CacheEnum.IMAGE_CACHE);
         const imgBuf = await readFile(path);
@@ -77,11 +109,16 @@ const menuConfig = shallowReactive({
       } else if (action === "saveAs") {
         await downloadFile(body?.name || `image_${Date.now()}.png`, body?.path || "");
       } else if (action === "delete") {
-        await ElMessageBox.confirm("确定删除这条消息吗?", "提示", {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning"
-        });
+        await ElMessageBox.confirm(
+          t("components.dialog.deleteMessage.confirm"),
+          t("components.dialog.title.warning"),
+          {
+            distinguishCancelAndClose: true,
+            confirmButtonText: t("components.dialog.buttons.confirm"),
+            cancelButtonText: t("components.dialog.buttons.cancel"),
+            type: "warning"
+          }
+        );
       } else if (action === "recall") {
         globalEventBus.emit("message:recall", item);
       }
@@ -91,15 +128,27 @@ const menuConfig = shallowReactive({
   }
 });
 
+/** 处理回复消息 */
+function handleReply(msg: typeof props.message): void {
+  globalEventBus.emit(Events.MESSAGE_REPLY, {
+    messageId: msg.messageId,
+    fromId: msg.fromId,
+    previewText: t("components.bubble.reply.image"),
+    messageContentType: MessageContentType.IMAGE.code,
+    senderName: msg.name || msg.fromId
+  });
+}
+
 watchEffect(() => {
   const item = props.message;
   const opts = [
-    { label: "复制", value: "copy" },
-    { label: "另存为...", value: "saveAs" },
-    { label: "删除", value: "delete" }
+    { label: t("components.bubble.reply.action"), value: "reply" },
+    { label: t("common.actions.copy"), value: "copy" },
+    { label: t("common.actions.saveAs"), value: "saveAs" },
+    { label: t("common.actions.delete"), value: "delete" }
   ];
   if (isOwner(item) && canRecall(item)) {
-    opts.splice(2, 0, { label: "撤回", value: "recall" });
+    opts.splice(3, 0, { label: t("common.actions.recall"), value: "recall" });
   }
   menuConfig.options = opts;
 });
@@ -108,11 +157,12 @@ watchEffect(() => {
 <style lang="scss" scoped>
 .image-bubble {
   display: flex;
+  flex-direction: column;
   margin: 4px 0;
   max-width: 300px;
 
   &--owner {
-    justify-content: flex-end;
+    align-items: flex-end;
   }
 
   &__wrapper {
@@ -134,6 +184,11 @@ watchEffect(() => {
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: transform 0.2s ease;
+  }
+
+  // 包含引用时的样式
+  :deep(.reply-quote) {
+    max-width: 280px;
   }
 }
 </style>

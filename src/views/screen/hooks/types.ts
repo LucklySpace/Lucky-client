@@ -3,6 +3,49 @@
 // 工具类型：新增 'text' 以支持文字功能
 export type ToolType = "rect" | "circle" | "line" | "arrow" | "mosaic" | "text" | "pen";
 
+/** 单屏幕截图数据 */
+export interface ScreenCapture {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  scale_factor: number;
+  is_primary: boolean;
+  data: number[];
+}
+
+/** 多屏幕截图结果 */
+export interface MultiScreenCapture {
+  screens: ScreenCapture[];
+  virtual_x: number;
+  virtual_y: number;
+  virtual_width: number;
+  virtual_height: number;
+}
+
+/** 屏幕信息 */
+export interface DisplayInfo {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  scale_factor: number;
+  frequency: number;
+  is_primary: boolean;
+}
+
+/** 多屏幕信息 */
+export interface MultiScreenInfo {
+  screens: DisplayInfo[];
+  virtual_x: number;
+  virtual_y: number;
+  virtual_width: number;
+  virtual_height: number;
+}
+
 export interface ScreenshotPluginContext {
   api: ScreenshotAPI;
 }

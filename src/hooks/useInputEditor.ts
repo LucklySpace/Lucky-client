@@ -377,7 +377,17 @@ export function useInputEditor(options: UseInputEditorOptions) {
 
   // ==================== 内容解析 ====================
 
-  /** 解析编辑器内容为消息部分（包含文件队列） */
+  /** @所有人 标识常量 */
+  const MENTION_ALL_ID = "all";
+
+  /**
+   * 解析编辑器内容为消息部分（包含文件队列）
+   * 
+   * 返回的 IMessagePart 数组中：
+   * - type: "text" | "image" | "video" | "file" | "at"
+   * - mentionedUserIds: 被 @ 的用户 ID 数组
+   * - mentionAll: 是否 @所有人
+   */
   const extractParts = (): IMessagePart[] => {
     const out: IMessagePart[] = [];
     const el = editorRef.value;
@@ -388,7 +398,8 @@ export function useInputEditor(options: UseInputEditorOptions) {
     if (!el) return out;
 
     let textBuf = "";
-    const mentioned = new Set<string>();
+    const mentionedIds = new Set<string>();
+    let hasMentionAll = false;
     const nodes = Array.from(el.childNodes);
 
     const isWhitespace = (ch?: string) => !!ch && /\s/.test(ch);
@@ -396,10 +407,20 @@ export function useInputEditor(options: UseInputEditorOptions) {
     const flushText = () => {
       const txt = stripZero(textBuf).trim();
       if (txt.length > 0) {
-        out.push({ type: "text", content: txt, mentionedUserIds: Array.from(mentioned) });
+        const part: IMessagePart = {
+          type: "text",
+          content: txt,
+          mentionedUserIds: Array.from(mentionedIds),
+        };
+        // 标记是否 @所有人
+        if (hasMentionAll) {
+          part.mentionAll = true;
+        }
+        out.push(part);
       }
       textBuf = "";
-      mentioned.clear();
+      mentionedIds.clear();
+      // 注意：hasMentionAll 不重置，保持整条消息的状态
     };
 
     for (let i = 0; i < nodes.length; i++) {
@@ -412,18 +433,27 @@ export function useInputEditor(options: UseInputEditorOptions) {
 
       if (node.nodeType !== Node.ELEMENT_NODE) continue;
 
-      const el = node as HTMLElement;
-      const tag = el.tagName;
+      const element = node as HTMLElement;
+      const tag = element.tagName;
 
       // @ 标签
-      if (tag === "SPAN" && el.classList.contains("active-text")) {
+      if (tag === "SPAN" && element.classList.contains("active-text")) {
         if (textBuf.length > 0 && !isWhitespace(textBuf.charAt(textBuf.length - 1))) {
           textBuf += " ";
         }
-        const id = el.getAttribute("data-id") || "";
-        const name = el.getAttribute("data-name") || el.innerText || "";
+
+        const id = element.getAttribute("data-id") || "";
+        const name = element.getAttribute("data-name") || element.innerText || "";
+        const isMentionAllTag = element.hasAttribute("data-mention-all") || id === MENTION_ALL_ID;
+
         textBuf += `@${name}`;
-        if (id) mentioned.add(id);
+
+        // 记录 @ 信息
+        if (isMentionAllTag) {
+          hasMentionAll = true;
+        } else if (id) {
+          mentionedIds.add(id);
+        }
 
         // 检查下一节点是否需要补空格
         const next = nodes[i + 1];
@@ -437,17 +467,17 @@ export function useInputEditor(options: UseInputEditorOptions) {
       // 图片
       if (tag === "IMG") {
         flushText();
-        const idxAttr = el.getAttribute("data-file-index");
+        const idxAttr = element.getAttribute("data-file-index");
         if (idxAttr != null) {
           const idx = parseInt(idxAttr, 10);
           const file = fileList.value[idx];
           if (file) {
             out.push({ type: "image", content: "", file });
           } else {
-            out.push({ type: "image", content: (el as HTMLImageElement).src });
+            out.push({ type: "image", content: (element as HTMLImageElement).src });
           }
         } else {
-          out.push({ type: "image", content: (el as HTMLImageElement).src });
+          out.push({ type: "image", content: (element as HTMLImageElement).src });
         }
         continue;
       }
@@ -459,16 +489,63 @@ export function useInputEditor(options: UseInputEditorOptions) {
       }
 
       // 其他元素：提取文本
-      textBuf += stripZero(el.innerText || el.textContent || "");
+      textBuf += stripZero(element.innerText || element.textContent || "");
     }
 
     // 最后的文本
     const final = stripZero(textBuf).trim();
     if (final.length) {
-      out.push({ type: "text", content: final, mentionedUserIds: [] });
+      const part: IMessagePart = {
+        type: "text",
+        content: final,
+        mentionedUserIds: Array.from(mentionedIds),
+      };
+      if (hasMentionAll) {
+        part.mentionAll = true;
+      }
+      out.push(part);
     }
 
     return out;
+  };
+
+  /**
+   * 检查编辑器内容中是否包含 @所有人
+   */
+  const hasMentionAll = (): boolean => {
+    const el = editorRef.value;
+    if (!el) return false;
+
+    const atTags = el.querySelectorAll("span.active-text");
+    for (const tag of atTags) {
+      if (
+        tag.hasAttribute("data-mention-all") ||
+        tag.getAttribute("data-id") === MENTION_ALL_ID
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /**
+   * 获取编辑器中所有被 @ 的用户 ID
+   */
+  const getMentionedUserIds = (): string[] => {
+    const el = editorRef.value;
+    if (!el) return [];
+
+    const ids: string[] = [];
+    const atTags = el.querySelectorAll("span.active-text");
+
+    for (const tag of atTags) {
+      const id = tag.getAttribute("data-id");
+      if (id && id !== MENTION_ALL_ID && !ids.includes(id)) {
+        ids.push(id);
+      }
+    }
+
+    return ids;
   };
 
   // ==================== 草稿管理 ====================
@@ -559,6 +636,8 @@ export function useInputEditor(options: UseInputEditorOptions) {
     getContent,
     // 解析
     extractParts,
+    hasMentionAll,
+    getMentionedUserIds,
     // 草稿管理
     getDraft,
     setDraft,

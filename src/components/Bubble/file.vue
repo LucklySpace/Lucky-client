@@ -1,6 +1,7 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)" v-memo="[message, message.isOwner]"
-    :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble">
+  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)"
+    v-memo="[message, message.isOwner, replyInfo?.messageId]"
+    :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble file-message-bubble">
     <div :title="parsedBody?.name" class="file-bubble no-select" @click="handleOpenFile(message)">
       <svg class="file-icon">
         <use :xlink:href="fileIcon(parsedBody?.suffix)"></use>
@@ -13,27 +14,58 @@
         <i class="iconfont icon-xiazai"></i>
       </button>
     </div>
+    <!-- 引用消息显示（在文件下方） -->
+    <ReplyQuote v-if="replyInfo" :replyMessage="replyInfo" :senderName="replySenderName" />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { fileIcon, formatFileSize } from "@/hooks/useFile";
+import { Events, MessageContentType } from "@/constants";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { fileIcon, formatFileSize, useFile } from "@/hooks/useFile";
+import { ReplyMessageInfo } from "@/models";
 import { useChatStore } from "@/store/modules/chat";
-import { useFile } from "@/hooks/useFile";
 import ObjectUtils from "@/utils/ObjectUtils";
-import { shallowReactive, watchEffect } from "vue";
+import { storage } from "@/utils/Storage";
+import { computed, shallowReactive, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
+import ReplyQuote from "./ReplyQuote.vue";
 
+const { t } = useI18n();
 const messageStore = useChatStore();
 const { openFile, downloadFile, previewFile, openFilePath, autoDownloadFile } = useFile();
 
 const props = defineProps<{
   message: {
     messageId: string | number;
-    messageBody: any; // 对象或 JSON 字符串
+    messageBody: any; // 对象或 JSON 字符串，包含 replyMessage
     type: string;
     isOwner: boolean;
+    fromId?: string;
+    name?: string;
   };
 }>();
+
+// 从 messageBody 获取引用消息
+const replyInfo = computed(() => {
+  const body = parsedBody;
+  return body?.replyMessage as ReplyMessageInfo | undefined;
+});
+
+// 获取被引用消息的发送者名称
+const replySenderName = computed(() => {
+  const replyFromId = replyInfo.value?.fromId;
+  if (!replyFromId) return "";
+
+  const currentUserId = storage.get("userId");
+  if (String(replyFromId) === String(currentUserId)) {
+    return t("components.message.me");
+  }
+
+  const membersMap = messageStore.currentChatGroupMemberMap;
+  const member = membersMap?.[String(replyFromId)];
+  return member?.name || replyFromId;
+});
 
 const parsedBody = shallowReactive({} as any);
 
@@ -91,6 +123,18 @@ const handleAutoDownloadFile = async (message: any) => {
   }
 };
 
+/** 处理回复消息 */
+function handleReply(msg: typeof props.message): void {
+  const fileName = parsedBody.name || t("components.bubble.reply.file");
+  globalEventBus.emit(Events.MESSAGE_REPLY, {
+    messageId: msg.messageId,
+    fromId: msg.fromId,
+    previewText: `[文件] ${fileName}`,
+    messageContentType: MessageContentType.FILE.code,
+    senderName: msg.name || msg.fromId
+  });
+}
+
 /**
  * 右键菜单配置（简化：移除未用复制逻辑）
  */
@@ -102,9 +146,10 @@ const getMenuConfig = (item: any) => {
 
   watchEffect(() => {
     config.options = [
-      { label: "删除", value: "delete" },
+      { label: t("components.bubble.reply.action"), value: "reply" },
+      { label: t("common.actions.delete"), value: "delete" },
       {
-        label: parsedBody.local ? "在文件夹中显示" : "预览",
+        label: parsedBody.local ? t("common.actions.showInFolder") : t("common.actions.preview"),
         value: parsedBody.local ? "openPath" : "preview"
       }
     ];
@@ -112,6 +157,11 @@ const getMenuConfig = (item: any) => {
 
   config.callback = async (action: any) => {
     try {
+      if (action === "reply") {
+        handleReply(item);
+        return;
+      }
+
       if (action === "delete") {
         // TODO: 确认删除逻辑
         return;
@@ -138,6 +188,12 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.file-message-bubble {
+  display: flex;
+  flex-direction: column;
+  max-width: 240px;
+}
+
 .file-bubble {
   display: flex;
   align-items: center;

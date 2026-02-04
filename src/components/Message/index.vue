@@ -17,8 +17,8 @@
     <!-- 非系统消息：头像/昵称/气泡/气泡弹出 -->
     <section v-else :class="['msg__row', { 'msg__row--owner': message.isOwner }]">
       <div v-if="more || time" class="msg__meta">
-        <button v-if="more" :aria-label="$t('components.message.loadMoreHistory')" class="msg__more no-select" type="button"
-          @click="handleMoreMessage">
+        <button v-if="more" :aria-label="$t('components.message.loadMoreHistory')" class="msg__more no-select"
+          type="button" @click="handleMoreMessage">
           <span>{{ $t("components.message.loadMore") }}</span>
         </button>
 
@@ -87,7 +87,6 @@
 </template>
 
 <script lang="ts" setup>
-
 import Avatar from "@/components/Avatar/index.vue";
 import ImageBubble from "@/components/Bubble/image.vue";
 import TextBubble from "@/components/Bubble/text.vue";
@@ -99,7 +98,7 @@ import { useUserStore } from "@/store/modules/user";
 const FileBubble = defineAsyncComponent(() => import("@/components/Bubble/file.vue"));
 const AudioBubble = defineAsyncComponent(() => import("@/components/Bubble/audio.vue"));
 const StickerBubble = defineAsyncComponent(() => import("@/components/Bubble/sticker.vue"));
-const SystemBubble = defineAsyncComponent(() => import("@/components/Bubble/system.vue"));
+const TipBubble = defineAsyncComponent(() => import("@/components/Bubble/tip.vue"));
 const GroupInviteBubble = defineAsyncComponent(() => import("@/components/Bubble/groupInvite.vue"));
 const UserPopover = defineAsyncComponent(() => import("@/components/UserPopover/index.vue"));
 
@@ -116,18 +115,18 @@ const props = defineProps({
   message: {
     type: Object,
     required: true,
-    default: () => ({})
+    default: () => ({}),
   },
   time: {
     type: Boolean,
     required: true,
-    default: false
+    default: false,
   },
   more: {
     type: Boolean,
     required: true,
-    default: false
-  }
+    default: false,
+  },
 });
 
 const { message } = toRefs(props);
@@ -142,13 +141,17 @@ const componentMap: any = {
   [MessageContentType.VIDEO.code]: VideoBubble,
   [MessageContentType.FILE.code]: FileBubble,
   [MessageContentType.STICKER.code]: StickerBubble,
-  [MessageContentType.GROUP_INVITE.code]: GroupInviteBubble,
-  [MessageContentType.TIP.code]: SystemBubble
+  [MessageContentType.INVITE_TO_GROUP.code]: GroupInviteBubble,
+  [MessageContentType.TIP.code]: TipBubble,
+  [MessageContentType.RECALL_MESSAGE.code]: TipBubble,
 };
 
 const currentComponent = computed(() => componentMap[props.message?.messageContentType]);
 
-const isSystem = computed(() => props.message?.messageContentType === MessageContentType.TIP.code);
+const isSystem = computed(() => {
+  const code = props.message?.messageContentType;
+  return code === MessageContentType.TIP.code || code === MessageContentType.RECALL_MESSAGE.code;
+});
 
 const handleMoreMessage = () => emit("handleMoreMessage");
 
@@ -200,7 +203,9 @@ $transition-fast: 0.2s;
     flex-wrap: wrap;
     align-items: flex-start;
     padding: 10px 10px 20px 10px;
-    transition: background-color $transition-fast ease, transform $transition-fast ease;
+    transition:
+      background-color $transition-fast ease,
+      transform $transition-fast ease;
     gap: $gap;
 
     // &:hover {
@@ -237,7 +242,9 @@ $transition-fast: 0.2s;
       margin-top: 20px;
       border-radius: 6px;
       cursor: pointer;
-      transition: transform $transition-fast ease, box-shadow $transition-fast ease;
+      transition:
+        transform $transition-fast ease,
+        box-shadow $transition-fast ease;
       display: flex;
       justify-content: center;
       // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -329,7 +336,9 @@ $transition-fast: 0.2s;
     /* 去掉轮廓 */
     user-select: none;
     transition: color 0.2s;
-    transition: transform $transition-fast ease, box-shadow $transition-fast ease;
+    transition:
+      transform $transition-fast ease,
+      box-shadow $transition-fast ease;
 
     // &:hover {
     //   color: #1890ff;

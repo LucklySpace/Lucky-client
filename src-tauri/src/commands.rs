@@ -349,81 +349,273 @@ pub fn batch_segment_text(
         .collect()
 }
 /**
- * 获取屏幕信息
+ * 获取屏幕信息（优化版）
+ * 返回所有屏幕的详细信息，包括虚拟桌面的总尺寸
  */
 #[tauri::command]
-pub fn get_display_info() -> Result<Vec<DisplayInfo>, String> {
+pub fn get_display_info() -> Result<MultiScreenInfo, String> {
     match Screen::all() {
         Ok(screens) => {
-            let screen_infos = screens
+            let mut min_x = i32::MAX;
+            let mut min_y = i32::MAX;
+            let mut max_x = i32::MIN;
+            let mut max_y = i32::MIN;
+
+            let screen_infos: Vec<DisplayInfo> = screens
                 .iter()
                 .map(|screen| {
-                    let display_info = screen.display_info;
+                    let d = screen.display_info;
+                    // 计算虚拟桌面边界
+                    min_x = min_x.min(d.x);
+                    min_y = min_y.min(d.y);
+                    max_x = max_x.max(d.x + d.width as i32);
+                    max_y = max_y.max(d.y + d.height as i32);
+
                     DisplayInfo {
-                        id: display_info.id,
-                        x: display_info.x,
-                        y: display_info.y,
-                        width: display_info.width,
-                        height: display_info.height,
-                        rotation: display_info.rotation,
-                        scale_factor: display_info.scale_factor,
-                        frequency: display_info.frequency,
-                        is_primary: display_info.is_primary,
+                        id: d.id,
+                        x: d.x,
+                        y: d.y,
+                        width: d.width,
+                        height: d.height,
+                        rotation: d.rotation,
+                        scale_factor: d.scale_factor,
+                        frequency: d.frequency,
+                        is_primary: d.is_primary,
                     }
                 })
                 .collect();
-            Ok(screen_infos)
+
+            Ok(MultiScreenInfo {
+                screens: screen_infos,
+                virtual_x: min_x,
+                virtual_y: min_y,
+                virtual_width: (max_x - min_x) as u32,
+                virtual_height: (max_y - min_y) as u32,
+            })
         }
         Err(e) => Err(e.to_string()),
     }
 }
 
+/// 单屏幕截图结果
+#[derive(Serialize, Clone)]
+pub struct ScreenCapture {
+    pub id: u32,
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub scale_factor: f32,
+    pub is_primary: bool,
+    pub data: Vec<u8>, // PNG 字节数据
+}
+
+/// 多屏幕截图结果
+#[derive(Serialize)]
+pub struct MultiScreenCapture {
+    pub screens: Vec<ScreenCapture>,
+    pub virtual_x: i32,
+    pub virtual_y: i32,
+    pub virtual_width: u32,
+    pub virtual_height: u32,
+}
+
 /**
- * 截取所有屏幕
+ * 高性能多屏幕截图（返回PNG字节数组）
+ * 并行捕获所有屏幕，避免base64编码开销
+ */
+#[tauri::command]
+pub fn capture_all_screens() -> Result<MultiScreenCapture, String> {
+    let screens = Screen::all().map_err(|e| e.to_string())?;
+
+    if screens.is_empty() {
+        return Err("No screens found".to_string());
+    }
+
+    // 计算虚拟桌面边界
+    let mut min_x = i32::MAX;
+    let mut min_y = i32::MAX;
+    let mut max_x = i32::MIN;
+    let mut max_y = i32::MIN;
+
+    for screen in &screens {
+        let d = screen.display_info;
+        min_x = min_x.min(d.x);
+        min_y = min_y.min(d.y);
+        max_x = max_x.max(d.x + d.width as i32);
+        max_y = max_y.max(d.y + d.height as i32);
+    }
+
+    // 串行捕获（保证稳定性，screenshots crate 在某些平台上并行可能有问题）
+    let mut captures: Vec<ScreenCapture> = Vec::with_capacity(screens.len());
+
+    for screen in screens {
+        let d = screen.display_info;
+        match screen.capture() {
+            Ok(image) => {
+                captures.push(ScreenCapture {
+                    id: d.id,
+                    x: d.x,
+                    y: d.y,
+                    width: d.width,
+                    height: d.height,
+                    scale_factor: d.scale_factor,
+                    is_primary: d.is_primary,
+                    data: image.buffer().to_vec(), // PNG 格式
+                });
+            }
+            Err(e) => {
+                eprintln!("[capture_all_screens] screen {} failed: {}", d.id, e);
+                // 继续捕获其他屏幕
+            }
+        }
+    }
+
+    if captures.is_empty() {
+        return Err("Failed to capture any screen".to_string());
+    }
+
+    Ok(MultiScreenCapture {
+        screens: captures,
+        virtual_x: min_x,
+        virtual_y: min_y,
+        virtual_width: (max_x - min_x) as u32,
+        virtual_height: (max_y - min_y) as u32,
+    })
+}
+
+/**
+ * 单屏幕截图（根据屏幕ID）
+ * 返回 PNG 字节数组，避免 base64 开销
+ */
+#[tauri::command]
+pub fn capture_screen_by_id(screen_id: u32) -> Result<ScreenCapture, String> {
+    let screens = Screen::all().map_err(|e| e.to_string())?;
+
+    let screen = screens
+        .into_iter()
+        .find(|s| s.display_info.id == screen_id)
+        .ok_or_else(|| format!("Screen {} not found", screen_id))?;
+
+    let d = screen.display_info;
+    let image = screen.capture().map_err(|e| e.to_string())?;
+
+    Ok(ScreenCapture {
+        id: d.id,
+        x: d.x,
+        y: d.y,
+        width: d.width,
+        height: d.height,
+        scale_factor: d.scale_factor,
+        is_primary: d.is_primary,
+        data: image.buffer().to_vec(),
+    })
+}
+
+/**
+ * 根据鼠标位置截取当前屏幕
+ * 返回 PNG 字节数组
+ */
+#[tauri::command]
+pub fn capture_screen_at_point(x: i32, y: i32) -> Result<ScreenCapture, String> {
+    let screen = Screen::from_point(x, y).map_err(|e| e.to_string())?;
+    let d = screen.display_info;
+    let image = screen.capture().map_err(|e| e.to_string())?;
+
+    Ok(ScreenCapture {
+        id: d.id,
+        x: d.x,
+        y: d.y,
+        width: d.width,
+        height: d.height,
+        scale_factor: d.scale_factor,
+        is_primary: d.is_primary,
+        data: image.buffer().to_vec(),
+    })
+}
+
+/**
+ * 截取指定区域（兼容旧API，但返回PNG字节）
+ */
+#[tauri::command]
+pub fn capture_area(x: i32, y: i32, width: u32, height: u32) -> Result<Vec<u8>, String> {
+    let screen = Screen::from_point(x, y).map_err(|e| e.to_string())?;
+    let d = screen.display_info;
+
+    // 计算相对于屏幕的坐标
+    let rel_x = (x - d.x).max(0) as u32;
+    let rel_y = (y - d.y).max(0) as u32;
+
+    // 限制区域不超出屏幕边界
+    let cap_width = width.min(d.width.saturating_sub(rel_x));
+    let cap_height = height.min(d.height.saturating_sub(rel_y));
+
+    let image = screen
+        .capture_area(rel_x as i32, rel_y as i32, cap_width, cap_height)
+        .map_err(|e| e.to_string())?;
+
+    Ok(image.buffer().to_vec())
+}
+
+// === 保留旧API兼容性（标记为deprecated） ===
+
+/**
+ * 截取所有屏幕（旧API，返回base64）
+ * @deprecated 使用 capture_all_screens 获取更好性能
  */
 #[tauri::command]
 pub fn get_all_screens() -> Result<Vec<String>, String> {
-    let screens = Screen::all().unwrap();
-    let mut list = Vec::new();
+    let screens = Screen::all().map_err(|e| e.to_string())?;
+    let mut list = Vec::with_capacity(screens.len());
     for screen in screens {
-        let image = screen.capture().unwrap();
-        let buffer = image.buffer();
-        let base64_str = general_purpose::STANDARD_NO_PAD.encode(buffer);
-        list.push(base64_str)
+        if let Ok(image) = screen.capture() {
+            let base64_str = general_purpose::STANDARD_NO_PAD.encode(image.buffer());
+            list.push(base64_str);
+        }
     }
     Ok(list)
 }
 
 /**
- * 截屏
+ * 截屏（旧API，返回base64）
+ * @deprecated 使用 capture_screen_at_point 获取更好性能
  */
 #[tauri::command]
-pub fn screenshot(x: &str, y: &str, width: &str, height: &str) -> String {
-    let screen = Screen::from_point(x.parse::<i32>().unwrap(), y.parse::<i32>().unwrap()).unwrap();
+pub fn screenshot(x: &str, y: &str, width: &str, height: &str) -> Result<String, String> {
+    let px = x.parse::<i32>().map_err(|e| e.to_string())?;
+    let py = y.parse::<i32>().map_err(|e| e.to_string())?;
+    let pw = width.parse::<u32>().map_err(|e| e.to_string())?;
+    let ph = height.parse::<u32>().map_err(|e| e.to_string())?;
+
+    let screen = Screen::from_point(px, py).map_err(|e| e.to_string())?;
     let image = screen
-        .capture_area(
-            0,
-            0,
-            width.parse::<u32>().unwrap(),
-            height.parse::<u32>().unwrap(),
-        )
-        .unwrap();
-    let buffer = image.buffer();
-    let base64_str = general_purpose::STANDARD_NO_PAD.encode(buffer);
-    base64_str
+        .capture_area(0, 0, pw, ph)
+        .map_err(|e| e.to_string())?;
+
+    Ok(general_purpose::STANDARD_NO_PAD.encode(image.buffer()))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct DisplayInfo {
-    id: u32,
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-    rotation: f32,
-    scale_factor: f32,
-    frequency: f32,
-    is_primary: bool,
+    pub id: u32,
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub rotation: f32,
+    pub scale_factor: f32,
+    pub frequency: f32,
+    pub is_primary: bool,
+}
+
+/// 多屏幕信息（包含虚拟桌面尺寸）
+#[derive(Serialize)]
+pub struct MultiScreenInfo {
+    pub screens: Vec<DisplayInfo>,
+    pub virtual_x: i32,
+    pub virtual_y: i32,
+    pub virtual_width: u32,
+    pub virtual_height: u32,
 }
 
 /// 鼠标坐标结构，公开以便序列化/使用

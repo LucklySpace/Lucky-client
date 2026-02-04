@@ -29,6 +29,12 @@ interface UserInfo {
   [key: string]: any;
 }
 
+interface AuthRefreshTokenResult {
+  userId: string;
+  accessToken: string;
+}
+
+
 interface LoginResponse {
   accessToken: string;
   refreshToken: string;
@@ -152,8 +158,20 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     }
   };
 
+  /**
+   * 刷新 AccessToken
+   */
   const refreshToken = async () => {
-
+    tokenManager.getRefresh().then(async (refreshToken) => {
+      if (refreshToken) {
+        api.RefreshToken(refreshToken).then((res: any) => {
+          if (res) {
+            token.value = res.accessToken;
+            storage.set("token", res.accessToken);
+          }
+        });
+      }
+    });
   }
 
   /** 强制下线 (被踢/Token失效) */
