@@ -27,6 +27,7 @@ import { ReplyMessageInfo } from "@/models";
 import { useChatStore } from "@/store/modules/chat";
 import ObjectUtils from "@/utils/ObjectUtils";
 import { storage } from "@/utils/Storage";
+import { ShowPreviewFileWindow } from "@/windows/preview";
 import { computed, shallowReactive, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import ReplyQuote from "./ReplyQuote.vue";
@@ -86,14 +87,21 @@ watchEffect(() => {
 
 // 打开文件（仅更新 local 字段，避免全 body JSON 化）
 const handleOpenFile = async (message: any) => {
-  const open = await openFile(parsedBody.local);
-  if (!open && parsedBody.local) {
-    // 只更新 local 为 null，不动其他字段
-    parsedBody.local = null;
-    const updateData = {
-      messageBody: JSON.stringify({ ...parsedBody }) // 仅 stringify 整个 body 以保持 DB 一致
-    };
-    messageStore.handleUpdateMessage(message, updateData);
+  // 先检查local字段是否存在
+  if (!!parsedBody.local) {
+    // openFile
+    const open = await openFile(parsedBody.local);
+    if (!open && parsedBody.local) {
+      // 只更新 local 为 null，不动其他字段
+      parsedBody.local = null;
+      const updateData = {
+        messageBody: JSON.stringify({ ...parsedBody }), // 仅 stringify 整个 body 以保持 DB 一致
+      };
+      messageStore.handleUpdateMessage(message, updateData);
+    }
+  } else {
+    // 在线预览
+    ShowPreviewFileWindow(parsedBody.name, parsedBody.path);
   }
 };
 
