@@ -1,12 +1,16 @@
-import "element-plus/theme-chalk/dark/css-vars.css";
 import "@/assets/style/scss/index.scss";
-import "@/assets/style/scss/theme.scss";
 import "@/assets/style/scss/setting.scss";
+import "@/assets/style/scss/theme.scss";
 import "element-plus/dist/index.css";
+import "element-plus/theme-chalk/dark/css-vars.css";
 
 // 创建 vue web 容器
 import { createApp } from "vue";
 import App from "./App.vue";
+
+// 全局错误处理
+import errorHandler from "./utils/ErrorHandler";
+import { ErrorCaptureConfig } from "./utils/ErrorTypes";
 
 // 注册 i18n
 import { useI18n } from "@/i18n";
@@ -33,6 +37,16 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 async function bootstrap(): Promise<void> {
   try {
     const app = createApp(App);
+
+    // 配置全局捕获规则
+    const captureConfig: ErrorCaptureConfig = {
+      enableVueError: true,
+      enablePromiseError: true,
+      enableScriptError: true,
+    };
+
+    // 初始化全局错误捕获(最先执行)
+    errorHandler.initGlobalCapture(app, captureConfig);
 
     // 应用启动时预先初始化 Store 实例
     try {

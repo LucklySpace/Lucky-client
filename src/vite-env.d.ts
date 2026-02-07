@@ -75,6 +75,14 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+declare namespace NodeJS {
+  interface Timeout {
+    ref(): void;
+    unref(): void;
+    hasRef(): boolean;
+  }
+}
+
 declare module "*.vue" {
   import type { DefineComponent } from "vue";
   const component: DefineComponent<{}, {}, any>;

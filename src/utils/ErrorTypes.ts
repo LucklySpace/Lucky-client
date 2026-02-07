@@ -8,9 +8,13 @@
  * 错误严重级别
  */
 export enum ErrorSeverity {
+  // 低严重度（如非核心功能警告）
   LOW = "low",
+  // 中严重度（如数据校验失败）
   MEDIUM = "medium",
+  // 高严重度（如接口调用失败）
   HIGH = "high",
+  // 致命错误（如系统崩溃）
   CRITICAL = "critical",
 }
 
@@ -18,13 +22,35 @@ export enum ErrorSeverity {
  * 错误类别
  */
 export enum ErrorCategory {
+  // 网络错误
   NETWORK = "network",
+  // 鉴权错误
   AUTH = "auth",
+  // 校验错误
   VALIDATION = "validation",
+  // 数据库错误
   DATABASE = "database",
+  // 业务逻辑错误
   BUSINESS = "business",
+  // 系统操作
   SYSTEM = "system",
+  // 未知错误
   UNKNOWN = "unknown",
+}
+
+/**
+ * 全局错误捕获配置
+ */
+export interface ErrorCaptureConfig {
+  // 捕获Vue内部错误
+  enableVueError: boolean;
+  // 捕获Promise错误
+  enablePromiseError: boolean;
+  // 捕获全局脚本错误
+  enableScriptError: boolean;
+
+  // 可考虑增加对TauriHttp的选项
+  // TODO ...
 }
 
 /**
