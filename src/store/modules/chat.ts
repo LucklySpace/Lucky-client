@@ -4,7 +4,7 @@ import { PageResult, QueryBuilder, useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
 import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useChatInput } from "@/hooks/useChatInput";
-import useCrypo from "@/hooks/useCrypo";
+import useCrypto from "@/hooks/useCrypto";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { draftManager } from "@/hooks/useInputEditor";
@@ -52,7 +52,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   } = useChatInput();
   const { addTask } = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   const { play } = useAudioPlayer();
-  const { md5 } = useCrypo();
+  const { md5 } = useCrypto();
 
   // ==================== 状态 ====================
   const state = reactive<ChatState>({

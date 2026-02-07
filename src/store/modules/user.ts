@@ -1,7 +1,7 @@
 import api from "@/api/index";
 import defaultImg from "@/assets/avatar/default.jpg";
 import { StoresEnum } from "@/constants";
-import useCrypo from "@/hooks/useCrypo";
+import useCrypto from "@/hooks/useCrypto";
 import { useWebSocketWorker } from "@/hooks/useWebSocketWorker";
 import { safeExecute, ValidationError } from "@/utils/ExceptionHandler";
 import { storage } from "@/utils/Storage";
@@ -47,7 +47,7 @@ interface LoginResponse {
 
 export const useUserStore = defineStore(StoresEnum.USER, () => {
   // 1. 核心依赖
-  const { md5 } = useCrypo();
+  const { md5 } = useCrypto();
   const { disconnect: wsDisconnect, destroy: wsDestroy } = useWebSocketWorker();
 
   // 2. 响应式状态 (State)
