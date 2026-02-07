@@ -101,8 +101,8 @@ export const vContextMenu = {
   mounted(el: HTMLElement, binding: DirectiveBinding<ContextMenuOptions>) {
     initMenu();
 
-    // 鼠标移出隐藏
-    menu.addEventListener("mouseleave", hideMenu);
+    // 监听全局鼠标滚轮滚动事件（可考虑优化成局部监听）
+    window.addEventListener('wheel', hideMenu)
 
     // 右键事件
     const handler = (e: MouseEvent) => {
@@ -137,6 +137,6 @@ export const vContextMenu = {
     // 清理事件
     const handler = (el as any).__contextMenuHandler__;
     if (handler) el.removeEventListener("contextmenu", handler);
-    menu.removeEventListener("mouseleave", hideMenu);
+    window.removeEventListener('wheel', hideMenu)
   }
 };
