@@ -20,11 +20,20 @@
 
         <section class="emoji-section">
           <h3 class="section-title">所有表情</h3>
-          <div class="emoji-grid unicode-grid">
-            <button v-for="(emoji, idx) in emojiData" :key="`all-${idx}`" class="emoji-cell unicode-cell"
-              @click="onSelectEmoji(emoji)">
-              {{ emoji }}
-            </button>
+          <div class="emoji-grid-container">
+            <RecycleScroller v-if="emojiRows.length" class="scroller" :items="emojiRows" :item-size="48" key-field="id"
+              :buffer="100">
+              <template #default="{ item }">
+                <div class="emoji-row" :style="{ 'grid-template-columns': `repeat(${columns}, 1fr)` }">
+                  <button v-for="emoji in item.emojis" :key="emoji" class="emoji-cell unicode-cell"
+                    @click="onSelectEmoji(emoji)">
+                    {{ emoji }}
+                  </button>
+                  <!-- 填充空白单元格 -->
+                  <div v-for="n in (columns - item.emojis.length)" :key="`empty-${n}`" class="empty-cell"></div>
+                </div>
+              </template>
+            </RecycleScroller>
           </div>
         </section>
       </div>
@@ -64,18 +73,17 @@
           <el-image :src="pack.url || pack.cover" fit="cover" class="pack-cover" />
         </div>
       </div>
-
     </nav>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { Picture } from "@element-plus/icons-vue";
-import emojiJson from "@/assets/json/emoji.json";
-import { useUserStore } from "@/store/modules/user";
 import api from "@/api/index";
+import emojiJson from "@/assets/json/emoji.json";
 import { Emoji as EmojiModel } from "@/models";
+import { useUserStore } from "@/store/modules/user";
+import { Picture } from "@element-plus/icons-vue";
+import { computed, onMounted, ref, watch } from 'vue';
 
 // --- 类型定义 ---
 type EmojiStr = string;
@@ -86,6 +94,11 @@ interface EmojiPack {
   cover?: string;
   emojiList?: EmojiModel[];
   emojis?: EmojiModel[];
+}
+
+interface EmojiRow {
+  id: string;
+  emojis: EmojiStr[];
 }
 
 // --- Props & Emits ---
@@ -103,6 +116,7 @@ const userStore = useUserStore();
 const activeTab = ref<string>('default');
 const emojiPacks = ref<EmojiPack[]>([]);
 const loading = ref(false);
+const columns = ref<number>(8); // 每行显示的表情数量
 
 // 性能优化：预处理并冻结数据
 const emojiData = Object.freeze(emojiJson.data.split(","));
@@ -111,6 +125,18 @@ const defaultEmojiIcon = emojiData[0];
 const historyEmojiList = ref<EmojiStr[]>(props.historyEmojiList || []);
 
 // --- 计算属性 ---
+// 将一维表情数组转换为二维行数组
+const emojiRows = computed<EmojiRow[]>(() => {
+  const rows: EmojiRow[] = [];
+  for (let i = 0; i < emojiData.length; i += columns.value) {
+    rows.push({
+      id: `row-${i / columns.value}`,
+      emojis: emojiData.slice(i, i + columns.value)
+    });
+  }
+  return rows;
+});
+
 const currentPackEmojis = computed(() => {
   if (activeTab.value === 'default') return [];
   const pack = emojiPacks.value.find(p => p.packId === activeTab.value);
@@ -131,7 +157,7 @@ const onSelectImageEmoji = (item: EmojiModel) => {
 };
 
 const loadEmojiPacks = async () => {
-  const ids = userStore.userEmojiPackIds;
+  const ids = userStore.emojiPackIds;
   if (!ids?.length) {
     emojiPacks.value = [];
     return;
@@ -157,10 +183,23 @@ watch(() => props.historyEmojiList, (val) => {
   historyEmojiList.value = val || [];
 });
 
-watch(() => userStore.userEmojiPackIds, loadEmojiPacks, { immediate: true, deep: true });
+watch(() => userStore.emojiPackIds, loadEmojiPacks, { immediate: true, deep: true });
+
+// 监听窗口大小变化，动态调整列数
+const updateColumns = () => {
+  const width = window.innerWidth;
+  if (width < 400) {
+    columns.value = 6;
+  } else if (width < 500) {
+    columns.value = 7;
+  } else {
+    columns.value = 8;
+  }
+};
 
 onMounted(() => {
-  // 可以在这里做一些初始化，比如自动滚动到顶部等
+  updateColumns();
+  window.addEventListener('resize', updateColumns);
 });
 </script>
 
@@ -246,7 +285,7 @@ onMounted(() => {
   }
 }
 
-/* 网格布局 */
+/* 最近使用的表情网格 */
 .emoji-grid {
   display: grid;
   gap: 4px;
@@ -254,6 +293,25 @@ onMounted(() => {
 
 .unicode-grid {
   grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+}
+
+/* 所有表情的虚拟滚动容器 */
+.emoji-grid-container {
+  height: calc(100% - 40px);
+  /* 减去标题高度 */
+  overflow: hidden;
+}
+
+.scroller {
+  height: 100%;
+}
+
+/* 每一行的网格布局 */
+.emoji-row {
+  display: grid;
+  gap: 4px;
+  padding: 0 4px;
+  margin-bottom: 4px;
 }
 
 .sticker-grid {
@@ -285,6 +343,7 @@ onMounted(() => {
 }
 
 .unicode-cell {
+  aspect-ratio: 1;
   height: 36px;
   font-size: 24px;
 }
@@ -313,6 +372,12 @@ onMounted(() => {
       font-size: 20px;
     }
   }
+}
+
+.empty-cell {
+  height: 36px;
+  aspect-ratio: 1;
+  visibility: hidden;
 }
 
 .empty-placeholder {
