@@ -4,7 +4,7 @@ import * as SparkMD5 from 'spark-md5';
 /**
  * 加密工具
  */
-export default function useCrypo() {
+export default function useCrypto() {
 
     /**
      * 计算文件的 md5
@@ -29,7 +29,7 @@ export default function useCrypo() {
             fileReader.readAsArrayBuffer(file);
         });
     }
-    
+
 
     return { md5 }
 }
