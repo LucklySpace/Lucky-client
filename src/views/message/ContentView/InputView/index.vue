@@ -14,18 +14,20 @@
     <!-- 引用消息预览 -->
     <transition name="slide-up">
       <div v-if="replyMessage" class="reply-preview">
-        <div class="reply-preview__bar"></div>
+        <div class="reply-preview__bar" />
         <div class="reply-preview__content">
           <div class="reply-preview__header">
             <span class="reply-preview__label">{{ $t("components.bubble.reply.replyTo", {
               name: replyMessage.senderName
                 || replyMessage.fromId
             }) }}</span>
-            <button class="reply-preview__close" @click="cancelReply">
-              <i class="iconfont icon-close"></i>
-            </button>
           </div>
           <div class="reply-preview__text">{{ replyMessage.previewText }}</div>
+        </div>
+        <div class="reply-preview__operate">
+          <button class="reply-preview__close" @click="cancelReply">
+            <i class="iconfont icon-quxiao" />
+          </button>
         </div>
       </div>
     </transition>
@@ -50,12 +52,12 @@
           <el-row :gutter="5" align="middle" justify="center" style="margin-bottom: 8px" type="flex">
             <el-button link size="default" @click="handleScreenshot">{{
               $t("pages.chat.toolbar.screenshot")
-            }}</el-button>
+              }}</el-button>
           </el-row>
           <el-row :gutter="5" align="middle" justify="center" type="flex">
             <el-button link size="default" @click="handleRecord">{{
               $t("pages.chat.toolbar.recorder.label")
-            }}</el-button>
+              }}</el-button>
           </el-row>
           <template #reference>
             <el-icon :size="15" style="margin-left: 2px">
@@ -675,7 +677,7 @@ defineExpose({
   align-items: stretch;
   gap: 8px;
   padding: 8px 10px;
-  margin: 0 8px 6px;
+  margin: 2px 8px 5px;
   background: rgba(0, 0, 0, 0.03);
   border-radius: 4px;
 
@@ -711,13 +713,19 @@ defineExpose({
     white-space: nowrap;
   }
 
+  &__operate {
+    display: flex;
+    align-items: center;
+  }
+
   &__close {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 2rem;
+    height: 2rem;
     border: none;
     background: transparent;
     cursor: pointer;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -728,8 +736,8 @@ defineExpose({
     }
 
     .iconfont {
-      font-size: 12px;
-      color: var(--content-font-color, #333);
+      font-size: 1rem;
+      color: var(--content-font-color, #909090);
     }
   }
 
@@ -741,6 +749,10 @@ defineExpose({
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+
+html.dark .reply-preview__label {
+  color: #409eff;
 }
 
 // 滑入滑出过渡
