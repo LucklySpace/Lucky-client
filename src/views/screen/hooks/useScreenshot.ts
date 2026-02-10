@@ -2,7 +2,7 @@ import { onBeforeUnmount, ref, shallowReactive } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ClipboardManager from "@/utils/Clipboard"; // 你已有的剪贴板管理器
-import type { MultiScreenCapture, ScreenCapture, ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
+import type { ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
 import { createUseCanvasTool } from "./useCanvasTool";
 
 /**
@@ -67,9 +67,14 @@ export function useScreenshot() {
     size: 150,
     zoom: 3
   };
-
-  // 缓存的 ImageBitmap（用于高性能渲染）
-  let cachedBitmaps: ImageBitmap[] = [];
+  type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
+  let isResizing = false;
+  let resizeDir: ResizeDir = null;
+  const resizeHandleSize = 8; // CSS px
+  // 截图原图（Image 元素）
+  let screenshotImage: HTMLImageElement | null = null;
+  // 图像数据缓存（如果需要快速导出）
+  let screenshotBlobBuffer: Uint8Array | null = null;
 
   // 插件系统
   const plugins: ScreenshotPlugin[] = [];
@@ -97,25 +102,19 @@ export function useScreenshot() {
     }
   }
 
-  /**
-   * PNG 字节数组转 ImageBitmap（高性能，避免 base64）
-   */
-  async function pngBytesToBitmap(data: number[]): Promise<ImageBitmap> {
-    const uint8 = new Uint8Array(data);
-    const blob = new Blob([uint8], { type: "image/png" });
-    return await createImageBitmap(blob);
-  }
-
-  // --- 初始化画布尺寸与上下文（支持多屏幕） ---
-  async function initCanvases(virtualWidth: number, virtualHeight: number) {
+  // --- 初始化画布尺寸与上下文 ---
+  async function initCanvases() {
     if (!imgCanvas.value || !maskCanvas.value || !drawCanvas.value || !magnifierCanvas.value) return;
 
-    // 对于多屏幕，使用虚拟桌面尺寸
-    // 注意：这里不再乘以 devicePixelRatio，因为截图本身已经是原始分辨率
-    const canvasW = virtualWidth;
-    const canvasH = virtualHeight;
+    // 使用屏幕尺寸 * devicePixelRatio 保证在高 DPI 下清晰
+    const factor = window.devicePixelRatio || 1 || (await getCurrentWebviewWindow().scaleFactor());
+    state.scaleX = factor;
+    state.scaleY = factor;
 
-    // 设置画布 size（像素大小）
+    const canvasW = Math.round(screen.width * factor);
+    const canvasH = Math.round(screen.height * factor);
+
+    // 设置画布 size（像素大小）并使用 css 100% 来适配屏幕显示
     imgCanvas.value.width = canvasW;
     imgCanvas.value.height = canvasH;
     maskCanvas.value.width = canvasW;
@@ -123,8 +122,8 @@ export function useScreenshot() {
     drawCanvas.value.width = canvasW;
     drawCanvas.value.height = canvasH;
 
-    // 使用高性能上下文选项
-    imgCtx.value = imgCanvas.value.getContext("2d", { alpha: false });
+    // contexts
+    imgCtx.value = imgCanvas.value.getContext("2d");
     maskCtx.value = maskCanvas.value.getContext("2d");
     drawCtx.value = drawCanvas.value.getContext("2d", { willReadFrequently: true });
     magnifierCtx.value = magnifierCanvas.value.getContext("2d", { willReadFrequently: true });
@@ -132,113 +131,49 @@ export function useScreenshot() {
     // 初始化放大镜尺寸
     magnifierCanvas.value.width = magnifierConfig.size;
     magnifierCanvas.value.height = magnifierConfig.size;
-
-    // 计算 CSS 像素与 canvas 像素的比例
-    // 使用 window.innerWidth/Height 作为 CSS 尺寸
-    const cssWidth = window.innerWidth;
-    const cssHeight = window.innerHeight;
-    state.scaleX = canvasW / cssWidth;
-    state.scaleY = canvasH / cssHeight;
   }
 
-  /**
-   * 高性能多屏幕截图
-   * 直接从 Rust 获取 PNG 字节数组，使用 ImageBitmap 渲染
-   */
+  // --- 发起本地截屏（依赖 Tauri 的 screenshot 命令） ---
   async function captureFullScreen() {
+    let pos: any;
     try {
-      // 调用优化后的多屏幕截图命令
-      const result = await invoke<MultiScreenCapture>("capture_all_screens");
-
-      // 保存虚拟桌面信息
-      state.virtualX = result.virtual_x;
-      state.virtualY = result.virtual_y;
-      state.virtualWidth = result.virtual_width;
-      state.virtualHeight = result.virtual_height;
-
-      // 初始化画布（使用虚拟桌面尺寸）
-      await initCanvases(result.virtual_width, result.virtual_height);
-
-      if (!imgCtx.value) return;
-
-      // 清理之前的 bitmap
-      for (const bmp of cachedBitmaps) {
-        bmp.close();
-      }
-      cachedBitmaps = [];
-
-      // 并行转换所有屏幕的 PNG 数据为 ImageBitmap
-      const bitmapPromises = result.screens.map(async screen => {
-        const bitmap = await pngBytesToBitmap(screen.data);
-        return { screen, bitmap };
-      });
-
-      const bitmaps = await Promise.all(bitmapPromises);
-
-      // 将所有屏幕绘制到画布上
-      for (const { screen, bitmap } of bitmaps) {
-        // 计算相对于虚拟桌面原点的位置
-        const drawX = screen.x - result.virtual_x;
-        const drawY = screen.y - result.virtual_y;
-
-        // 使用 ImageBitmap 绘制（高性能）
-        imgCtx.value.drawImage(bitmap, drawX, drawY);
-        cachedBitmaps.push(bitmap);
-      }
-
-      // 绘制蒙版
-      drawMask();
-
-      // 绘制全屏边框
-      drawRectangle(0, 0, result.virtual_width, result.virtual_height, 1);
-
-      // 触发插件事件
-      emitPluginEvent("onCapture", {
-        width: result.virtual_width,
-        height: result.virtual_height,
-        screens: result.screens.length
-      });
+      pos = await invoke("get_mouse_position"); // 你现有的 native 调用
     } catch (e) {
-      console.error("[screenshot] capture failed:", e);
-      // 回退到单屏幕模式
-      await captureFullScreenFallback();
+      console.log(e);
     }
-  }
+    const factor = state.scaleX || (await getCurrentWebviewWindow().scaleFactor());
+    const canvasW = Math.round(screen.width * factor);
+    const canvasH = Math.round(screen.height * factor);
 
-  /**
-   * 回退：单屏幕截图（兼容旧版本）
-   */
-  async function captureFullScreenFallback() {
+    const config = {
+      x: `${pos[0]}`,
+      y: `${pos[1]}`,
+      width: `${canvasW}`,
+      height: `${canvasH}`
+    };
+    let base64: string;
     try {
-      const pos = await invoke<[number, number]>("get_mouse_position");
-      const result = await invoke<ScreenCapture>("capture_screen_at_point", {
-        x: pos[0],
-        y: pos[1]
-      });
+      base64 = await invoke<string>("screenshot", config);
+      // 将 base64 转成 Image
+      screenshotImage = new Image();
+      screenshotImage.src = `data:image/png;base64,${base64}`;
+      screenshotImage.onload = () => {
+        imgCtx.value?.drawImage(screenshotImage as any, 0, 0, canvasW, canvasH);
 
-      state.virtualX = result.x;
-      state.virtualY = result.y;
-      state.virtualWidth = result.width;
-      state.virtualHeight = result.height;
-
-      await initCanvases(result.width, result.height);
-
-      if (!imgCtx.value) return;
-
-      const bitmap = await pngBytesToBitmap(result.data);
-      imgCtx.value.drawImage(bitmap, 0, 0);
-      cachedBitmaps.push(bitmap);
-
+        // 默认绘制全屏蒙版
       drawMask();
-      drawRectangle(0, 0, result.width, result.height, 1);
 
-      emitPluginEvent("onCapture", {
-        width: result.width,
-        height: result.height,
-        screens: 1
-      });
+        // 绘制全屏绿色边框
+        drawRectangle(0, 0, canvasW, canvasH, 1);
+
+        emitPluginEvent("onCapture", { width: canvasW, height: canvasH, image: screenshotImage });
+        // 可把二进制 buffer 缓存起来（用于导出）
+        const binary: Uint8Array = Uint8Array.from(atob(base64), c => c.charCodeAt(0)); // 浏览器端转换
+        screenshotBlobBuffer = binary;
+      };
     } catch (e) {
-      console.error("[screenshot] fallback capture failed:", e);
+      console.log(e);
+      screenshotBlobBuffer = null;
     }
   }
 
@@ -268,6 +203,92 @@ export function useScreenshot() {
     maskCtx.value.strokeRect(x, y, w, h);
     // 选区尺寸
     drawSizeText(x, y, w, h);
+    drawResizeHandles(x, y, w, h);
+  }
+
+  function drawResizeHandles(x: number, y: number, w: number, h: number) {
+    if (!maskCtx.value) return;
+    const handlePx = resizeHandleSize * (state.scaleX || 1);
+    const half = handlePx / 2;
+    const minX = w >= 0 ? x : x + w;
+    const maxX = w >= 0 ? x + w : x;
+    const minY = h >= 0 ? y : y + h;
+    const maxY = h >= 0 ? y + h : y;
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+    const points = [
+      [minX, minY],
+      [midX, minY],
+      [maxX, minY],
+      [maxX, midY],
+      [maxX, maxY],
+      [midX, maxY],
+      [minX, maxY],
+      [minX, midY]
+    ];
+
+    maskCtx.value.save();
+    maskCtx.value.fillStyle = "#ffffff";
+    maskCtx.value.strokeStyle = "#00FF00";
+    maskCtx.value.lineWidth = 1;
+    points.forEach(([px, py]) => {
+      maskCtx.value!.fillRect(px - half, py - half, handlePx, handlePx);
+      maskCtx.value!.strokeRect(px - half, py - half, handlePx, handlePx);
+    });
+    maskCtx.value.restore();
+  }
+
+  function getSelectionBounds() {
+    const minX = Math.min(state.startX, state.endX);
+    const maxX = Math.max(state.startX, state.endX);
+    const minY = Math.min(state.startY, state.endY);
+    const maxY = Math.max(state.startY, state.endY);
+    return { minX, maxX, minY, maxY };
+  }
+
+  function hitTestResizeHandle(x: number, y: number): ResizeDir {
+    if (state.isInitial) return null;
+    const { minX, maxX, minY, maxY } = getSelectionBounds();
+    const handlePx = resizeHandleSize * (state.scaleX || 1);
+    const half = handlePx / 2;
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+    const handles: Array<[ResizeDir, number, number]> = [
+      ["nw", minX, minY],
+      ["n", midX, minY],
+      ["ne", maxX, minY],
+      ["e", maxX, midY],
+      ["se", maxX, maxY],
+      ["s", midX, maxY],
+      ["sw", minX, maxY],
+      ["w", minX, midY]
+    ];
+
+    for (const [dir, hx, hy] of handles) {
+      if (x >= hx - half && x <= hx + half && y >= hy - half && y <= hy + half) {
+        return dir;
+      }
+    }
+    return null;
+  }
+
+  function getCursorByDir(dir: ResizeDir) {
+    switch (dir) {
+      case "n":
+      case "s":
+        return "ns-resize";
+      case "e":
+      case "w":
+        return "ew-resize";
+      case "ne":
+      case "sw":
+        return "nesw-resize";
+      case "nw":
+      case "se":
+        return "nwse-resize";
+      default:
+        return "default";
+    }
   }
 
   /**
@@ -319,6 +340,17 @@ export function useScreenshot() {
     // 鼠标位置（像素级，考虑 scale）
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
+
+
+    const hitDir = hitTestResizeHandle(offsetX, offsetY);
+    if (hitDir) {
+      isResizing = true;
+      resizeDir = hitDir;
+      state.showButtonGroup = false;
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(hitDir);
+      return;
+    }
+
     // 判断是否在已经选好的矩形内 => 进入移动
     if (isInSelection(offsetX, offsetY) && !state.isInitial) {
       //不是初始状态
@@ -366,6 +398,44 @@ export function useScreenshot() {
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
 
+    if (isResizing && resizeDir) {
+      const canvasW = (maskCanvas.value as HTMLCanvasElement).width;
+      const canvasH = (maskCanvas.value as HTMLCanvasElement).height;
+      const { minX, maxX, minY, maxY } = getSelectionBounds();
+      let nextMinX = minX;
+      let nextMaxX = maxX;
+      let nextMinY = minY;
+      let nextMaxY = maxY;
+      const minSize = 5 * (state.scaleX || 1);
+
+      if (resizeDir.includes("w")) {
+        nextMinX = clamp(offsetX, 0, nextMaxX - minSize);
+      }
+      if (resizeDir.includes("e")) {
+        nextMaxX = clamp(offsetX, nextMinX + minSize, canvasW);
+      }
+      if (resizeDir.includes("n")) {
+        nextMinY = clamp(offsetY, 0, nextMaxY - minSize);
+      }
+      if (resizeDir.includes("s")) {
+        nextMaxY = clamp(offsetY, nextMinY + minSize, canvasH);
+      }
+
+      state.startX = nextMinX;
+      state.endX = nextMaxX;
+      state.startY = nextMinY;
+      state.endY = nextMaxY;
+      state.width = Math.abs(state.endX - state.startX);
+      state.height = Math.abs(state.endY - state.startY);
+      state.hasMoved = true;
+
+      drawMask();
+      maskCtx.value!.clearRect(state.startX, state.startY, state.width, state.height);
+      drawSelectionRect(state.startX, state.startY, state.width, state.height);
+      updateButtonGroupPosition();
+      return;
+    }
+
     // 绘制新选区（正在拖框）
     if (state.isDrawing) {
       const w = offsetX - state.startX;
@@ -375,8 +445,11 @@ export function useScreenshot() {
       drawSelectionRect(state.startX, state.startY, w, h);
     }
 
-    // 更新鼠标样式：如果在选区内显示 move，否则默认
-    if (isInSelection(offsetX, offsetY)) {
+    // 更新鼠标样式：先看控制点，再看选区
+    const hoverDir = hitTestResizeHandle(offsetX, offsetY);
+    if (hoverDir) {
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(hoverDir);
+    } else if (isInSelection(offsetX, offsetY)) {
       if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "move";
     } else {
       if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "default";
@@ -468,6 +541,13 @@ export function useScreenshot() {
       state.showButtonGroup = true;
       emitPluginEvent("onEndMove", state);
     }
+    if (isResizing) {
+      isResizing = false;
+      resizeDir = null;
+      updateButtonGroupPosition();
+      state.showButtonGroup = true;
+    }
+
 
     if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "default";
   }
@@ -549,40 +629,25 @@ export function useScreenshot() {
     const rectY = Math.min(state.startY, state.endY);
     const w = Math.abs(state.endX - state.startX);
     const h = Math.abs(state.endY - state.startY);
-    if (!imgCtx.value || w === 0 || h === 0) return;
+    if (!imgCtx.value) return;
 
     // 先把 drawCanvas 绘制到 imgCanvas（包含标注）
+    imgCtx.value.save();
+    imgCtx.value.scale(1, 1); // 已经在像素级别
     imgCtx.value.drawImage(drawCanvas.value as HTMLCanvasElement, 0, 0);
+    imgCtx.value.restore();
 
-    // 使用 OffscreenCanvas 进行高性能裁剪（如果支持）
-    let offCanvas: HTMLCanvasElement | OffscreenCanvas;
-    let offCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
-
-    if (typeof OffscreenCanvas !== "undefined") {
-      offCanvas = new OffscreenCanvas(w, h);
-      offCtx = offCanvas.getContext("2d");
-    } else {
-      offCanvas = document.createElement("canvas");
+    // 临时 canvas 裁剪输出
+    const offCanvas = document.createElement("canvas");
       offCanvas.width = w;
       offCanvas.height = h;
-      offCtx = offCanvas.getContext("2d");
-    }
-
+    const offCtx = offCanvas.getContext("2d");
     if (!offCtx) return;
 
-    // 直接裁剪
+    // 注意：state 内部是“像素级”，所以直接用 rectX/rectY/w/h
     offCtx.drawImage(imgCanvas.value as HTMLCanvasElement, rectX, rectY, w, h, 0, 0, w, h);
 
-    // 获取 Blob
-    let blob: Blob | null = null;
-    if (offCanvas instanceof OffscreenCanvas) {
-      blob = await offCanvas.convertToBlob({ type: "image/png" });
-    } else {
-      blob = await new Promise<Blob | null>(resolve => {
-        (offCanvas as HTMLCanvasElement).toBlob(resolve, "image/png");
-      });
-    }
-
+    offCanvas.toBlob(async blob => {
     if (!blob) return;
 
     const array = await blob.arrayBuffer();
@@ -590,7 +655,7 @@ export function useScreenshot() {
 
     // 可通过插件拦截保存行为
     const pluginHandled = await Promise.all(
-      plugins.map(p => (p.onExport ? p.onExport({ blob: blob!, uint8, width: w, height: h }) : Promise.resolve(false)))
+        plugins.map(p => (p.onExport ? p.onExport({ blob, uint8, width: w, height: h }) : Promise.resolve(false)))
     );
     const handled = pluginHandled.some(Boolean);
 
@@ -599,6 +664,7 @@ export function useScreenshot() {
       await ClipboardManager.writeImage(uint8);
       cancelSelection();
     }
+    }, "image/png");
   }
 
   // --- 取消选区：清理并关闭窗口 ---
@@ -608,11 +674,8 @@ export function useScreenshot() {
     maskCtx.value?.clearRect(0, 0, maskCanvas.value!.width, maskCanvas.value!.height);
     imgCtx.value?.clearRect(0, 0, imgCanvas.value!.width, imgCanvas.value!.height);
 
-    // 释放缓存的 ImageBitmap
-    for (const bmp of cachedBitmaps) {
-      bmp.close();
-    }
-    cachedBitmaps = [];
+    screenshotImage = null;
+    screenshotBlobBuffer = null;
 
     // 隐藏放大镜 & 按钮
     if (magnifier.value) magnifier.value.style.display = "none";
@@ -667,7 +730,8 @@ export function useScreenshot() {
 
   // 启动截屏（初始化 + 进行截图）
   async function start() {
-    await captureFullScreenFallback();
+    await initCanvases();
+    await captureFullScreen();
 
     // 挂载事件监听（mask canvas 上）
     maskCanvas.value?.addEventListener("mousedown", handleMaskMouseDown);
@@ -685,13 +749,6 @@ export function useScreenshot() {
     maskCanvas.value?.removeEventListener("mousemove", handleMaskMouseMove);
     maskCanvas.value?.removeEventListener("mouseup", handleMaskMouseUp);
     canvasTool.stopListen();
-
-    // 释放缓存的 ImageBitmap
-    for (const bmp of cachedBitmaps) {
-      bmp.close();
-    }
-    cachedBitmaps = [];
-
     emitPluginEvent("onDestroy", state);
   }
 
