@@ -437,7 +437,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
   const send = async (formData: any, chat: any) => {
     const res = await sendApi(chat)(formData);
-    createMessage(chat.toId, res, chat.chatType, true);
+    // createMessage(chat.toId, res, chat.chatType, true);
     return res;
   };
 
