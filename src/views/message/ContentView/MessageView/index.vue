@@ -264,8 +264,13 @@ watch(
 
   &::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: transparent;
   }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.25)
+  }
+
 }
 
 .message-records {

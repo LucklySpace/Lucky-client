@@ -10,10 +10,12 @@ import BaseEntity from "../orm/BaseEntity";
 @FTS5({ virtual_name: "friends_virtual", fields: ["userId", "friendId", "name", "location", "sequence"], match_field: "name" })
 @Entity("friends")
 export default class Friends extends BaseEntity {
+
   @PrimaryKey(false)
   @Column("userId", "TEXT")
   userId!: string;
 
+  @PrimaryKey(false)
   @Column("friendId", "TEXT")
   friendId!: string;
 
@@ -26,8 +28,8 @@ export default class Friends extends BaseEntity {
   @Column("avatar", "TEXT", true)
   avatar?: string;
 
-  @Column("userSex", "INTEGER", true)
-  userSex?: number;
+  @Column("gender", "INTEGER", true)
+  gender?: number;
 
   @Column("location", "TEXT", true)
   location?: string;

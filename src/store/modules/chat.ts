@@ -1,6 +1,6 @@
 import api from "@/api/index";
 import { Events, isTextType, MessageContentType, MessageType, StoresEnum } from "@/constants";
-import { PageResult, QueryBuilder, useMappers } from "@/database";
+import { PageResult, useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
 import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useChatInput } from "@/hooks/useChatInput";
@@ -81,6 +81,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   const isSingle = (chat: any) => chat?.chatType === MessageType.SINGLE_MESSAGE.code;
   const mapper = (type: number) => type === MessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
   const sendApi = (chat: any) => isSingle(chat) ? api.SendSingleMessage : api.SendGroupMessage;
+  const findChatByToId = (toId: any) => state.chatList.find(item => item.toId === toId);
   const findIdx = (id: any) => findChatIndex(state.chatList, id);
 
   // ==================== 计算属性 ====================
@@ -303,26 +304,44 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     const idx = findIdx(chat?.chatId);
     if (idx === -1) return;
     state.chatList[idx].unread = unread;
-    addTask(() => chatsMapper.updateById(chat.chatId, { unread } as Chats));
+    addTask(() => {
+      chatsMapper.updateById(chat.chatId, { unread } as Chats);
+      api.ReadChat({
+        fromId: chat.toId,
+        toId: chat.ownerId,
+        chatType: chat.chatType,
+      });
+    });
   };
 
-  const createOrUpdate = async (message: IMessage | undefined, id: string | number) => {
-    const qb = new QueryBuilder<Chats>().select().and(q => q.eq("ownerId", ownerId.value).eq("toId", id));
-    state.loading = true;
+  /** 从消息中解析会话 toId（私聊取对方 ID，群聊取群 ID） */
+  const getToIdFromMessage = (msg: IMessage): string | number | null => {
+    if (!msg) return null;
+    const myId = String(ownerId.value);
+    const single = msg as IMSingleMessage;
+    const group = msg as IMGroupMessage;
+    if (group.groupId != null) return group.groupId;
+    return String(single.fromId) === myId ? single.toId : single.fromId;
+  };
 
-    const chats = await exec(() => chatsMapper.selectList(qb), { op: "queryChat" }) as Chats[] | null;
-    let chat: Chats | null = chats?.[0] ?? null;
-
+  const createOrUpdate = async (message: IMessage | undefined, existingChat: Chats | null) => {
+    let chat = existingChat;
     if (chat) {
       if (message?.fromId !== ownerId.value) triggerNotify(chat, message);
       const idx = findIdx(chat.chatId);
       updateWithMsg(idx !== -1 ? state.chatList[idx] : chat, message, idx === -1);
       if (idx === -1) upsert(chat);
-    } else {
-      chat = await exec(() => api.GetChat({ ownerId: ownerId.value, toId: id }), { op: "fetchChat" }) as Chats;
-      if (chat) { updateWithMsg(chat, message, true); upsert(chat); }
+    } else if (message) {
+      const toId = getToIdFromMessage(message);
+      if (toId != null) {
+        chat = await exec(() => api.GetChat({ ownerId: ownerId.value, toId }), { op: "fetchChat" }) as Chats;
+        if (chat) {
+          if (message.fromId !== ownerId.value) triggerNotify(chat, message);
+          updateWithMsg(chat, message, true);
+          upsert(chat);
+        }
+      }
     }
-
     if (chat) sortList();
     state.loading = false;
   };
@@ -408,49 +427,58 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     Object.assign(page, { num: 1, total: 0 });
   };
 
+  const FILE_CONTENT_TYPE: Record<string, number> = {
+    image: MessageContentType.IMAGE.code,
+    video: MessageContentType.VIDEO.code,
+    file: MessageContentType.FILE.code,
+  };
+
+  const sendOnePart = async (part: IMessagePart, chat: Chats): Promise<void> => {
+    if (part.type === "text") {
+      const payload = buildPayload(
+        { text: part.content },
+        chat,
+        MessageContentType.TEXT.code,
+        {
+          replyMessage: part.replyMessage,
+          mentionedUserIds: part.mentionedUserIds ?? [],
+          mentionAll: part.mentionAll,
+        }
+      );
+      await exec(() => send(payload, chat), { op: "sendText" });
+      return;
+    }
+    if (part.file && FILE_CONTENT_TYPE[part.type] != null) {
+      await exec(
+        () => uploadAndSend(part.file!, chat, FILE_CONTENT_TYPE[part.type], part.replyMessage),
+        { op: "sendFile" }
+      );
+    }
+  };
+
   const sendMessage = async (parts: IMessagePart[]) => {
     if (!parts?.length || !state.currentChat) return;
     const chat = state.currentChat;
-
-    const tasks = parts.map(async m => {
-      if (["image", "video", "file"].includes(m.type) && m.file) {
-        const contentType = m.type === "image" ? MessageContentType.IMAGE.code
-          : m.type === "video" ? MessageContentType.VIDEO.code : MessageContentType.FILE.code;
-        await exec(() => uploadAndSend(m.file!, chat, contentType, m.replyMessage), { op: "sendFile" });
-      } else if (m.type === "text") {
-        const payload = buildPayload(
-          {
-            text: m.content,
-          },
-          chat,
-          MessageContentType.TEXT.code,
-          {
-            replyMessage: m.replyMessage,
-            mentionedUserIds: m.mentionedUserIds || [],
-            mentionAll: m.mentionAll,
-          });
-        await exec(() => send(payload, chat), { op: "sendText" });
-      }
-    });
-    await Promise.all(tasks);
+    await Promise.all(parts.map(p => sendOnePart(p, chat)));
   };
 
-  const send = async (formData: any, chat: any) => {
-    const res = await sendApi(chat)(formData);
-    // createMessage(chat.toId, res, chat.chatType, true);
-    return res;
+  /** 发送消息到服务端，本地列表由 WebSocket 回包后 handleCreateMessage 写入 */
+  const send = async (payload: any, chat: Chats) => {
+    return sendApi(chat)(payload);
   };
 
-  const uploadAndSend = async (file: File, chat: any, contentType: number, replyMessage?: any) => {
+  const uploadAndSend = async (file: File, chat: Chats, contentType: number, replyMessage?: any) => {
     const md5Str = await md5(file);
     const formData = new FormData();
     formData.append("identifier", md5Str.toString());
     formData.append("file", file);
 
-    const uploadRes: any = contentType === MessageContentType.IMAGE.code
-      ? await api.uploadImage(formData) : await api.UploadFile(formData);
+    const uploadRes: any =
+      contentType === MessageContentType.IMAGE.code
+        ? await api.uploadImage(formData)
+        : await api.UploadFile(formData);
 
-    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     const payload = buildPayload({ ...uploadRes, size: file.size, suffix: ext }, chat, contentType, { replyMessage });
     await send(payload, chat);
     return uploadRes;
@@ -478,20 +506,20 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     page.total = await exec(() => mapper(chat.chatType).findMessageCount(chat.ownerId || chat.toId, chat.toId), { fallback: 0 }) || 0;
   };
 
-  const createMessage = (id: string | number, message: any, messageType: number, isSender = false) => {
-    if (id === state.currentChat?.toId) {
-      state.messageList.push(normalizeMsg(message, state.currentChat));
-      if (isSender) createOrUpdate(message, state.currentChat.toId);
+  /** 写入一条收到的消息：更新当前会话列表并落库（由 core 收到 WS 后调用） */
+  const createMessage = (targetId: string | number, message: any, messageType: number) => {
+    if (String(targetId) === String(state.currentChat?.toId)) {
+      state.messageList.push(normalizeMsg(message, state.currentChat!));
     }
-    insertToDb(message, messageType);
+    persistMessage(message, messageType);
   };
 
-  const insertToDb = (message: any, messageType: number) => {
+  /** 将消息持久化到 DB 并更新 FTS（仅文本） */
+  const persistMessage = (message: any, messageType: number) => {
     const record = toRecord(message);
     const m = mapper(messageType);
     addTask(() => {
       m.insert(record);
-      // 仅文本类消息插入 FTS 索引
       const contentType = Number(message.messageContentType);
       if (isTextType(contentType) && message.messageBody?.text) {
         m.insertOrUpdateFTS({ ...record, messageBody: message.messageBody.text });
@@ -740,6 +768,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     getCurrentGroupMembersExcludeSelf: getters.membersExcludeSelf,
     getOwnerId: ownerId,
     getChatById: computed(() => (id: string | number) => state.chatList.find(c => c.chatId === id) ?? null),
+    getChatByToId: findChatByToId,
     getShowDetailBtn: computed(() => !!state.currentChat),
     getShowDetail: computed(() => state.isShowDetail),
 
@@ -781,7 +810,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     handleGetMessageList: getMessages,
     handleGetMessageCount: getMessageCount,
     handleCreateMessage: createMessage,
-    handleInsertToDatabase: insertToDb,
+    handleInsertToDatabase: persistMessage,
     handleSendRecallMessage: recallMessage,
     handleReCallMessage: handleRecall,
     handleSearchMessageUrl: searchUrls,

@@ -285,8 +285,11 @@ export default {
   /** 设置群公告 */
   SetGroupAnnouncement: (data: any) => Http.post("/chat/api/v1/group/announcement", data),
 
-  /** 获取消息列表 */
-  GetMessageList: (data: any) => Http.post("/chat/api/v1/message/list", data),
+  /** 获取私聊消息列表 */
+  GetSingleMessageList: (data: any) => Http.post("/chat/api/v1/message/single/list", data),
+
+  /** 获取群聊消息列表 */
+  GetGroupMessageList: (data: any) => Http.post("/chat/api/v1/message/group/list", data),
 
   /** 检查单聊消息 */
   SingleCheck: (data: any) => Http.post("/chat/api/v1/message/singleCheck", data),

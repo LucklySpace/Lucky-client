@@ -1,7 +1,7 @@
-import SingleMessage from "../entity/SingleMessage";
-import xmlText from "./SingleMessageMapper.xml?raw";
-import { BaseFTS5Mapper } from "../orm/BaseFTS5Mapper";
 import { MessageContentType } from "@/constants";
+import SingleMessage from "../entity/SingleMessage";
+import { BaseFTS5Mapper } from "../orm/BaseFTS5Mapper";
+import xmlText from "./SingleMessageMapper.xml?raw";
 
 /**
  * 单聊消息
@@ -26,12 +26,10 @@ class SingleMessageMapper extends BaseFTS5Mapper<SingleMessage> {
 
   /**
    * 最后一条消息
-   * @param fromId 发送人
-   * @param toId 接收人
    * @returns
    */
-  async findLastMessage(fromId: any, toId: any): Promise<any> {
-    const res = await this.querySql("findLastMessage", { fromId, toId });
+  async findLastMessage(): Promise<any> {
+    const res = await this.querySql("findLastMessage");
     return res[0];
   }
 

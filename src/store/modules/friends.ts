@@ -1,13 +1,12 @@
-import { MessageType, StoresEnum, MAX_REMARK_LEN } from "@/constants";
 import api from "@/api/index";
+import { Events, MAX_REMARK_LEN, MessageType, StoresEnum } from "@/constants";
 import { useMappers } from "@/database";
-import { storage } from "@/utils/Storage";
 import Chats from "@/database/entity/Chats";
-import { useUserStore } from "./user";
-import { useChatStore } from "@/store/modules/chat";
-import { ref, computed } from "vue";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { Events } from "@/constants";
+import { useChatStore } from "@/store/modules/chat";
+import { storage } from "@/utils/Storage";
+import { computed, ref } from "vue";
+import { useUserStore } from "./user";
 
 // mappers（DB 操作）
 const { friendsMapper, chatsMapper } = useMappers();
@@ -243,23 +242,31 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
    * @throws 查询失败时抛出错误
    */
   const loadContacts = async (): Promise<void> => {
-    try {
+
+    friendsMapper.findLast().then(async (last) => {
+
+      const sequence = last?.[0]?.sequence ?? 0;
+
       const newList = (await api.GetContacts({
         userId: storage.get("userId"),
-        sequence: 0
+        sequence
       })) || [];
 
-      if (!Array.isArray(newList) || newList.length === 0) {
-        logger.debug("好友列表无更新");
+      if (!newList || !Array.isArray(newList) || newList.length === 0) {
+        logger.prettyDebug("好友列表无更新");
         return;
       }
 
-      contacts.value = [...newList];
-      logger.info("好友列表加载成功", { count: newList.length });
-    } catch (error) {
-      logger.error("加载好友列表失败", error);
-      throw error;
-    }
+      await friendsMapper.batchInsertOrUpdate(newList);
+      await friendsMapper.batchInsertOrUpdateFTS(newList);
+
+      logger.prettyInfo("好友列表加载成功", { count: newList.length });
+
+    }).catch(error => {
+      logger.prettyError("好友列表加载失败", error);
+    }).finally(async () => {
+      contacts.value = await friendsMapper.selectList() ?? [];
+    });
   };
 
   /**

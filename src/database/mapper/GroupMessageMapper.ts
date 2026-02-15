@@ -1,7 +1,7 @@
-import GroupMessage from "../entity/GroupMessage";
-import xmlText from "./GroupMessageMapper.xml?raw";
-import { BaseFTS5Mapper } from "../orm/BaseFTS5Mapper";
 import { MessageContentType } from "@/constants";
+import GroupMessage from "../entity/GroupMessage";
+import { BaseFTS5Mapper } from "../orm/BaseFTS5Mapper";
+import xmlText from "./GroupMessageMapper.xml?raw";
 
 /**
  * 群聊消息
@@ -29,8 +29,8 @@ class GroupMessageMapper extends BaseFTS5Mapper<GroupMessage> {
    * @param groupId 群id
    * @returns
    */
-  async findLastMessage(groupId: any): Promise<any> {
-    const res = await this.querySql("findLastMessage", { groupId });
+  async findLastMessage(): Promise<any> {
+    const res = await this.querySql("findLastMessage");
     return res[0];
   }
 
