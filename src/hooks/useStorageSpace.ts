@@ -2,6 +2,7 @@ import { onMounted, ref } from "vue";
 import { size } from "@tauri-apps/plugin-fs";
 import { appCacheDir, appDataDir, appLogDir, cacheDir } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "@/hooks/useLogger";
 
 /**
  * 存储明细信息
@@ -97,7 +98,7 @@ async function loadAppdataDisk() {
       name: string;
     };
 
-    console.log("Disk info", info);
+    logger.debug("Disk info", info);
     // 格式化显示
     const totalStr = formatBytes(info.total);
     const availStr = formatBytes(info.available);
@@ -106,7 +107,7 @@ async function loadAppdataDisk() {
 
     // 在 UI 中展示这些值
   } catch (e) {
-    console.error("get_appdata_disk_info failed", e);
+    logger.error("get_appdata_disk_info failed", e);
   }
 }
 

@@ -1,6 +1,7 @@
 import { MessageContentType } from "@/constants";
 import type Chats from "@/database/entity/Chats";
 import { globalI18n } from "@/i18n";
+import { logger } from "@/hooks/useLogger";
 
 /* -------------------- 类型定义 -------------------- */
 
@@ -446,7 +447,7 @@ export function useChatInput() {
         ? removeHighlightsWithDOM(html, opts)
         : removeHighlightsWithRegex(html, opts);
     } catch (error) {
-      console.warn("移除高亮标记失败:", error);
+      logger.warn("移除高亮标记失败:", error);
       return html;
     }
   }

@@ -3,6 +3,7 @@ import { PiniaPlugin, PiniaPluginContext } from "pinia";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { get } from "lodash-es";
+import { logger } from "@/hooks/useLogger";
 
 /**
  * Pinia 多窗口同步选项
@@ -49,11 +50,11 @@ function createPiniaSync(globalOpts: SyncOptions = {}): PiniaPlugin {
     if (!(store as any).sync) (store as any).sync = cfg;
 
     if (!cfg.paths.length) {
-      console.log(`[pinia-sync] store "${storeId}" 无同步字段，跳过`);
+      logger.debug(`[pinia-sync] store "${storeId}" 无同步字段，跳过`);
       return;
     }
 
-    console.log(`[pinia-sync] store "${storeId}" 配置`, cfg);
+    logger.debug(`[pinia-sync] store "${storeId}" 配置`, cfg);
 
     let isRemote = false;
     let debounceTimer: NodeJS.Timeout | null = null;

@@ -11,6 +11,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { exists, mkdir, writeFile, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { storage } from "@/utils/Storage";
 import SparkMD5 from "spark-md5";
+import { logger } from "@/hooks/useLogger";
 
 // ===================== 类型 =====================
 
@@ -184,7 +185,7 @@ class ShardedCacheManager {
 
       return localSrc;
     } catch (e) {
-      console.warn(`[${this.type}Cache] Failed:`, url, e);
+      logger.warn(`[${this.type}Cache] Failed:`, url, e);
       return url;
     }
   }

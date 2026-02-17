@@ -3,6 +3,7 @@
 // 使用前建议在应用启动时调用 getTauriStore() 初始化一次（例如 main.ts）。
 
 import { Store, StoreOptions } from "@tauri-apps/plugin-store";
+import { logger } from "@/hooks/useLogger";
 
 /**
  * TauriStore
@@ -87,7 +88,7 @@ export class TauriStore {
       }
       return null;
     } catch (e) {
-      console.warn("[TauriStore] get error", e);
+      logger.warn("[TauriStore] get error", e);
       return null;
     }
   }
@@ -172,7 +173,7 @@ export class TauriStore {
       await this.store.clear();
       await this.store.save();
     } catch (e) {
-      console.warn("[TauriStore] clearAll error", e);
+      logger.warn("[TauriStore] clearAll error", e);
     }
   }
 
@@ -184,8 +185,8 @@ export class TauriStore {
       clearTimeout(this.saveTimer);
     }
     this.saveTimer = setTimeout(() => {
-      this._doSavePending().catch(e => {
-        console.warn("[TauriStore] save error", e);
+        this._doSavePending().catch(e => {
+        logger.warn("[TauriStore] save error", e);
       });
       this.saveTimer = null;
     }, this.debounceMs);
@@ -218,22 +219,21 @@ export class TauriStore {
             try {
               await this.store.delete(k);
             } catch (e) {
-              // log but continue
-              console.warn(`[TauriStore] delete key "${k}" failed`, e);
+              logger.warn(`[TauriStore] delete key "${k}" failed`, e);
             }
           } else {
             // 写入值（直接存入 JS 对象）
             try {
               await this.store.set(k, v);
             } catch (e) {
-              console.warn(`[TauriStore] set key "${k}" failed`, e);
+              logger.warn(`[TauriStore] set key "${k}" failed`, e);
             }
           }
         }
         // 所有 set/delete 完成后统一 save()，把修改刷盘
         await this.store.save();
       } catch (e) {
-        console.warn("[TauriStore] _doSavePending error", e);
+        logger.warn("[TauriStore] _doSavePending error", e);
       } finally {
         // 保存完成，清理 savingPromise
         this.savingPromise = null;
@@ -286,7 +286,7 @@ export const tauriStorage = {
   getItem(key: string): string | null {
     const inst = TauriStore.instance;
     if (!inst) {
-      console.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
+      logger.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
       return null;
     }
     const val = inst.getSync(key);
@@ -295,7 +295,7 @@ export const tauriStorage = {
   setItem(key: string, value: string): void {
     const inst = TauriStore.instance;
     if (!inst) {
-      console.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
+      logger.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
       return;
     }
     // value 是字符串（localStorage 风格），尝试 parse
@@ -311,7 +311,7 @@ export const tauriStorage = {
   removeItem(key: string): void {
     const inst = TauriStore.instance;
     if (!inst) {
-      console.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
+      logger.warn("[tauriStorage] 尚未初始化，请在应用启动时调用 await getTauriStore()");
       return;
     }
     inst.removeSync(key);

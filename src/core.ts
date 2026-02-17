@@ -25,6 +25,7 @@ import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useGroupStore } from "@/store/modules/group";
+import { useMessageStore } from "@/store/modules/message";
 import { useSettingStore } from "@/store/modules/setting";
 import { useUserStore } from "@/store/modules/user";
 
@@ -127,6 +128,7 @@ class MainManager {
   private readonly stores = {
     user: useUserStore(),
     chat: useChatStore(),
+    message: useMessageStore(),
     call: useCallStore(),
     setting: useSettingStore(),
     friend: useFriendsStore(),
@@ -311,7 +313,7 @@ class MainManager {
 
   private initEventListeners(): void {
     globalEventBus.on("message:recall", payload => {
-      this.stores.chat.handleSendRecallMessage(payload);
+      this.stores.message.handleSendRecallMessage(payload);
     });
   }
 
@@ -384,7 +386,7 @@ class MainManager {
       sequence && api.GetSingleMessageList({ fromId: ownerId, sequence }).then(async res => {
 
         if (!res || !Array.isArray(res) || res.length === 0) {
-          this.log.prettyDebug("无新私聊离线消息");
+          this.log.prettyDebug("message", "无新私聊离线消息");
           return;
         }
 
@@ -405,7 +407,7 @@ class MainManager {
       sequence && api.GetGroupMessageList({ fromId: ownerId, sequence }).then(async res => {
 
         if (!res || !Array.isArray(res) || res.length === 0) {
-          this.log.prettyDebug("无新群聊离线消息");
+          this.log.prettyDebug("message", "无新群聊离线消息");
           return;
         }
 
@@ -456,7 +458,7 @@ class MainManager {
   }
 
   private async initSystemTray(): Promise<void> {
-    const { user, chat } = this.stores;
+    const { user, chat, message: messageStore } = this.stores;
 
     await this.tray.initSystemTray({
       id: "app-tray",
@@ -488,10 +490,10 @@ class MainManager {
 
             try {
               router.push("/message");
-              await Promise.all([chat.handleChangeCurrentChat(item), chat.handleResetMessage()]);
+              await Promise.all([chat.handleChangeCurrentChat(item), messageStore.handleResetMessage()]);
               await ShowMainWindow();
               await Promise.all([
-                chat.handleGetMessageList(item),
+                messageStore.handleGetMessageList(item),
                 chat.handleUpdateReadStatus(item),
                 hideNotifyWindow(),
               ]);
@@ -582,7 +584,7 @@ class MainManager {
       // 消息操作
       if (code === MessageType.MESSAGE_OPERATION.code) {
         const message = IMessageAction.fromPlain(data);
-        this.stores.chat.handleReCallMessage(message);
+        this.stores.message.handleReCallMessage(message);
       }
     });
   }
@@ -622,7 +624,7 @@ class MainManager {
   }
 
   private async handleChatMessage(code: number, data: any): Promise<void> {
-    const { chat, setting } = this.stores;
+    const { chat, setting, message: messageStore } = this.stores;
     const message = IMessage.fromPlainByType(data);
     if (!message) return;
 
@@ -635,7 +637,7 @@ class MainManager {
 
     const existingChat = chat.getChatByToId(targetId);
     chat.handleCreateOrUpdateChat(message, existingChat ?? null);
-    chat.handleCreateMessage(targetId, message, code);
+    messageStore.handleCreateMessage(targetId, message, code);
   }
 
   // ==================== 工具方法 ====================

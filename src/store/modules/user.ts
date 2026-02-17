@@ -100,7 +100,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
 
       // 2. 并行处理：安全存储 + 状态更新
       await Promise.all([
-        tokenManager.set({
+        await tokenManager.set({
           accessToken: res.accessToken,
           refreshToken: res.refreshToken,
           accessExpiresAt: res.accessExpiresAt || Date.now() + 7200000,
@@ -110,7 +110,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
           token.value = res.accessToken;
           storage.set("userId", res.userId);
           storage.set("token", res.accessToken);
-          userInfo.value.userId = res.userId; // 先设置 ID 以便后续请求使用
+          userInfo.value.userId = res.userId;
         })()
       ]);
 
