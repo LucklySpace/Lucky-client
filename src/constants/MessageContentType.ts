@@ -83,6 +83,7 @@ export const MessageContentType = {
   MARK_READ: { code: 456, desc: "已读回执" },
   TYPING: { code: 457, desc: "正在输入" },
   MESSAGE_QUOTE: { code: 458, desc: "引用消息" },
+  MERGE_MESSAGE: { code: 459, desc: "合并消息" },
 
   // ========== 其它 / 保留 ==========
   COMPLEX: { code: 500, desc: "混合消息（多类型组合）" },
@@ -124,7 +125,7 @@ export function getMessageContentTypeByCodeOrDefault(code: number): MessageConte
  * 判断是否为文本类消息（code 1-99）
  */
 export function isTextType(code: number): boolean {
-  return code >= 1 && code <= 99 ;
+  return code >= 1 && code <= 99;
 }
 
 /**
