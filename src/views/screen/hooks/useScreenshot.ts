@@ -59,18 +59,18 @@ export function useScreenshot() {
     virtualX: 0,
     virtualY: 0,
     virtualWidth: 0,
-    virtualHeight: 0
+    virtualHeight: 0,
   });
 
   // 放大镜配置
   const magnifierConfig = {
     size: 150,
-    zoom: 3
+    zoom: 3,
   };
   type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
   let isResizing = false;
   let resizeDir: ResizeDir = null;
-  const resizeHandleSize = 2; // CSS px
+  const resizeHandleSize = 6; // CSS px
   const resizeHandleHitPadding = 6; // CSS px, 扩大命中范围但不放大视觉控制点
   // 截图原图（Image 元素）
   let screenshotImage: HTMLImageElement | null = null;
@@ -150,7 +150,7 @@ export function useScreenshot() {
       x: `${pos[0]}`,
       y: `${pos[1]}`,
       width: `${canvasW}`,
-      height: `${canvasH}`
+      height: `${canvasH}`,
     };
     let base64: string;
     try {
@@ -162,7 +162,7 @@ export function useScreenshot() {
         imgCtx.value?.drawImage(screenshotImage as any, 0, 0, canvasW, canvasH);
 
         // 默认绘制全屏蒙版
-      drawMask();
+        drawMask();
 
         // 绘制全屏绿色边框
         drawRectangle(0, 0, canvasW, canvasH, 1);
@@ -225,7 +225,7 @@ export function useScreenshot() {
       [maxX, maxY],
       [midX, maxY],
       [minX, maxY],
-      [minX, midY]
+      [minX, midY],
     ];
 
     maskCtx.value.save();
@@ -356,7 +356,6 @@ export function useScreenshot() {
     // 鼠标位置（像素级，考虑 scale）
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
-
 
     const hitDir = hitTestResizeHandle(offsetX, offsetY);
     if (hitDir) {
@@ -557,7 +556,6 @@ export function useScreenshot() {
       state.showButtonGroup = true;
     }
 
-
     if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "default";
   }
 
@@ -648,8 +646,8 @@ export function useScreenshot() {
 
     // 临时 canvas 裁剪输出
     const offCanvas = document.createElement("canvas");
-      offCanvas.width = w;
-      offCanvas.height = h;
+    offCanvas.width = w;
+    offCanvas.height = h;
     const offCtx = offCanvas.getContext("2d");
     if (!offCtx) return;
 
@@ -657,22 +655,22 @@ export function useScreenshot() {
     offCtx.drawImage(imgCanvas.value as HTMLCanvasElement, rectX, rectY, w, h, 0, 0, w, h);
 
     offCanvas.toBlob(async blob => {
-    if (!blob) return;
+      if (!blob) return;
 
-    const array = await blob.arrayBuffer();
-    const uint8 = new Uint8Array(array);
+      const array = await blob.arrayBuffer();
+      const uint8 = new Uint8Array(array);
 
-    // 可通过插件拦截保存行为
-    const pluginHandled = await Promise.all(
+      // 可通过插件拦截保存行为
+      const pluginHandled = await Promise.all(
         plugins.map(p => (p.onExport ? p.onExport({ blob, uint8, width: w, height: h }) : Promise.resolve(false)))
-    );
-    const handled = pluginHandled.some(Boolean);
+      );
+      const handled = pluginHandled.some(Boolean);
 
-    // 如果插件没有处理，则默认复制到剪贴板并关闭截图
-    if (!handled) {
-      await ClipboardManager.writeImage(uint8);
-      cancelSelection();
-    }
+      // 如果插件没有处理，则默认复制到剪贴板并关闭截图
+      if (!handled) {
+        await ClipboardManager.writeImage(uint8);
+        cancelSelection();
+      }
     }, "image/png");
   }
 
@@ -709,7 +707,7 @@ export function useScreenshot() {
     maskCanvas.value?.removeEventListener("mouseup", handleMaskMouseUp);
 
     //防止拦截鼠标事件(工具为文字时, 点击会创建新的节点. )
-    if (maskCanvas.value) maskCanvas.value.style.pointerEvents = 'none';
+    if (maskCanvas.value) maskCanvas.value.style.pointerEvents = "none";
 
     state.currentTool = tool;
     canvasTool.setTool(tool);
@@ -778,7 +776,7 @@ export function useScreenshot() {
       drawCanvas,
       magnifier,
       magnifierCanvas,
-      buttonGroup
+      buttonGroup,
     },
     state,
     start,
@@ -788,7 +786,7 @@ export function useScreenshot() {
     undo,
     redo,
     registerPlugin,
-    setPenOptions: canvasTool.setPenOptions
+    setPenOptions: canvasTool.setPenOptions,
   };
 
   return publicAPI;
