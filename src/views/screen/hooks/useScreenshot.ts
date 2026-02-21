@@ -70,7 +70,7 @@ export function useScreenshot() {
   type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
   let isResizing = false;
   let resizeDir: ResizeDir = null;
-  const resizeHandleSize = 6; // CSS px
+  const resizeHandleSize = 10; // CSS px
   const resizeHandleHitPadding = 6; // CSS px, 扩大命中范围但不放大视觉控制点
   // 截图原图（Image 元素）
   let screenshotImage: HTMLImageElement | null = null;
