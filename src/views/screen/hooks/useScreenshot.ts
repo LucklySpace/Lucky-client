@@ -70,7 +70,8 @@ export function useScreenshot() {
   type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
   let isResizing = false;
   let resizeDir: ResizeDir = null;
-  const resizeHandleSize = 8; // CSS px
+  const resizeHandleSize = 2; // CSS px
+  const resizeHandleHitPadding = 6; // CSS px, 扩大命中范围但不放大视觉控制点
   // 截图原图（Image 元素）
   let screenshotImage: HTMLImageElement | null = null;
   // 图像数据缓存（如果需要快速导出）
@@ -249,26 +250,26 @@ export function useScreenshot() {
   function hitTestResizeHandle(x: number, y: number): ResizeDir {
     if (state.isInitial) return null;
     const { minX, maxX, minY, maxY } = getSelectionBounds();
-    const handlePx = resizeHandleSize * (state.scaleX || 1);
+    const handlePx = (resizeHandleSize + resizeHandleHitPadding * 2) * (state.scaleX || 1);
     const half = handlePx / 2;
-    const midX = (minX + maxX) / 2;
-    const midY = (minY + maxY) / 2;
-    const handles: Array<[ResizeDir, number, number]> = [
-      ["nw", minX, minY],
-      ["n", midX, minY],
-      ["ne", maxX, minY],
-      ["e", maxX, midY],
-      ["se", maxX, maxY],
-      ["s", midX, maxY],
-      ["sw", minX, maxY],
-      ["w", minX, midY]
-    ];
 
-    for (const [dir, hx, hy] of handles) {
-      if (x >= hx - half && x <= hx + half && y >= hy - half && y <= hy + half) {
-        return dir;
-      }
-    }
+    // 先命中四个角（保持角点优先）
+    if (x >= minX - half && x <= minX + half && y >= minY - half && y <= minY + half) return "nw";
+    if (x >= maxX - half && x <= maxX + half && y >= minY - half && y <= minY + half) return "ne";
+    if (x >= maxX - half && x <= maxX + half && y >= maxY - half && y <= maxY + half) return "se";
+    if (x >= minX - half && x <= minX + half && y >= maxY - half && y <= maxY + half) return "sw";
+
+    // 边框按四等分，仅中间 2/4 作为可拖动范围；与边框垂直方向命中范围不变
+    const edgeMinX = minX + (maxX - minX) / 4;
+    const edgeMaxX = maxX - (maxX - minX) / 4;
+    const edgeMinY = minY + (maxY - minY) / 4;
+    const edgeMaxY = maxY - (maxY - minY) / 4;
+
+    if (x >= edgeMinX && x <= edgeMaxX && y >= minY - half && y <= minY + half) return "n";
+    if (x >= edgeMinX && x <= edgeMaxX && y >= maxY - half && y <= maxY + half) return "s";
+    if (y >= edgeMinY && y <= edgeMaxY && x >= minX - half && x <= minX + half) return "w";
+    if (y >= edgeMinY && y <= edgeMaxY && x >= maxX - half && x <= maxX + half) return "e";
+
     return null;
   }
 
@@ -288,6 +289,21 @@ export function useScreenshot() {
         return "nwse-resize";
       default:
         return "default";
+    }
+  }
+
+  function updateCursorByPoint(x: number, y: number) {
+    if (isResizing && resizeDir) {
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(resizeDir);
+      return;
+    }
+    const hoverDir = hitTestResizeHandle(x, y);
+    if (hoverDir) {
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(hoverDir);
+    } else if (isInSelection(x, y) && !state.isInitial) {
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "move";
+    } else {
+      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "default";
     }
   }
 
@@ -346,6 +362,8 @@ export function useScreenshot() {
     if (hitDir) {
       isResizing = true;
       resizeDir = hitDir;
+      state.isMoving = false;
+      state.isDrawing = false;
       state.showButtonGroup = false;
       if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(hitDir);
       return;
@@ -397,6 +415,7 @@ export function useScreenshot() {
 
     const offsetX = e.offsetX * state.scaleX;
     const offsetY = e.offsetY * state.scaleY;
+    updateCursorByPoint(offsetX, offsetY);
 
     if (isResizing && resizeDir) {
       const canvasW = (maskCanvas.value as HTMLCanvasElement).width;
@@ -443,16 +462,6 @@ export function useScreenshot() {
       drawMask();
       maskCtx.value!.clearRect(state.startX, state.startY, w, h);
       drawSelectionRect(state.startX, state.startY, w, h);
-    }
-
-    // 更新鼠标样式：先看控制点，再看选区
-    const hoverDir = hitTestResizeHandle(offsetX, offsetY);
-    if (hoverDir) {
-      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = getCursorByDir(hoverDir);
-    } else if (isInSelection(offsetX, offsetY)) {
-      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "move";
-    } else {
-      if (maskCanvas?.value) (maskCanvas.value as HTMLCanvasElement).style.cursor = "default";
     }
 
     // 选区移动：使用鼠标偏移量控制选区左上角，避免飘移
@@ -730,6 +739,10 @@ export function useScreenshot() {
 
   // 启动截屏（初始化 + 进行截图）
   async function start() {
+    // 截图窗口需要覆盖任务栏，否则画布会按工作区尺寸缩放导致偏移
+    try {
+      await getCurrentWebviewWindow().setFullscreen(true);
+    } catch {}
     await initCanvases();
     await captureFullScreen();
 
