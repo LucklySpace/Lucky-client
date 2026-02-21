@@ -1,5 +1,6 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { ref, watch, type Ref } from "vue";
+import { logger } from "@/hooks/useLogger";
 
 // ==================== 类型定义 ====================
 
@@ -166,7 +167,7 @@ export const fetchLinkMeta = async (url: string): Promise<LinkMeta> => {
 
     // 检查响应状态
     if (!res.ok) {
-      console.warn(`[LinkPreview] HTTP ${res.status} for ${normalizedUrl}`);
+      logger.warn(`[LinkPreview] HTTP ${res.status} for ${normalizedUrl}`);
       const fallback = createFallback();
       cache.set(cacheKey, { data: fallback, timestamp: Date.now() });
       return fallback;
@@ -187,7 +188,7 @@ export const fetchLinkMeta = async (url: string): Promise<LinkMeta> => {
     cache.set(cacheKey, { data: meta, timestamp: Date.now() });
     return meta;
   } catch (err) {
-    console.warn(`[LinkPreview] Error fetching ${normalizedUrl}:`, err);
+    logger.warn(`[LinkPreview] Error fetching ${normalizedUrl}:`, err);
     const fallback = createFallback();
     cache.set(cacheKey, { data: fallback, timestamp: Date.now() });
     return fallback;

@@ -180,6 +180,8 @@
           "title": "联系人信息",
           "id": "ID",
           "idLabel": "ID: ",
+          "remark": "备注",
+          "remarkLabel": "备注：",
           "nickname": "昵称",
           "nicknameLabel": "昵称：",
           "region": "地区",
@@ -509,7 +511,8 @@
           "title": "群成员",
           "search": "搜索群成员",
           "viewMore": "查看更多",
-          "collapse": "收起"
+          "collapse": "收起",
+          "remove": "移除"
         },
         "details": {
           "name": "群聊名称",
@@ -525,10 +528,100 @@
         "actions": {
           "enter": "进入群聊",
           "viewMembers": "查看成员",
-          "leave": "退出群"
+          "leave": "退出群",
+          "dissolve": "解散群聊"
         },
         "empty": {
           "noSelection": "未选择群聊或群信息为空"
+        },
+        "management": {
+          "sectionTitle": "群管理",
+          "joinMode": "加入方式",
+          "muteAll": "全员禁言",
+          "transferOwner": "移交群主"
+        },
+        "joinMode": {
+          "dialogTitle": "加入群聊方式",
+          "options": {
+            "free": { "label": "自由加入", "desc": "任何人都可以直接加入" },
+            "approval": { "label": "需要验证", "desc": "需要群主或管理员同意" },
+            "forbidden": { "label": "禁止加入", "desc": "不允许新成员加入" }
+          },
+          "defaultLabel": "需要验证",
+          "updated": "加入方式已更新"
+        },
+        "transferOwner": {
+          "dialogTitle": "移交群主",
+          "tip": "选择新群主后，你将成为普通成员",
+          "confirmMessage": "确定将群主移交给 {name}？移交后你将成为普通成员。",
+          "success": "群主已移交",
+          "buttonConfirm": "确认移交"
+        },
+        "removeMember": {
+          "dialogTitle": "移除成员",
+          "searchPlaceholder": "搜索成员",
+          "confirmMessage": "确定移除选中的 {count} 名成员？",
+          "successCount": "已移除 {count} 名成员",
+          "buttonRemove": "移除"
+        },
+        "memberAction": {
+          "dialogTitle": "成员管理",
+          "muteDurationLabel": "禁言时长",
+          "setAdmin": "设为管理员",
+          "cancelAdmin": "取消管理员",
+          "mute": "禁言",
+          "unmute": "取消禁言",
+          "kick": "移出群聊"
+        },
+        "roles": {
+          "owner": "群主",
+          "admin": "管理员",
+          "member": "成员"
+        },
+        "muteDurations": {
+          "10m": "10分钟",
+          "1h": "1小时",
+          "12h": "12小时",
+          "1d": "1天",
+          "3d": "3天",
+          "7d": "7天",
+          "30d": "30天"
+        },
+        "messages": {
+          "inviteSent": "邀请已发送",
+          "joinModeUpdated": "加入方式已更新",
+          "muteAllOn": "已开启全员禁言",
+          "muteAllOff": "已关闭全员禁言",
+          "adminSet": "已设为管理员",
+          "adminCanceled": "已取消管理员",
+          "muteSuccess": "已禁言该成员",
+          "unmuteSuccess": "已取消禁言",
+          "kickSuccess": "已移出群聊",
+          "removeSuccess": "已移除 {count} 名成员",
+          "groupInfoUpdated": "群信息已更新",
+          "updateFailed": "更新失败",
+          "onlyOwnerRename": "只有群主才能修改群名称"
+        },
+        "confirm": {
+          "tip": "提示",
+          "saveName": "是否保存群名称更改？",
+          "saveNotice": "是否保存群公告更改？",
+          "clearChat": "确定清空该群聊的聊天记录？",
+          "quitTitle": "退出群聊",
+          "quitMessage": "确定退出群聊？",
+          "dissolveTitle": "解散群聊",
+          "dissolveMessage": "确定解散该群聊？",
+          "kickTitle": "移出群聊",
+          "kickMessage": "确定将 {name} 移出群聊？",
+          "removeTitle": "移除成员",
+          "removeMessage": "确定移除选中的 {count} 名成员？",
+          "transferTitle": "移交群主",
+          "transferMessage": "确定将群主移交给 {name}？移交后你将成为普通成员。"
+        },
+        "buttons": {
+          "cancel": "取消",
+          "confirm": "确定",
+          "save": "保存"
         }
       },
 

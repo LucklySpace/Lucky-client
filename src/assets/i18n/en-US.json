@@ -180,6 +180,8 @@
           "title": "Contact Info",
           "id": "ID",
           "idLabel": "ID: ",
+          "remark": "Remark",
+          "remarkLabel": "Remark:",
           "nickname": "Nickname",
           "nicknameLabel": "Nickname:",
           "region": "Region",
@@ -509,7 +511,8 @@
           "title": "Member",
           "search": "Search Group Members",
           "viewMore": "View More",
-          "collapse": "Collapse"
+          "collapse": "Collapse",
+          "remove": "Remove"
         },
         "details": {
           "name": "Group Name",
@@ -525,10 +528,100 @@
         "actions": {
           "enter": "Enter Group",
           "viewMembers": "View Members",
-          "leave": "Leave Group"
+          "leave": "Leave Group",
+          "dissolve": "Dissolve Group"
         },
         "empty": {
           "noSelection": "No group selected or group information is empty"
+        },
+        "management": {
+          "sectionTitle": "Group Management",
+          "joinMode": "Join Mode",
+          "muteAll": "Mute All",
+          "transferOwner": "Transfer Ownership"
+        },
+        "joinMode": {
+          "dialogTitle": "Join Mode",
+          "options": {
+            "free": { "label": "Free to Join", "desc": "Anyone can join directly" },
+            "approval": { "label": "Approval Required", "desc": "Requires owner or admin approval" },
+            "forbidden": { "label": "No New Members", "desc": "New members are not allowed" }
+          },
+          "defaultLabel": "Approval Required",
+          "updated": "Join mode updated"
+        },
+        "transferOwner": {
+          "dialogTitle": "Transfer Ownership",
+          "tip": "After selecting a new owner, you will become a regular member.",
+          "confirmMessage": "Transfer ownership to {name}? You will become a regular member.",
+          "success": "Ownership transferred",
+          "buttonConfirm": "Confirm Transfer"
+        },
+        "removeMember": {
+          "dialogTitle": "Remove Members",
+          "searchPlaceholder": "Search members",
+          "confirmMessage": "Remove {count} selected member(s)?",
+          "successCount": "{count} member(s) removed",
+          "buttonRemove": "Remove"
+        },
+        "memberAction": {
+          "dialogTitle": "Member Management",
+          "muteDurationLabel": "Mute Duration",
+          "setAdmin": "Set as Admin",
+          "cancelAdmin": "Remove Admin",
+          "mute": "Mute",
+          "unmute": "Unmute",
+          "kick": "Remove from Group"
+        },
+        "roles": {
+          "owner": "Owner",
+          "admin": "Admin",
+          "member": "Member"
+        },
+        "muteDurations": {
+          "10m": "10 min",
+          "1h": "1 hour",
+          "12h": "12 hours",
+          "1d": "1 day",
+          "3d": "3 days",
+          "7d": "7 days",
+          "30d": "30 days"
+        },
+        "messages": {
+          "inviteSent": "Invitation sent",
+          "joinModeUpdated": "Join mode updated",
+          "muteAllOn": "Mute all enabled",
+          "muteAllOff": "Mute all disabled",
+          "adminSet": "Set as admin",
+          "adminCanceled": "Admin removed",
+          "muteSuccess": "Member muted",
+          "unmuteSuccess": "Unmuted",
+          "kickSuccess": "Member removed",
+          "removeSuccess": "{count} member(s) removed",
+          "groupInfoUpdated": "Group info updated",
+          "updateFailed": "Update failed",
+          "onlyOwnerRename": "Only the owner can change the group name"
+        },
+        "confirm": {
+          "tip": "Tip",
+          "saveName": "Save group name changes?",
+          "saveNotice": "Save group notice changes?",
+          "clearChat": "Clear all chat history for this group?",
+          "quitTitle": "Leave Group",
+          "quitMessage": "Leave this group?",
+          "dissolveTitle": "Dissolve Group",
+          "dissolveMessage": "Dissolve this group?",
+          "kickTitle": "Remove from Group",
+          "kickMessage": "Remove {name} from this group?",
+          "removeTitle": "Remove Members",
+          "removeMessage": "Remove {count} selected member(s)?",
+          "transferTitle": "Transfer Ownership",
+          "transferMessage": "Transfer ownership to {name}? You will become a regular member."
+        },
+        "buttons": {
+          "cancel": "Cancel",
+          "confirm": "Confirm",
+          "save": "Save"
         }
       },
 

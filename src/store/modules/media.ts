@@ -5,6 +5,7 @@ import { Store as TauriStore } from "@tauri-apps/plugin-store";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { markRaw, ref, computed } from "vue";
 import { CacheEnum, StoresEnum } from "@/constants";
+import { logger } from "@/hooks/useLogger";
 
 /**
  * 媒体缓存 Store（简化优化版）
@@ -90,22 +91,14 @@ export const useMediaCacheStore = defineStore(
               .reduce((map, [k, v]) => ({ ...map, [k]: v as string }), {});
           }
         } catch (e) {
-          // 读取失败则保留空 map
           mediaMap.value = {};
-          if (process.env.NODE_ENV !== "production") {
-            // eslint-disable-next-line no-console
-            console.warn("[MediaCacheStore] load mediaMap fail:", e);
-          }
+          logger.warn("[MediaCacheStore] load mediaMap fail:", e);
         }
       } catch (e) {
-        // store 加载失败（极少情况），保持降级策略
         storage.value = null;
         targetId.value = id;
         mediaMap.value = {};
-        if (process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
-          console.error("[MediaCacheStore] initStorage failed:", e);
-        }
+        logger.error("[MediaCacheStore] initStorage failed:", e);
       }
     };
 
@@ -122,10 +115,7 @@ export const useMediaCacheStore = defineStore(
         }
         await storage.value.save();
       } catch (e) {
-        if (process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
-          console.error("[MediaCacheStore] persist failed:", e);
-        }
+        logger.error("[MediaCacheStore] persist failed:", e);
       }
     };
 
@@ -167,11 +157,7 @@ export const useMediaCacheStore = defineStore(
           inflightPromises.delete(filePath);
         }
       } catch (e) {
-        // 下载或写入失败：上层可决定使用原始 URL 回退
-        if (process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
-          console.warn("[MediaCacheStore] cacheUrl failed, fallback to original URL:", e);
-        }
+        logger.warn("[MediaCacheStore] cacheUrl failed, fallback to original URL:", e);
         return url;
       }
     };

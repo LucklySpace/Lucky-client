@@ -5,19 +5,19 @@
       <!-- 头部：头像 + 基本信息 -->
       <el-row align="middle" class="contact-detail__header">
         <el-col :span="6" class="no-select">
-            <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
+          <Avatar :avatar="friendInfo.avatar || ' '" :name="friendInfo.name" :width="84" :borderRadius="6" />
         </el-col>
 
         <el-col :span="18" class="contact-detail__meta">
           <div class="contact-detail__name-row">
             <span class="contact-detail__name">{{ friendInfo.name }}</span>
             <svg v-if="friendInfo.gender === 1" aria-hidden="true" class="contact-detail__gender no-select">
-                <use xlink:href="#icon-nanxing" />
-              </svg>
+              <use xlink:href="#icon-nanxing" />
+            </svg>
             <svg v-else-if="friendInfo.gender === 0" aria-hidden="true" class="contact-detail__gender no-select">
-                <use xlink:href="#icon-nvxing" />
-              </svg>
-            </div>
+              <use xlink:href="#icon-nvxing" />
+            </svg>
+          </div>
           <div v-if="friendInfo.friendId" class="contact-detail__id">
             {{ $t("pages.contacts.info.idLabel") }} {{ friendInfo.friendId }}
           </div>
@@ -28,21 +28,17 @@
 
       <!-- 详细信息 -->
       <div class="contact-detail__info">
-        <InfoRow v-if="friendInfo.name" :label="$t('business.profile.fields.remark')">
+        <InfoRow v-if="friendInfo.name" :label="$t('pages.contacts.info.remarkLabel')">
           <template v-if="!isEditingRemark">
             <span class="contact-detail__remark" @click="startEditRemark">
               {{ remark || friendInfo.name }}
             </span>
-            <el-icon class="contact-detail__edit-icon"><Edit /></el-icon>
+            <el-icon class="contact-detail__edit-icon">
+              <Edit />
+            </el-icon>
           </template>
-          <el-input
-            v-else
-            v-model="remark"
-            size="small"
-            class="contact-detail__remark-input"
-            @keyup.enter="saveRemark"
-            @blur="cancelEdit"
-          />
+          <el-input v-else v-model="remark" size="small" class="contact-detail__remark-input" @keyup.enter="saveRemark"
+            @blur="cancelEdit" />
         </InfoRow>
 
         <InfoRow v-if="friendInfo.name" :label="$t('pages.contacts.info.nicknameLabel')">
@@ -53,7 +49,8 @@
           {{ friendInfo.location }}
         </InfoRow>
 
-        <InfoRow v-if="friendInfo.selfSignature" :label="$t('pages.contacts.info.signatureLabel')" class="contact-detail__signature">
+        <InfoRow v-if="friendInfo.selfSignature" :label="$t('pages.contacts.info.signatureLabel')"
+          class="contact-detail__signature">
           {{ friendInfo.selfSignature }}
         </InfoRow>
       </div>
@@ -62,10 +59,10 @@
       <div class="contact-detail__actions">
         <el-button type="primary" @click="handleSendMessage">
           {{ $t("pages.contacts.actions.sendMessage") }}
-          </el-button>
+        </el-button>
         <el-button @click="handleCall">
           {{ $t("pages.contacts.actions.videoCall") }}
-          </el-button>
+        </el-button>
       </div>
     </el-card>
 
@@ -79,6 +76,7 @@ import Avatar from "@/components/Avatar/index.vue";
 import { MAX_REMARK_LEN, MessageType } from "@/constants";
 import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { useFriendsStore } from "@/store/modules/friends";
 import { ElMessage } from "element-plus";
 import { computed, h, ref, watch } from "vue";
@@ -107,6 +105,7 @@ const InfoRow = (props: { label: string }, { slots }: { slots: any }) => {
 const { t } = useI18n();
 const router = useRouter();
 const chatStore = useChatStore();
+const messageStore = useMessageStore();
 const friendStore = useFriendsStore();
 const callStore = useCallStore();
 
@@ -164,9 +163,9 @@ const navigateToChat = async (friend: Friend, messageType: number) => {
   if (!friend) return;
 
   await chatStore.handleChangeCurrentChatByTarget(friend, messageType);
-  chatStore.handleResetMessage();
-  await chatStore.handleGetMessageCount();
-  await chatStore.handleGetMessageList(chatStore.currentChat);
+  messageStore.handleResetMessage();
+  await messageStore.handleGetMessageCount();
+  await messageStore.handleGetMessageList(chatStore.currentChat);
   router.push("/message");
 };
 
@@ -191,13 +190,13 @@ const handleCall = async () => {
   box-sizing: border-box;
 
   &__card {
-  width: 600px;
-  max-width: calc(100% - 32px);
-  border-radius: 5px;
+    width: 600px;
+    max-width: calc(100% - 32px);
+    border-radius: 5px;
     transition: box-shadow 0.18s ease;
 
-  &:hover {
-    box-shadow: 0 12px 36px rgba(16, 24, 40, 0.08);
+    &:hover {
+      box-shadow: 0 12px 36px rgba(16, 24, 40, 0.08);
     }
   }
 
@@ -242,37 +241,37 @@ const handleCall = async () => {
   }
 
   &__row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      font-size: 14px;
-      color: #333;
-      margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
 
-      strong {
-        color: #6b6b6b;
-        min-width: 84px;
-      }
+    strong {
+      color: #6b6b6b;
+      min-width: 84px;
     }
+  }
 
   &__remark {
-      cursor: pointer;
-      color: var(--main-text-color);
-    }
+    cursor: pointer;
+    color: var(--main-text-color);
+  }
 
   &__edit-icon {
-      font-size: 12px;
-      color: #6b6b6b;
-      margin-left: 4px;
-    }
+    font-size: 12px;
+    color: #6b6b6b;
+    margin-left: 4px;
+  }
 
   &__remark-input {
-      max-width: 220px;
-    }
+    max-width: 220px;
+  }
 
   &__signature {
-      color: #495057;
-      font-style: italic;
+    color: #495057;
+    font-style: italic;
   }
 
   &__actions {
@@ -291,7 +290,7 @@ const handleCall = async () => {
     font-size: 14px;
     text-align: center;
     padding: 18px;
-}
+  }
 }
 
 @media (max-width: 520px) {

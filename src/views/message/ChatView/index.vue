@@ -21,6 +21,7 @@
 <script lang="ts" setup>
 import type Chats from "@/database/entity/Chats";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { useMediaCacheStore } from "@/store/modules/media";
 import { useWindowSize } from "@vueuse/core";
 import { ElMessageBox } from "element-plus";
@@ -28,6 +29,7 @@ import { computed, ref } from "vue";
 import ItemView from "./ItemView/index.vue";
 
 const chatMessageStore = useChatStore();
+const messageStore = useMessageStore();
 const mediaStore = useMediaCacheStore();
 
 const { height: windowHeight } = useWindowSize();
@@ -62,10 +64,10 @@ const handleScroll = () => {
 
 const handleChooseChat = async (item: Chats) => {
   selectedId.value = item.chatId;
-  chatMessageStore.handleResetMessage();
+  messageStore.handleResetMessage();
   await mediaStore.initStorage(item.toId);
   await chatMessageStore.handleChangeCurrentChat(item);
-  await chatMessageStore.handleGetMessageList(item);
+  await messageStore.handleGetMessageList(item);
   await chatMessageStore.handleUpdateReadStatus(item);
 };
 

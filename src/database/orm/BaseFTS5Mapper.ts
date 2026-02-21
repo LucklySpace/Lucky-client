@@ -689,6 +689,149 @@ export class BaseFTS5Mapper<T extends Record<string, any>> extends BaseMapper<T>
     }
   }
 
+  async batchInsertOrUpdateFTS(
+    entities: Array<Partial<T>>,
+    extraData?: Partial<T>,
+    batchSize: number = 200
+  ): Promise<{ inserted: number; updated: number }> {
+    if (!entities?.length) return { inserted: 0, updated: 0 };
+    await this.ensureFTSReady();
+
+    const idCol = this.pkCol?.columnName;
+    const idProp = this.pkCol?.property;
+
+    const ftsCols =
+      Array.isArray(this.fts5Fields) && this.fts5Fields.length > 0
+        ? this.fts5Fields.slice()
+        : this.cols?.map(c => c.columnName) ?? [];
+    if (idCol && !ftsCols.includes(idCol)) ftsCols.unshift(idCol);
+    if (ftsCols.length === 0) return { inserted: 0, updated: 0 };
+
+    const colToProp: Record<string, string> =
+      this.cols?.reduce<Record<string, string>>((acc, m) => {
+        acc[m.columnName] = m.property;
+        return acc;
+      }, {}) ?? {};
+
+    const extraByProp: Record<string, any> = extraData ? { ...(extraData as any) } : {};
+    const extraByCol: Record<string, any> = extraData ? { ...(extraData as any) } : {};
+    if (extraData) {
+      for (const col of Object.keys(colToProp)) {
+        const prop = colToProp[col];
+        if (prop && (extraData as any)[prop] !== undefined) extraByCol[col] = (extraData as any)[prop];
+        if ((extraData as any)[col] !== undefined) extraByProp[prop] = (extraData as any)[col];
+      }
+    }
+
+    const rawTokenized = await this.tokenizeBatch(entities, colToProp);
+    const tokensMap = new Map<number, string[]>();
+    for (const k of Object.keys(rawTokenized || {})) {
+      const idx = Number(k);
+      if (!Number.isNaN(idx)) tokensMap.set(idx, rawTokenized[k]);
+    }
+
+    const getPkValue = (item: Partial<T>) => {
+      if (idProp && (item as any)[idProp] !== undefined) return (item as any)[idProp];
+      if (idCol && (item as any)[idCol] !== undefined) return (item as any)[idCol];
+      return undefined;
+    };
+
+    const getInsertValue = (item: Partial<T>, idx: number, col: string) => {
+      if (col === this.fts5MatchField && tokensMap.has(idx)) {
+        const arr = tokensMap.get(idx)!;
+        return Array.isArray(arr) ? arr.join(" ") : arr;
+      }
+      const prop = colToProp[col];
+      if (prop && (item as any)[prop] !== undefined) return (item as any)[prop];
+      if ((item as any)[col] !== undefined) return (item as any)[col];
+      if (prop && extraByProp[prop] !== undefined) return extraByProp[prop];
+      if (extraByCol[col] !== undefined) return extraByCol[col];
+      return null;
+    };
+
+    const getUpdateValue = (item: Partial<T>, idx: number, col: string) => {
+      const prop = colToProp[col];
+      const hasProp = prop ? Object.prototype.hasOwnProperty.call(item, prop) : false;
+      const hasCol = Object.prototype.hasOwnProperty.call(item, col);
+      if (!hasProp && !hasCol) return undefined;
+      if (col === this.fts5MatchField && tokensMap.has(idx)) {
+        const arr = tokensMap.get(idx)!;
+        return Array.isArray(arr) ? arr.join(" ") : arr;
+      }
+      const val = hasProp ? (item as any)[prop!] : (item as any)[col];
+      return val;
+    };
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (let i = 0; i < entities.length; i += batchSize) {
+      const batch = entities.slice(i, i + batchSize);
+      const rawPkValues = batch.map(getPkValue).filter(v => v !== undefined && v !== null && v !== "");
+      const uniquePkValues = Array.from(new Set(rawPkValues.map(v => String(v))));
+      let existingSet = new Set<string>();
+
+      if (idCol && uniquePkValues.length > 0) {
+        const placeholders = uniquePkValues.map(() => "?").join(", ");
+        const rows = await this.fts5database.query<any>(
+          `SELECT ${idCol} FROM ${this.fts5TableName} WHERE ${idCol} IN (${placeholders})`,
+          uniquePkValues
+        );
+        existingSet = new Set(
+          rows
+            .map(r => r?.[idCol])
+            .filter(v => v !== undefined && v !== null)
+            .map(v => String(v))
+        );
+      }
+
+      await this.fts5database.beginTransaction();
+      try {
+        for (let bi = 0; bi < batch.length; bi++) {
+          const item = batch[bi];
+          const pkValue = getPkValue(item);
+          const pkKey = pkValue !== undefined && pkValue !== null ? String(pkValue) : null;
+          const exists = pkKey ? existingSet.has(pkKey) : false;
+
+          if (exists && pkValue !== undefined && pkValue !== null && idCol) {
+            const sets: string[] = [];
+            const params: any[] = [];
+            for (const col of ftsCols) {
+              if (col === idCol) continue;
+              const val = getUpdateValue(item, i + bi, col);
+              if (val === undefined) continue;
+              sets.push(`${col} = ?`);
+              params.push(val);
+            }
+            if (sets.length > 0) {
+              params.push(pkValue);
+              await this.fts5database.execute(
+                `UPDATE ${this.fts5TableName} SET ${sets.join(", ")} WHERE ${idCol} = ?`,
+                params
+              );
+              updated++;
+            }
+          } else {
+            const params = ftsCols.map(col => getInsertValue(item, i + bi, col));
+            await this.fts5database.execute(
+              `INSERT INTO ${this.fts5TableName} (${ftsCols.join(", ")}) VALUES (${ftsCols
+                .map(() => "?")
+                .join(", ")})`,
+              params
+            );
+            inserted++;
+          }
+        }
+        await this.fts5database.commit();
+      } catch (err) {
+        await this.fts5database.rollback();
+        throw err;
+      }
+    }
+
+    return { inserted, updated };
+  }
+
   /**
    * 删除单条或多条记录（支持传入数组）
    */

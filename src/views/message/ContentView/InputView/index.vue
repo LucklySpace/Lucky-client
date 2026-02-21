@@ -135,6 +135,7 @@ import { ReplyMessageInfo } from "@/models";
 import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
 import { useGroupStore } from "@/store/modules/group";
+import { useMessageStore } from "@/store/modules/message";
 import { useSettingStore } from "@/store/modules/setting";
 import onPaste from "@/utils/Paste";
 import { storage } from "@/utils/Storage";
@@ -144,6 +145,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 // ==================== Store & Hooks ====================
 
 const chatStore = useChatStore();
+const messageStore = useMessageStore();
 const callStore = useCallStore();
 const settingStore = useSettingStore();
 const groupStore = useGroupStore();
@@ -400,7 +402,7 @@ const handleSend = async () => {
     }
   }
 
-  await chatStore.handleSendMessage(parts);
+  await messageStore.handleSendMessage(parts);
   log.prettyInfo("send message", parts);
 
   // 清理编辑器和文件队列

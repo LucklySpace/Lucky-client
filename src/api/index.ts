@@ -229,112 +229,115 @@ export default {
   /** ================================================== 业务模块 =============================================================== */
 
   /** 发送单聊消息 */
-  SendSingleMessage: (data: any) => Http.post("/service/api/v1/message/single", data),
+  SendSingleMessage: (data: any) => Http.post("/chat/api/v1/message/single", data),
 
   /** 发送群聊消息 */
-  SendGroupMessage: (data: any) => Http.post("/service/api/v1/message/group", data),
+  SendGroupMessage: (data: any) => Http.post("/chat/api/v1/message/group", data),
 
   /** 撤回消息 */
-  RecallMessage: (data: any) => Http.post("/service/api/v1/message/recall", data),
+  RecallMessage: (data: any) => Http.post("/chat/api/v1/message/recall", data),
 
   /** 获取群成员 */
-  GetGroupMember: (data: any) => Http.post("/service/api/v1/group/member", data),
+  GetGroupMember: (data: any) => Http.post("/chat/api/v1/group/member", data),
 
   /** 更新群聊信息 */
-  updateGroupInfo: (data: any) => Http.post("/service/api/v1/group/update", data),
+  updateGroupInfo: (data: any) => Http.post("/chat/api/v1/group/update", data),
 
   /** 更新修改好友备注名 **/
-  updateFriendRemark: (data: any) => Http.post("/service/api/v1/relationship/updateFriendRemark", data),
+  updateFriendRemark: (data: any) => Http.post("/chat/api/v1/relationship/updateFriendRemark", data),
 
   /** 同意或拒绝群聊邀请 */
-  ApproveGroup: (data: any) => Http.post("/service/api/v1/group/approve", data),
+  ApproveGroup: (data: any) => Http.post("/chat/api/v1/group/approve", data),
 
   /** 退出群聊 */
-  QuitGroups: (data: any) => Http.post("/service/api/v1/group/quit", data),
+  QuitGroups: (data: any) => Http.post("/chat/api/v1/group/quit", data),
 
   /** 邀请群成员 */
-  InviteGroupMember: (data: any) => Http.post("/service/api/v1/group/invite", data),
+  InviteGroupMember: (data: any) => Http.post("/chat/api/v1/group/invite", data),
 
   /** 获取群信息 */
-  GetGroupInfo: (data: any) => Http.post("/service/api/v1/group/info", data),
+  GetGroupInfo: (data: any) => Http.post("/chat/api/v1/group/info", data),
 
   /** 踢出群成员 */
-  KickGroupMember: (data: any) => Http.post("/service/api/v1/group/member/kick", data),
+  KickGroupMember: (data: any) => Http.post("/chat/api/v1/group/member/kick", data),
 
   /** 设置/取消管理员 */
-  SetGroupAdmin: (data: any) => Http.post("/service/api/v1/group/member/setAdmin", data),
+  SetGroupAdmin: (data: any) => Http.post("/chat/api/v1/group/member/setAdmin", data),
 
   /** 移交群主 */
-  TransferGroupOwner: (data: any) => Http.post("/service/api/v1/group/transferOwner", data),
+  TransferGroupOwner: (data: any) => Http.post("/chat/api/v1/group/transferOwner", data),
 
   /** 设置群加入方式 */
-  SetGroupJoinMode: (data: any) => Http.post("/service/api/v1/group/setJoinMode", data),
+  SetGroupJoinMode: (data: any) => Http.post("/chat/api/v1/group/setJoinMode", data),
 
   /** 禁言/取消禁言成员 */
-  MuteGroupMember: (data: any) => Http.post("/service/api/v1/group/member/mute", data),
+  MuteGroupMember: (data: any) => Http.post("/chat/api/v1/group/member/mute", data),
 
   /** 更新群成员信息（群昵称/备注） */
-  UpdateGroupMember: (data: any) => Http.post("/service/api/v1/group/member/update", data),
+  UpdateGroupMember: (data: any) => Http.post("/chat/api/v1/group/member/update", data),
 
   /** 全员禁言/取消全员禁言 */
-  MuteAllGroupMembers: (data: any) => Http.post("/service/api/v1/group/muteAll", data),
+  MuteAllGroupMembers: (data: any) => Http.post("/chat/api/v1/group/muteAll", data),
 
   /** 解散群组 */
-  DismissGroup: (data: any) => Http.post("/service/api/v1/group/dismiss", data),
+  DismissGroup: (data: any) => Http.post("/chat/api/v1/group/dismiss", data),
 
   /** 设置群公告 */
-  SetGroupAnnouncement: (data: any) => Http.post("/service/api/v1/group/announcement", data),
+  SetGroupAnnouncement: (data: any) => Http.post("/chat/api/v1/group/announcement", data),
 
-  /** 获取消息列表 */
-  GetMessageList: (data: any) => Http.post("/service/api/v1/message/list", data),
+  /** 获取私聊消息列表 */
+  GetSingleMessageList: (data: any) => Http.post("/chat/api/v1/message/single/list", data),
+
+  /** 获取群聊消息列表 */
+  GetGroupMessageList: (data: any) => Http.post("/chat/api/v1/message/group/list", data),
 
   /** 检查单聊消息 */
-  SingleCheck: (data: any) => Http.post("/service/api/v1/message/singleCheck", data),
+  SingleCheck: (data: any) => Http.post("/chat/api/v1/message/singleCheck", data),
 
   /** 发送视频消息 */
-  SendCallMessage: (data: any) => Http.post("/service/api/v1/message/media/video", data),
+  SendCallMessage: (data: any) => Http.post("/chat/api/v1/message/media/video", data),
 
   /** 会话列表 */
-  GetChatList: (data: any) => Http.post("/service/api/v1/chat/list", data),
+  GetChatList: (data: any) => Http.post("/chat/api/v1/chat/list", data),
 
   /** 获取会话 */
-  GetChat: (params: any) => Http.get("/service/api/v1/chat/one", { params }),
+  GetChat: (params: any) => Http.get("/chat/api/v1/chat/one", { params }),
 
   /** 已读 */
-  ReadChat: (data: any) => Http.post("/service/api/v1/chat/read", data),
+  ReadChat: (data: any) => Http.post("/chat/api/v1/chat/read", data),
 
   /** 创建会话 */
-  CreateChat: (data: any) => Http.post("/service/api/v1/chat/create", data),
+  CreateChat: (data: any) => Http.post("/chat/api/v1/chat/create", data),
 
   /** 获取用户信息 */
-  UpdateUserInfo: (data: any) => Http.post("/service/api/v1/user/update", data),
+  UpdateUserInfo: (data: any) => Http.post("/chat/api/v1/user/update", data),
 
   /** 获取好友列表 */
-  GetContacts: (params: any) => Http.get("/service/api/v1/relationship/contacts/list", { params }),
+  GetContacts: (params: any) => Http.get("/chat/api/v1/relationship/contacts/list", { params }),
 
   /** 获取群列表 */
-  GetGroups: (params: any) => Http.get("/service/api/v1/relationship/groups/list", { params }),
+  GetGroups: (params: any) => Http.get("/chat/api/v1/relationship/groups/list", { params }),
 
   /** 获取好友添加请求列表 */
-  GetNewFriends: (params: any) => Http.get("/service/api/v1/relationship/newFriends/list", { params }),
+  GetNewFriends: (params: any) => Http.get("/chat/api/v1/relationship/newFriends/list", { params }),
 
   /** 获取好友信息 */
-  GetContactInfo: (data: any) => Http.post("/service/api/v1/relationship/getFriendInfo", data),
+  GetContactInfo: (data: any) => Http.post("/chat/api/v1/relationship/getFriendInfo", data),
 
   /** 搜索好友信息 */
-  SearchContactInfoList: (data: any) => Http.post("/service/api/v1/relationship/search/getFriendInfoList", data),
+  SearchContactInfoList: (data: any) => Http.post("/chat/api/v1/relationship/search/getFriendInfoList", data),
 
   /** 请求添加好友 */
-  RequestContact: (data: any) => Http.post("/service/api/v1/relationship/requestContact", data),
+  RequestContact: (data: any) => Http.post("/chat/api/v1/relationship/requestContact", data),
 
   /** 同意或拒绝好友请求 */
-  ApproveContact: (data: any) => Http.post("/service/api/v1/relationship/approveContact", data),
+  ApproveContact: (data: any) => Http.post("/chat/api/v1/relationship/approveContact", data),
 
   /** 删除好友 */
-  DeleteContact: (data: any) => Http.post("/service/api/v1/relationship/deleteFriendById", data),
+  DeleteContact: (data: any) => Http.post("/chat/api/v1/relationship/deleteFriendById", data),
 
   /** 获取用户表情包 */
-  GetUserEmojis: (params: any) => Http.get("/service/api/v1/emoji/list", { params }),
+  GetUserEmojis: (params: any) => Http.get("/chat/api/v1/emoji/list", { params }),
 
 
 
@@ -364,5 +367,5 @@ export default {
   /** ================================================== 日志模块 =============================================================== */
 
   /** 异常上报 */
-  ExceptionReport: (params: any) => Http.get("/service/api/v1/tauri/exception/report", { params })
+  ExceptionReport: (params: any) => Http.get("/chat/api/v1/tauri/exception/report", { params })
 };

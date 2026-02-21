@@ -1,5 +1,5 @@
-import { DatabaseManager } from "./DatabaseManager";
 import { ColumnMeta, Metadata } from "../annotation/Decorators";
+import { DatabaseManager } from "./DatabaseManager";
 
 export class SchemaGenerator {
 

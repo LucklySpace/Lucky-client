@@ -25,6 +25,7 @@ import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useGroupStore } from "@/store/modules/group";
+import { useMessageStore } from "@/store/modules/message";
 import { useSettingStore } from "@/store/modules/setting";
 import { useUserStore } from "@/store/modules/user";
 
@@ -73,7 +74,7 @@ const getMessageDisplayText = (code: number, msg?: any): string => {
   const t = getT();
 
   if (code === MessageContentType.TEXT.code) {
-    return msg?.message ?? "";
+    return msg.message ?? msg.text ?? "";
   }
 
   const previewMap: Record<number, string> = {
@@ -127,6 +128,7 @@ class MainManager {
   private readonly stores = {
     user: useUserStore(),
     chat: useChatStore(),
+    message: useMessageStore(),
     call: useCallStore(),
     setting: useSettingStore(),
     friend: useFriendsStore(),
@@ -311,7 +313,7 @@ class MainManager {
 
   private initEventListeners(): void {
     globalEventBus.on("message:recall", payload => {
-      this.stores.chat.handleSendRecallMessage(payload);
+      this.stores.message.handleSendRecallMessage(payload);
     });
   }
 
@@ -355,7 +357,11 @@ class MainManager {
     return withTiming(
       "sync",
       "用户数据同步",
-      () => Promise.all([this.syncOfflineMessages(), this.syncChatSessions(), this.syncFriends()]).then(() => { }),
+      () => Promise.all([
+        this.syncOfflineMessages(),
+        this.syncChatSessions(),
+        this.syncFriends(),
+      ]).then(() => { }),
       this.log
     );
   }
@@ -368,37 +374,50 @@ class MainManager {
   }
 
   private async syncOfflineMessages(): Promise<void> {
-    const { chatsMapper, singleMessageMapper, groupMessageMapper } = this.mappers;
+    const { singleMessageMapper, groupMessageMapper } = this.mappers;
     const ownerId = this.stores.user.userId;
-
-    const chats = await chatsMapper.findLastChat();
-    const sequence = chats?.[0]?.sequence || 0;
-    const res: any = await api.GetMessageList({ fromId: ownerId, sequence });
-
-    if (!res) {
-      this.log.prettyInfo("message", "无新离线消息");
-      return;
-    }
 
     const insertConfig = { ownerId, messageType: 0 };
 
     // 处理私聊消息
-    const singleMsgs = res[MessageType.SINGLE_MESSAGE.code];
-    if (singleMsgs) {
-      insertConfig.messageType = MessageType.SINGLE_MESSAGE.code;
-      await singleMessageMapper.batchInsert(singleMsgs, insertConfig);
-      singleMessageMapper.batchInsertFTS5(singleMsgs, insertConfig, 200, this.exec);
-    }
+    singleMessageMapper.findLastMessage().then(res => {
+
+      const sequence = res?.sequence;
+      sequence && api.GetSingleMessageList({ fromId: ownerId, sequence }).then(async res => {
+
+        if (!res || !Array.isArray(res) || res.length === 0) {
+          this.log.prettyDebug("message", "无新私聊离线消息");
+          return;
+        }
+
+        insertConfig.messageType = MessageType.SINGLE_MESSAGE.code;
+        await singleMessageMapper.batchInsert(res as any, insertConfig);
+        singleMessageMapper.batchInsertFTS5(res as any, insertConfig, 200, this.exec);
+
+        this.log.prettyInfo("message", "私聊离线消息同步成功");
+      });
+
+    });
 
     // 处理群聊消息
-    const groupMsgs = res[MessageType.GROUP_MESSAGE.code];
-    if (groupMsgs) {
-      insertConfig.messageType = MessageType.GROUP_MESSAGE.code;
-      await groupMessageMapper.batchInsert(groupMsgs, insertConfig);
-      groupMessageMapper.batchInsertFTS5(groupMsgs, insertConfig, 200, this.exec);
-    }
+    groupMessageMapper.findLastMessage().then(res => {
 
-    this.log.prettyInfo("message", "离线消息同步成功");
+      const sequence = res?.sequence;
+
+      sequence && api.GetGroupMessageList({ fromId: ownerId, sequence }).then(async res => {
+
+        if (!res || !Array.isArray(res) || res.length === 0) {
+          this.log.prettyDebug("message", "无新群聊离线消息");
+          return;
+        }
+
+        insertConfig.messageType = MessageType.GROUP_MESSAGE.code;
+        await groupMessageMapper.batchInsert(res as any, insertConfig);
+        groupMessageMapper.batchInsertFTS5(res as any, insertConfig, 200, this.exec);
+
+        this.log.prettyInfo("message", "群聊离线消息同步成功");
+      });
+    });
   }
 
   private async syncChatSessions(): Promise<void> {
@@ -406,9 +425,8 @@ class MainManager {
     const { chat } = this.stores;
     const ownerId = this.stores.user.userId;
 
-    try {
-      const lastChats = await chatsMapper.findLastChat();
-      const sequence = lastChats?.[0]?.sequence ?? 0;
+    chatsMapper.findLastChat().then(async lastChat => {
+      const sequence = lastChat?.[0]?.sequence ?? 0;
       const res: any = await api.GetChatList({ fromId: ownerId, sequence });
 
       if (Array.isArray(res) && res.length > 0) {
@@ -426,24 +444,21 @@ class MainManager {
           return { ...rest, message: this.formatMessagePreview(parsedMessage, messageContentType) };
         });
 
-        await chatsMapper.batchInsert(transformed);
-        chatsMapper.batchInsertFTS5(transformed, undefined, 200, this.exec);
+        await chatsMapper.batchInsertOrUpdate(transformed);
+        chatsMapper.batchInsertOrUpdateFTS(transformed);
       }
-
+      this.log.prettyInfo("chat", "会话同步成功");
+    }).catch(async err => {
+      this.log.prettyInfo("chat", "会话同步错误", err);
+    }).finally(async () => {
       // 重新加载并排序聊天列表
       chat.chatList = await chatsMapper.selectList() ?? [];
       chat.handleSortChatList();
-      this.log.prettyInfo("chat", "会话同步成功");
-    } catch (err) {
-      // 失败时仍加载本地数据
-      chat.chatList = await chatsMapper.selectList() ?? [];
-      chat.handleSortChatList();
-      throw err;
-    }
+    });
   }
 
   private async initSystemTray(): Promise<void> {
-    const { user, chat } = this.stores;
+    const { user, chat, message: messageStore } = this.stores;
 
     await this.tray.initSystemTray({
       id: "app-tray",
@@ -475,10 +490,10 @@ class MainManager {
 
             try {
               router.push("/message");
-              await Promise.all([chat.handleChangeCurrentChat(item), chat.handleResetMessage()]);
+              await Promise.all([chat.handleChangeCurrentChat(item), messageStore.handleResetMessage()]);
               await ShowMainWindow();
               await Promise.all([
-                chat.handleGetMessageList(item),
+                messageStore.handleGetMessageList(item),
                 chat.handleUpdateReadStatus(item),
                 hideNotifyWindow(),
               ]);
@@ -569,7 +584,7 @@ class MainManager {
       // 消息操作
       if (code === MessageType.MESSAGE_OPERATION.code) {
         const message = IMessageAction.fromPlain(data);
-        this.stores.chat.handleReCallMessage(message);
+        this.stores.message.handleReCallMessage(message);
       }
     });
   }
@@ -592,22 +607,37 @@ class MainManager {
     return Priority.NORMAL;
   }
 
+  /**
+   * 解析聊天消息的目标会话 ID（私聊取对方 ID，群聊取群 ID）
+   */
+  private resolveChatTargetId(message: IMessage, code: number): string | number | null {
+    if (!message) return null;
+    if (code === MessageType.SINGLE_MESSAGE.code) {
+      const single = message as IMSingleMessage;
+      const myId = this.stores.user.userId;
+      return String(single.fromId) === myId ? single.toId : single.fromId;
+    }
+    if (code === MessageType.GROUP_MESSAGE.code) {
+      return (message as IMGroupMessage).groupId;
+    }
+    return null;
+  }
+
   private async handleChatMessage(code: number, data: any): Promise<void> {
-    const { chat, setting } = this.stores;
-
+    const { chat, setting, message: messageStore } = this.stores;
     const message = IMessage.fromPlainByType(data);
-    const chatId =
-      code === MessageType.SINGLE_MESSAGE.code
-        ? (message as IMSingleMessage).fromId
-        : (message as IMGroupMessage).groupId;
+    if (!message) return;
 
-    // 新消息通知
-    if (setting.notification.message && message && (await appIsMinimizedOrHidden())) {
+    const targetId = this.resolveChatTargetId(message, code);
+    if (targetId == null) return;
+
+    if (setting.notification.message && (await appIsMinimizedOrHidden())) {
       this.tray.flash(true);
     }
 
-    chat.handleCreateOrUpdateChat(message, chatId);
-    chat.handleCreateMessage(chatId, message, code);
+    const existingChat = chat.getChatByToId(targetId);
+    chat.handleCreateOrUpdateChat(message, existingChat ?? null);
+    messageStore.handleCreateMessage(targetId, message, code);
   }
 
   // ==================== 工具方法 ====================

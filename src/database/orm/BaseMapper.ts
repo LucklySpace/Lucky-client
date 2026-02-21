@@ -1,9 +1,9 @@
+import { useLogger } from "@/hooks/useLogger";
+import { ColumnMeta, Metadata } from "./annotation/Decorators";
 import { DatabaseManager } from "./core/DatabaseManager";
 import { SchemaGenerator } from "./core/SchemaGenerator";
-import { QueryBuilder, SqlFragment } from "./query/QueryBuilder";
-import { ColumnMeta, Metadata } from "./annotation/Decorators";
 import XMLSQLParser from "./parser/XMLSQLParser";
-import { useLogger } from "@/hooks/useLogger";
+import { QueryBuilder, SqlFragment } from "./query/QueryBuilder";
 
 /**
  * 分页查询结果接口
@@ -208,6 +208,89 @@ export class BaseMapper<T extends Record<string, any>> {
         await this.insert(insertData);
       }
     }
+  }
+
+  async batchInsertOrUpdate(
+    data: Array<Partial<T>>,
+    extraData?: Partial<T>,
+    batchSize: number = 200
+  ): Promise<{ inserted: number; updated: number }> {
+    if (!data || data.length === 0) return { inserted: 0, updated: 0 };
+
+    const colsMeta = Array.isArray(this.cols) ? this.cols : [];
+    if (colsMeta.length === 0) return { inserted: 0, updated: 0 };
+
+    const columnNames = colsMeta.map(c => c.columnName);
+    const props = colsMeta.map(c => c.property);
+    const pkProp = this.pkCol?.property;
+    const pkCol = this.pkCol?.columnName;
+
+    const getPkValue = (item: Partial<T>) => {
+      if (pkProp && (item as any)[pkProp] !== undefined) return (item as any)[pkProp];
+      if (pkCol && (item as any)[pkCol] !== undefined) return (item as any)[pkCol];
+      return undefined;
+    };
+
+    const getInsertParams = (item: Partial<T>) =>
+      props.map((prop, idx) => {
+        const colName = columnNames[idx];
+        if ((item as any)[prop] !== undefined) return (item as any)[prop];
+        if ((item as any)[colName] !== undefined) return (item as any)[colName];
+        if (extraData && (extraData as any)[prop] !== undefined) return (extraData as any)[prop];
+        if (extraData && (extraData as any)[colName] !== undefined) return (extraData as any)[colName];
+        return null;
+      });
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (let i = 0; i < data.length; i += batchSize) {
+      const batch = data.slice(i, i + batchSize);
+      const rawPkValues = batch.map(getPkValue).filter(v => v !== undefined && v !== null && v !== "");
+      const uniquePkValues = Array.from(new Set(rawPkValues.map(v => String(v))));
+      let existingSet = new Set<string>();
+
+      if (pkCol && uniquePkValues.length > 0) {
+        const placeholders = uniquePkValues.map(() => "?").join(", ");
+        const rows = await this.database.query<any>(
+          `SELECT ${pkCol} FROM ${this.tableName} WHERE ${pkCol} IN (${placeholders})`,
+          uniquePkValues
+        );
+        existingSet = new Set(
+          rows
+            .map(r => r?.[pkCol])
+            .filter(v => v !== undefined && v !== null)
+            .map(v => String(v))
+        );
+      }
+
+      //await this.database.beginTransaction();
+      try {
+        for (const item of batch) {
+          const pkValue = getPkValue(item);
+          const pkKey = pkValue !== undefined && pkValue !== null ? String(pkValue) : null;
+          const exists = pkKey ? existingSet.has(pkKey) : false;
+
+          if (exists && pkValue !== undefined && pkValue !== null) {
+            await this.updateById(pkValue as any, item);
+            updated++;
+          } else {
+            const sql = `INSERT INTO ${this.tableName} (${columnNames.join(", ")}) VALUES (${props
+              .map(() => "?")
+              .join(", ")})`;
+            const params = getInsertParams(item);
+            await this.database.execute(sql, params);
+            inserted++;
+          }
+        }
+        //await this.database.commit();
+      } catch (err) {
+        //await this.database.rollback();
+        throw err;
+      }
+    }
+
+    return { inserted, updated };
   }
 
   /**

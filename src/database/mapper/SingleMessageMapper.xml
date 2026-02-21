@@ -47,34 +47,20 @@
     </SQL>
 
     <SQL name="findLastMessage">
-        SELECT
-        *
-        FROM
-        (
-        SELECT
-        messageId,
-        fromId,
-        toId,
-        messageBody,
-        messageContentType,
-        messageTime,
-        messageType,
-        readStatus,
-        sequence,
-        extra
-        FROM
-        single_message
-        WHERE
-        (
-        (fromId = #{fromId} AND toId = #{toId})
-        OR (fromId = #{toId} AND toId =#{fromId})
-        )
-        ORDER BY
-        messageTime DESC
-        LIMIT 1
-        ) subquery
-        ORDER BY
-        messageTime ASC;
+      SELECT
+       messageId,
+       fromId,
+       toId,
+       messageBody,
+       messageContentType,
+       messageTime,
+       messageType,
+       readStatus,
+       sequence,
+       extra
+     FROM single_message
+     ORDER BY sequence DESC
+     LIMIT 1;
     </SQL>
 
     <SQL name="findMessageCount">

@@ -1,12 +1,12 @@
 <SQLStore className="Friends">
     <SQL name="createTable">
         CREATE TABLE IF NOT EXISTS friends (
-        userId TEXT,
-        friendId TEXT,
+        userId TEXT PRIMARY KEY,
+        friendId TEXT PRIMARY KEY,
         name TEXT,
         remark TEXT,
         avatar TEXT,
-        userSex INTEGER,
+        gender INTEGER,
         location TEXT,
         black INTEGER,
         flag TEXT,

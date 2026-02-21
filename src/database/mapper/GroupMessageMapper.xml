@@ -24,6 +24,23 @@
         subquery.messageTime ASC
     </SQL>
 
+    <SQL name="findLastMessage">
+        SELECT
+          fromId,
+          groupId,
+          ownerId,
+          messageBody,
+          messageContentType,
+          messageTime,
+          messageType,
+          readStatus,
+          sequence,
+          extra 
+        FROM group_message
+        ORDER BY sequence DESC
+        LIMIT 1;
+    </SQL>
+
     <SQL name="findMessageCount">
         SELECT count(*) FROM group_message WHERE  ownerId = #{ownerId} AND groupId = #{groupId}
     </SQL>
