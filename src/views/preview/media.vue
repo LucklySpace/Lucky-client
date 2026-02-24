@@ -29,8 +29,8 @@
     <div class="media-previewer">
       <div ref="mediaContainer" class="media-container" @wheel="handleWheel">
         <video v-if="isVideo" ref="videoRef" :src="mediaUrl" controls />
-        <img v-else ref="imageRef" :src="mediaUrl" :style="transformStyle" class="lazy-img" style="cursor: move"
-          @mousedown="startDrag" @mousemove="moveImg" @mouseup="endDrag" />
+        <img v-else ref="imageRef" :src="mediaUrl" :style="transformStyle" class="lazy-img"
+          style="cursor: move;user-select: none;" @mousedown="startDrag" @mousemove="moveImg" @mouseup="endDrag" />
         <!-- 缩放倍率指示器 -->
         <div v-if="showZoomIndicator" class="zoom-indicator">{{ (scale * 100).toFixed(0) }}%</div>
       </div>
@@ -296,5 +296,6 @@ video::-webkit-media-controls-fullscreen-button {
   font-weight: bold;
   pointer-events: none;
   transition: opacity 0.2s;
+  user-select: none;
 }
 </style>
