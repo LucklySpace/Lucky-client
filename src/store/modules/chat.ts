@@ -456,6 +456,21 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     }
   };
 
+  /**
+   * 给任意好友/群组发送消息
+   */
+  const sendMessageToSomeone = async (parts: IMessagePart[], chats: Chats[]) => {
+    if (!parts?.length || !chats.length) return;
+    const allChatPromises = chats.map(chat => {
+      return Promise.all(parts.map(part => sendOnePart(part, chat)))
+    })
+    await Promise.all(allChatPromises)
+  }
+
+  /**
+   * 给当前会话发送消息
+   */
+  // TODO 建议更名为sendMessageToCurrent以示区分
   const sendMessage = async (parts: IMessagePart[]) => {
     if (!parts?.length || !state.currentChat) return;
     const chat = state.currentChat;
@@ -804,6 +819,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     // 消息操作
     handleResetMessage: resetMessages,
     handleSendMessage: sendMessage,
+    handleSendMessageToSomeone: sendMessageToSomeone,
     sendSingle: send,
     uploadAndSendFile: uploadAndSend,
     handleMoreMessage: loadMore,

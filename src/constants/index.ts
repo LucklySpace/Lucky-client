@@ -14,6 +14,12 @@ export const Events = {
   MESSAGE_REPLY: "message:reply",
   /** 取消引用事件 */
   MESSAGE_REPLY_CANCEL: "message:replyCancel",
+  /** 消息转发事件 */
+  MESSAGE_FORWARD: 'message:forward',
+  /** 取消转发事件 */
+  MESSAGE_FORWARD_CANCEL: "message:forwardCancel",
+  /** 转发消息内容 */
+  MESSAGE_FORWARD_CONTENT: "message:forwardContent"
 };
 
 

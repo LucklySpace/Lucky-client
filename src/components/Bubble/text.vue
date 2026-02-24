@@ -207,9 +207,10 @@ const openLink = async () => {
 
 function buildMenuOptions(): MenuOption[] {
   const options: MenuOption[] = [
-    { label: t("components.bubble.reply.action"), value: "reply" },
-    { label: t("common.actions.copy"), value: "copy" },
-    { label: t("common.actions.delete"), value: "delete" }
+    { label: t("components.bubble.reply.action", 'Reply'), value: "reply" },
+    { label: t("common.actions.forward", 'Forward'), value: "forward" },
+    { label: t("common.actions.copy", 'Copy'), value: "copy" },
+    { label: t("common.actions.delete", 'Delete'), value: "delete" }
   ];
 
   if (linkMeta.value) {
@@ -230,6 +231,9 @@ async function handleMenuAction(action: string): Promise<void> {
     switch (action) {
       case "reply":
         handleReply(msg);
+        break;
+      case "forward":
+        handleForward(msg);
         break;
       case "copy":
         await handleCopy(msg);
@@ -262,6 +266,16 @@ function handleReply(msg: Message): void {
     messageContentType: msg.messageContentType || MessageContentType.TEXT.code,
     senderName: msg.name || msg.fromId
   });
+}
+
+/** 处理转发消息 */
+function handleForward(msg: Message) {
+  globalEventBus.emit(Events.MESSAGE_FORWARD, {
+    type: 'text',
+    content: msg.messageBody?.text,
+    id: msg.fromId,
+    name: msg.name,
+  })
 }
 
 async function handleCopy(msg: Message): Promise<void> {

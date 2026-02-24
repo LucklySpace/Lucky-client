@@ -143,6 +143,17 @@ function handleReply(msg: typeof props.message): void {
   });
 }
 
+/** 处理转发消息 */
+function handleForward(msg: typeof props.message): void {
+  const { local, name, path } = parsedBody
+  globalEventBus.emit(Events.MESSAGE_FORWARD, {
+    type: 'file',
+    content: path || local,
+    id: msg.messageId,
+    name: name,
+  })
+}
+
 /**
  * 右键菜单配置（简化：移除未用复制逻辑）
  */
@@ -155,6 +166,7 @@ const getMenuConfig = (item: any) => {
   watchEffect(() => {
     config.options = [
       { label: t("components.bubble.reply.action"), value: "reply" },
+      { label: t("common.actions.forward",), value: "forward" },
       { label: t("common.actions.delete"), value: "delete" },
       {
         label: parsedBody.local ? t("common.actions.showInFolder") : t("common.actions.preview"),
@@ -167,6 +179,11 @@ const getMenuConfig = (item: any) => {
     try {
       if (action === "reply") {
         handleReply(item);
+        return;
+      }
+
+      if (action === "forward") {
+        handleForward(item);
         return;
       }
 
