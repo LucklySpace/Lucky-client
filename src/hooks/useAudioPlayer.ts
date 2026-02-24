@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { logger } from "@/hooks/useLogger";
 
 export function useAudioPlayer() {
   // 缓存 Audio 实例
@@ -37,7 +38,7 @@ export function useAudioPlayer() {
     const audio = getAudio(tip);
     audio.currentTime = 0;
     audio.play().catch(e => {
-      console.error("[useAudioPlayerStandalone] play error", e);
+      logger.error("[useAudioPlayerStandalone] play error", e);
     });
   }
 
@@ -51,7 +52,7 @@ export function useAudioPlayer() {
     audio.loop = true;
     audio.currentTime = 0;
     audio.play().catch(e => {
-      console.error("[useAudioPlayerStandalone] playLoop error", e);
+      logger.error("[useAudioPlayerStandalone] playLoop error", e);
     });
 
     if (duration != null) {

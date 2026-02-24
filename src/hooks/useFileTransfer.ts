@@ -2,6 +2,7 @@ import { ref } from "vue";
 import { upload } from "@tauri-apps/plugin-upload";
 import { stat } from "@tauri-apps/plugin-fs";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { logger } from "@/hooks/useLogger";
 
 
 interface ProgressPayload {
@@ -84,11 +85,9 @@ export function useFileTransfer() {
       try {
         const fileInfo = await stat(savePath);
         resumeOffset = fileInfo.size ?? 0;
-        console.log(`已存在文件大小：${resumeOffset}`);
+        logger.debug(`已存在文件大小：${resumeOffset}`);
       } catch (err) {
-        console.log("错误", err);
-
-        // 文件不存在时忽略
+        logger.debug("断点续传检查", err);
       }
 
       const customHeaders = headers || new Map<string, string>();
@@ -122,7 +121,7 @@ export function useFileTransfer() {
       progress.value = 100;
       progressText.value = "下载完成！";
     } catch (err: any) {
-      console.error("下载失败:", err);
+      logger.error("下载失败:", err);
       progressText.value = `下载失败: ${err.message || err}`;
     } finally {
       isDownloading.value = false;
@@ -161,7 +160,7 @@ export function useFileTransfer() {
       progress.value = 100;
       progressText.value = "上传完成！";
     } catch (err: any) {
-      console.error("上传失败:", err);
+      logger.error("上传失败:", err);
       progressText.value = `上传失败: ${err.message || err}`;
     } finally {
       isUploading.value = false;

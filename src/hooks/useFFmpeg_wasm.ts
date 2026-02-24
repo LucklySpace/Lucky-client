@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { logger as appLogger } from "@/hooks/useLogger";
 
 // import { Command } from '@tauri-apps/plugin-shell';
 // // `binaries/my-sidecar` 是在 `tauri.conf.json > tauri > bundle > externalBin` 指定的确切值。
@@ -52,8 +53,8 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
   const DEFAULT_FFMPEG_BASE = "https://unpkg.com/@ffmpeg/core@0.12.4/dist/esm";
 
   // ---------- 内部 util ----------
-  function logger(...args: any[]) {
-    if (options.log) console.log("[useFFmpeg]", ...args);
+  function log(...args: any[]) {
+    if (options.log) appLogger.debug("[useFFmpeg]", ...args);
   }
 
   function getOrCreateFFmpeg(): FFmpeg {
@@ -71,12 +72,12 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
     const ff = getOrCreateFFmpeg();
     GLOBAL_LOAD_PROMISE = (async () => {
       try {
-        logger("开始加载 ffmpeg...");
+        log("开始加载 ffmpeg...");
         const base = options.coreBaseUrl ?? DEFAULT_FFMPEG_BASE;
 
         // 进度与日志转发
         ff.on("log", ({ message }: any) => {
-          if (options.log) console.log("[ffmpeg]", message);
+          if (options.log) appLogger.debug("[ffmpeg]", message);
         });
         ff.on("progress", ({ progress: p, time }: any) => {
           progress.value = { ratio: p ?? 0, time };
@@ -89,9 +90,9 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
         });
 
         ready.value = true;
-        logger("ffmpeg 加载完成");
+        log("ffmpeg 加载完成");
       } catch (e: any) {
-        logger("ffmpeg load error:", e);
+        log("ffmpeg load error:", e);
         error.value = String(e?.message ?? e);
         // 清理单例以便重试
         GLOBAL_FFMPEG = null;
@@ -119,12 +120,12 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
     ff.on("progress", progHandler);
 
     try {
-      logger("执行 ffmpeg:", args.join(" "));
+      log("执行 ffmpeg:", args.join(" "));
       await ff.exec(args);
-      logger("ffmpeg 执行完成");
+      log("ffmpeg 执行完成");
     } catch (e: any) {
       error.value = String(e?.message ?? e);
-      logger("ffmpeg 执行失败:", e);
+      log("ffmpeg 执行失败:", e);
       throw e;
     } finally {
       running.value = false;
@@ -186,7 +187,7 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
     includeAudio?: boolean;
   }): Promise<MediaStream> {
     if (isRecording.value) {
-      logger("已在录制中");
+      log("已在录制中");
       return mediaStream.value as MediaStream;
     }
 
@@ -209,7 +210,7 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
       const vt = stream.getVideoTracks()[0];
       if (vt) {
         vt.addEventListener("ended", () => {
-          logger("屏幕共享被用户停止（track ended）");
+          log("屏幕共享被用户停止（track ended）");
           // 这里选择自动停止并保留数据，交由调用者处理后续：stopScreenRecord() / cancelScreenRecord()
           // 我们先把 isRecording 置 false，以保证 UI 同步
           isRecording.value = false;
@@ -233,21 +234,21 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
         if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data);
       };
       mr.onerror = (ev: any) => {
-        logger("MediaRecorder error", ev);
+        log("MediaRecorder error", ev);
         error.value = ev?.error?.message || "MediaRecorder 错误";
         isRecording.value = false;
       };
       mr.onstop = () => {
-        logger("MediaRecorder stop event");
+        log("MediaRecorder stop event");
         isRecording.value = false;
       };
 
       if (opts?.timeSlice && opts.timeSlice > 0) mr.start(opts.timeSlice);
       else mr.start();
-      logger("开始录制, mimeType=" + mimeType);
+      log("开始录制, mimeType=" + mimeType);
       return stream;
     } catch (e: any) {
-      logger("startScreenRecord failed:", e);
+      log("startScreenRecord failed:", e);
       isRecording.value = false;
       mediaStream.value = null;
       throw e;
@@ -298,7 +299,7 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
           const url = URL.createObjectURL(mp4Blob);
           return { webmBlob: webm, mp4Blob, url };
         } catch (e: any) {
-          logger("转码失败，回退返回 webm:", e);
+          log("转码失败，回退返回 webm:", e);
           const url = URL.createObjectURL(webm);
           return { webmBlob: webm, mp4Blob: null, url };
         }
@@ -360,7 +361,7 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
       mediaRecorder.value = null;
       mediaStream.value = null;
       isRecording.value = false;
-      logger("录制已取消并清理");
+      log("录制已取消并清理");
     }
   }
 

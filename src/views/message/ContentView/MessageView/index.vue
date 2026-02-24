@@ -28,6 +28,7 @@ import GroupDetail from "@/components/ChatDetail/group.vue";
 import SingleDetail from "@/components/ChatDetail/single.vue";
 import { MessageType } from "@/constants";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { useFriendsStore } from "@/store/modules/friends";
 import { useDebounceFn } from "@vueuse/core";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
@@ -58,6 +59,7 @@ const TIME_GAP_THRESHOLD = 5 * 60 * 1000; // 5分钟
 const SCROLL_BOTTOM_THRESHOLD = 10;
 
 const chatStore = useChatStore();
+const messageStore = useMessageStore();
 const friendStore = useFriendsStore();
 
 const scrollerRef = ref<ScrollerInstance | null>(null);
@@ -144,7 +146,7 @@ const loadMoreMessages = () => {
       isLoadingMore: true,
     };
   }
-  chatStore.handleMoreMessage();
+  messageStore.handleMoreMessage();
 };
 
 // 删除会话对象
@@ -157,7 +159,7 @@ const handleDelete = async () => {
 // 清空会话消息
 const handleClearMessage = async () => {
   if (chatStore.currentChat) {
-    await chatStore.handleClearMessage(chatStore.currentChat);
+    await messageStore.handleClearMessage(chatStore.currentChat);
   }
 };
 

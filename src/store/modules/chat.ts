@@ -1,14 +1,13 @@
 import api from "@/api/index";
-import { Events, isTextType, MessageContentType, MessageType, StoresEnum } from "@/constants";
-import { PageResult, useMappers } from "@/database";
+import { Events, MessageContentType, MessageType, StoresEnum } from "@/constants";
+import { useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
 import { AudioEnum, useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { useChatInput } from "@/hooks/useChatInput";
-import useCrypto from "@/hooks/useCrypto";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { draftManager } from "@/hooks/useInputEditor";
-import { IMessage, IMessageAction, IMessagePart, IMGroupMessage, IMSingleMessage, RecallMessageBody } from "@/models";
+import { IMessage, IMGroupMessage, IMSingleMessage } from "@/models";
 import { safeExecute } from "@/utils/ExceptionHandler";
 import { storage } from "@/utils/Storage";
 import { textReplaceMention } from "@/utils/Strings";
@@ -18,7 +17,7 @@ import { CreateScreenWindow } from "@/windows/screen";
 import { defineStore } from "pinia";
 import { computed, reactive } from "vue";
 import { useGroupStore } from "./group";
-import { useSearchStore } from "./search";
+import { useMessageStore } from "./message";
 import { useSettingStore } from "./setting";
 import { useUserStore } from "./user";
 
@@ -26,12 +25,9 @@ import { useUserStore } from "./user";
 
 interface ChatState {
   chatList: Chats[];
-  messageList: IMessage[];
   currentChat: Chats | null;
   isShowDetail: boolean;
   ignoreList: string[];
-  historyList: IMessage[];
-  currentUrls: string[];
   loading: boolean;
   error: string | null;
 }
@@ -40,7 +36,7 @@ interface ChatState {
 
 export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   // ==================== 依赖 ====================
-  const { chatsMapper, singleMessageMapper, groupMessageMapper } = useMappers();
+  const { chatsMapper } = useMappers();
   const userStore = useUserStore();
   const settingStore = useSettingStore();
   const log = useLogger();
@@ -52,17 +48,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   } = useChatInput();
   const { addTask } = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   const { play } = useAudioPlayer();
-  const { md5 } = useCrypto();
 
   // ==================== 状态 ====================
   const state = reactive<ChatState>({
     chatList: [],
-    messageList: [],
     currentChat: null,
     isShowDetail: false,
     ignoreList: [],
-    historyList: [],
-    currentUrls: [],
     loading: false,
     error: null
   });
@@ -73,14 +65,15 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (!_groupStore) _groupStore = useGroupStore();
     return _groupStore;
   };
-
-  const page = reactive({ num: 1, size: 20, total: 0 });
+  let _messageStore: ReturnType<typeof useMessageStore> | null = null;
+  const getMessageStore = () => {
+    if (!_messageStore) _messageStore = useMessageStore();
+    return _messageStore;
+  };
 
   // ==================== 核心工具 ====================
   const ownerId = computed(() => userStore.userId || storage.get("userId"));
   const isSingle = (chat: any) => chat?.chatType === MessageType.SINGLE_MESSAGE.code;
-  const mapper = (type: number) => type === MessageType.SINGLE_MESSAGE.code ? singleMessageMapper : groupMessageMapper;
-  const sendApi = (chat: any) => isSingle(chat) ? api.SendSingleMessage : api.SendGroupMessage;
   const findChatByToId = (toId: any) => state.chatList.find(item => item.toId === toId);
   const findIdx = (id: any) => findChatIndex(state.chatList, id);
 
@@ -90,7 +83,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     currentType: computed(() => state.currentChat?.chatType),
     totalUnread: computed(() => state.chatList.reduce((s, c) => c.isMute === 0 ? s + (c.unread || 0) : s, 0)),
     isGroup: computed(() => state.currentChat?.chatType === MessageType.GROUP_MESSAGE.code),
-    remaining: computed(() => Math.max(0, page.total - page.num * page.size)),
     unreadChats: computed(() => state.chatList.filter(c => c.unread > 0)),
     /** 群成员（排除自己），委托给 groupStore */
     membersExcludeSelf: computed(() => getGroupStore().getMembersExcludeSelf),
@@ -135,53 +127,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     }
   };
 
-  const parseBody = (raw: unknown): Record<string, any> => {
-    if (raw == null) return {};
-    if (typeof raw === "object") return Array.isArray(raw) ? { parts: raw } : raw as Record<string, any>;
-    if (typeof raw !== "string") return { text: String(raw) };
-    try {
-      const parsed = JSON.parse(raw.trim());
-      return typeof parsed === "object" && parsed ? (Array.isArray(parsed) ? { parts: parsed } : parsed) : { text: String(parsed) };
-    } catch { return { text: raw }; }
-  };
-
-  /**
-   * 转换为 JSON 字符串
-   */
-  const stringifyBody = (raw: unknown): string => {
-    if (raw == null) return "{}";
-    if (typeof raw === "string") {
-      try { JSON.parse(raw); return raw; } catch { return JSON.stringify({ text: raw }); }
-    }
-    return JSON.stringify(raw);
-  };
-
-  /**
-   * 归一化消息（填充缺失字段）
-   */
-  const normalizeMsg = (msg: any, chat: any) => {
-    const body = parseBody(msg?.messageBody);
-    const fromId = msg?.fromId ?? msg?.userId;
-    const isOwner = String(ownerId.value) === String(fromId);
-    if (Number(msg?.messageContentType) === MessageContentType.TIP.code) return { ...msg, messageBody: body };
-
-    const groupStore = getGroupStore();
-    const member = !isOwner && fromId ? groupStore.getMember(String(fromId)) : undefined;
-    const user = userStore.userInfo ?? {};
-    const mentionAll = Boolean((body as any)?.mentionAll);
-    const mentionedUserIds = Array.isArray((body as any)?.mentionedUserIds)
-      ? (body as any).mentionedUserIds.map((v: any) => String(v)).filter(Boolean)
-      : [];
-    return {
-      ...msg,
-      messageBody: body,
-      name: isOwner ? user.name ?? chat?.name : member?.name ?? chat?.name ?? "",
-      avatar: isOwner ? user.avatar ?? chat?.avatar : member?.avatar ?? chat?.avatar ?? "",
-      isOwner,
-      mentionAll,
-      mentionedUserIds
-    };
-  };
 
   /**
    * 构建消息预览（实时计算）
@@ -197,43 +142,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     } catch { return null; }
   };
 
-  /**
-   * 转换为记录
-   */
-  const toRecord = (msg: any) => {
-    const r = { ...msg, ownerId: ownerId.value, messageBody: stringifyBody(msg?.messageBody) };
-    delete r.messageTempId;
-    return r;
-  };
-
-  /**
-   * 构建消息发送参数
-   */
-  const buildPayload = (content: any, chat: any, contentType: number, meta: any = {}) => {
-    // 将 replyMessage 放入 messageBody 中
-    const messageBody = { ...content };
-    if (meta.replyMessage) {
-      messageBody.replyMessage = meta.replyMessage;
-    }
-    if (meta.mentionedUserIds?.length) {
-      messageBody.mentionedUserIds = [...new Set(meta.mentionedUserIds)];
-    }
-    if (meta.mentionAll) {
-      messageBody.mentionAll = meta.mentionAll;
-    }
-
-    const payload: any = {
-      fromId: ownerId.value,
-      messageBody,
-      messageTempId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      messageTime: Date.now(),
-      messageContentType: contentType,
-      messageType: chat?.chatType,
-      [isSingle(chat) ? "toId" : "groupId"]: chat?.toId || ""
-    };
-
-    return payload;
-  };
 
   // ==================== 会话操作 ====================
   const initChat = async () => {
@@ -268,7 +176,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       sortList();
     }
 
-    resetMessages();
+    getMessageStore().handleResetMessage();
     state.currentChat = chat;
 
     // 群聊：加载群成员
@@ -277,6 +185,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
       await groupStore.loadMembers(String(chat.toId));
     }
     emitChange();
+    await getMessageStore().handleGetMessageList(chat);
   };
 
   const changeChatByTarget = async (target: Record<string, any>, chatType: number) => {
@@ -384,7 +293,7 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
 
     if (state.currentChat?.chatId === chat?.chatId) {
       state.currentChat = null;
-      resetMessages();
+      getMessageStore().handleResetMessage();
       getGroupStore().reset();
     }
     draftManager.clear(chat?.chatId);
@@ -684,71 +593,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     if (preview) upsert({ chatId, message: preview, messageTime: Date.now() } as any);
   };
 
-  // ==================== 群组操作（委托给 groupStore） ====================
-
-  /**
-   * 邀请群成员
-   */
-  const addGroupMember = async (memberIds: string[], isInvite = false) => {
-    if (!memberIds?.length || !state.currentChat?.toId) return;
-    await getGroupStore().inviteMembers({
-      groupId: String(state.currentChat.toId),
-      memberIds,
-      type: isInvite ? 1 : 0
-    });
-  };
-
-  /**
-   * 更新群信息（同步更新本地 chatList 状态）
-   */
-  const updateGroup = async (dto: {
-    groupId: string;
-    chatId?: string;
-    groupName?: string;
-    avatar?: string;
-    introduction?: string;
-    notification?: string;
-  }) => {
-    const chatKey = dto.chatId ?? dto.groupId;
-    const result = await getGroupStore().updateGroupInfo({
-      groupId: dto.groupId,
-      groupName: dto.groupName,
-      avatar: dto.avatar,
-      introduction: dto.introduction,
-      notification: dto.notification
-    }, chatKey);
-
-    if (!result) throw new Error("UPDATE_GROUP_INFO_FAILED");
-
-    // 同步更新本地 chatList 状态
-    const idx = findIdx(chatKey);
-    if (dto.groupName) {
-      if (idx !== -1) state.chatList[idx].name = dto.groupName as any;
-      if (state.currentChat?.chatId === chatKey) (state.currentChat as any).name = dto.groupName;
-    }
-    if (dto.notification) {
-      if (idx !== -1) (state.chatList[idx] as any).notification = dto.notification;
-      if (state.currentChat?.chatId === chatKey) (state.currentChat as any).notification = dto.notification;
-    }
-    return result;
-  };
-
-  /**
-   * 退出或解散群组
-   */
-  const leaveOrDismissGroup = async (groupId: string): Promise<boolean> => {
-    const groupStore = getGroupStore();
-    const result = groupStore.getIsOwner
-      ? await groupStore.dismissGroup(groupId)
-      : await groupStore.quitGroup(groupId);
-
-    if (result) {
-      const idx = findIdx(groupId);
-      if (idx !== -1) await deleteChat(state.chatList[idx]);
-    }
-    return result;
-  };
-
   // ==================== 工具 ====================
   const showScreenshot = () => CreateScreenWindow(screen.availWidth, screen.availHeight);
   const showRecord = () => CreateRecordWindow(screen.availWidth, screen.availHeight);
@@ -759,16 +603,13 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
   // ==================== 导出 ====================
   return {
     // 状态
-    state, page,
+    state,
     chatList: computed({ get: () => state.chatList, set: v => { state.chatList = v; } }),
-    messageList: computed({ get: () => state.messageList, set: v => { state.messageList = v; } }),
     currentChat: computed({ get: () => state.currentChat, set: v => { state.currentChat = v; } }),
     currentChatGroupMemberMap: computed({ get: () => getGroupStore().members, set: v => { getGroupStore().members = v; } }),
     isShowDetail: computed({ get: () => state.isShowDetail, set: v => { state.isShowDetail = v; } }),
     ignoreAllList: computed({ get: () => state.ignoreList, set: v => { state.ignoreList = v; } }),
-    historyMessageList: computed({ get: () => state.historyList, set: v => { state.historyList = v; } }),
     groupInfo: computed({ get: () => getGroupStore().info, set: v => { getGroupStore().info = v; } }),
-    currentUrls: computed({ get: () => state.currentUrls, set: v => { state.currentUrls = v; } }),
     loading: computed({ get: () => state.loading, set: v => { state.loading = v; } }),
     error: computed({ get: () => state.error, set: v => { state.error = v; } }),
     chatDraftMap: computed(() => draftManager.getAll()),
@@ -778,7 +619,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     getCurrentType: getters.currentType,
     getTotalUnread: getters.totalUnread,
     getChatIsGroup: getters.isGroup,
-    remainingQuantity: getters.remaining,
     getHaveMessageChat: getters.unreadChats,
     getCurrentGroupMembersExcludeSelf: getters.membersExcludeSelf,
     getOwnerId: ownerId,
@@ -806,7 +646,6 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     handleJumpToChat: jumpToChat,
     handleGetChat: getChat,
     handleChatDetail: toggleDetail,
-    handleDeleteMessage: (m: any) => { if (m?.messageContentType) delete m.messageContentType; },
     upsertChat: upsert,
     persistPreviewToDb: persist,
     buildPreviewFromMessage: buildPreview,
@@ -844,20 +683,12 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     // 工具
     handleShowScreenshot: showScreenshot,
     handleShowRecord: showRecord,
-    isSingleChat: isSingle,
-    getMapperByType: mapper,
-    getSendApiByChat: sendApi,
-    buildFormPayload: buildPayload,
-    toDbRecord: toRecord,
-    normalizeMessageForUI: normalizeMsg,
-    findMessageIndex: (id: string | number) => state.messageList.findIndex(m => m.messageId == id),
-    chooseByIMessageType: (type: number) => ({ mapper: mapper(type), isSingle: type === MessageType.SINGLE_MESSAGE.code })
+    isSingleChat: isSingle
   };
 }, {
   persist: [
     { key: `${StoresEnum.CHAT}_local`, paths: ["state.ignoreList"], storage: localStorage },
-    { key: `${StoresEnum.CHAT}_session_chat`, paths: ["state.chatList", "state.currentChat"], storage: sessionStorage },
-    { key: `${StoresEnum.CHAT}_session_message`, paths: ["state.messageList"], storage: sessionStorage }
+    { key: `${StoresEnum.CHAT}_session_chat`, paths: ["state.chatList", "state.currentChat"], storage: sessionStorage }
   ],
   sync: { paths: ["state.chatList"], targetWindows: [StoresEnum.NOTIFY], sourceWindow: StoresEnum.MAIN }
 });

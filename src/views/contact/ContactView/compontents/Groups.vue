@@ -59,6 +59,7 @@
 import Avatar from "@/components/Avatar/index.vue";
 import { MessageType } from "@/constants";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { useFriendsStore } from "@/store/modules/friends";
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -78,6 +79,7 @@ interface Group {
 const { t } = useI18n();
 const router = useRouter();
 const chatStore = useChatStore();
+const messageStore = useMessageStore();
 const friendStore = useFriendsStore();
 
 // ========================= Computed =========================
@@ -125,9 +127,9 @@ const handleEnterGroup = async () => {
   if (!group) return;
 
   await chatStore.handleChangeCurrentChatByTarget(group, MessageType.GROUP_MESSAGE.code);
-  chatStore.handleResetMessage();
-  await chatStore.handleGetMessageCount();
-  await chatStore.handleGetMessageList(chatStore.currentChat);
+  messageStore.handleResetMessage();
+  await messageStore.handleGetMessageCount();
+  await messageStore.handleGetMessageList(chatStore.currentChat);
   router.push("/message");
 };
 </script>

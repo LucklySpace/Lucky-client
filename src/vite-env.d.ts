@@ -69,6 +69,12 @@ interface ImportMetaEnv {
 
   /** 是否开启水印（true/false） */
   readonly VITE_API_WATERMARK: string;
+
+  /** 日志开关：true 启用，false 关闭控制台与文件日志 */
+  readonly VITE_LOG_ENABLED?: string;
+
+  /** 日志级别：trace | debug | info | warn | error */
+  readonly VITE_LOG_LEVEL?: string;
 }
 
 interface ImportMeta {

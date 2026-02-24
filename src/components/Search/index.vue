@@ -95,8 +95,8 @@
     </el-popover>
 
     <!-- 弹窗部分 -->
-    <el-dialog v-model="inviteDialogVisible" :title="$t('components.search.inviteMembers')" width="550px" destroy-on-close
-      class="modern-dialog">
+    <el-dialog v-model="inviteDialogVisible" :title="$t('components.search.inviteMembers')" width="550px"
+      destroy-on-close class="modern-dialog">
       <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="inviteDialogVisible = false" />
     </el-dialog>
 
@@ -123,7 +123,8 @@
                 t("business.friend.addFriend.button") }}</el-button>
             </div>
           </div>
-          <div v-if="!searchedFriends.length && searchFriendStr" class="no-data">{{ t("business.friend.search.noResult") }}
+          <div v-if="!searchedFriends.length && searchFriendStr" class="no-data">{{ t("business.friend.search.noResult")
+            }}
           </div>
         </div>
       </div>
@@ -153,6 +154,7 @@ import { MessageType } from "@/constants";
 import { useTimeFormat } from "@/hooks/useTimeFormat";
 import { useChatStore } from "@/store/modules/chat";
 import { useFriendsStore } from "@/store/modules/friends";
+import { useGroupStore } from "@/store/modules/group";
 import { useSearchStore } from "@/store/modules/search";
 import { useUserStore } from "@/store/modules/user";
 import { escapeHtml } from "@/utils/Strings";
@@ -186,7 +188,8 @@ interface Friend {
 /* -------------------- 依赖与状态 -------------------- */
 const { t } = useI18n();
 const userStore = useUserStore();
-const messageStore = useChatStore();
+const chatStore = useChatStore();
+const groupStore = useGroupStore();
 const searchStore = useSearchStore();
 const friendStore = useFriendsStore();
 const { useFriendlyTime } = useTimeFormat();
@@ -345,8 +348,15 @@ function openInvite() {
 
 function handleAddGroupMember(arr: any[]) {
   if (arr?.length) {
-    messageStore.handleAddGroupMember(arr, false);
-    inviteDialogVisible.value = false;
+    const groupId = chatStore.currentChat?.toId;
+    if (groupId) {
+      groupStore.inviteMembers({
+        groupId: String(groupId),
+        memberIds: arr.map((m: any) => m.friendId || m.userId || m),
+        type: 1,
+      });
+      inviteDialogVisible.value = false;
+    }
   }
 }
 

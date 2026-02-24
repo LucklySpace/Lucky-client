@@ -51,7 +51,7 @@
                   <Minus />
                 </el-icon>
               </div>
-              <div class="member-name">移除</div>
+              <div class="member-name">{{ $t("business.group.members.remove") }}</div>
             </div>
           </div>
           <div v-if="filteredMembers.length > 15" class="expand-btn-wrapper">
@@ -114,10 +114,10 @@
 
         <!-- 群管理设置（仅管理员可见） -->
         <div v-if="hasAdminPermission" class="settings-section">
-          <div class="section-title">群管理</div>
+          <div class="section-title">{{ $t("business.group.management.sectionTitle") }}</div>
 
           <div class="setting-item clickable" @click="ui.dialogs.joinMode = true">
-            <span class="label">加入方式</span>
+            <span class="label">{{ $t("business.group.management.joinMode") }}</span>
             <div class="content">
               <span class="value">{{ joinModeText }}</span>
               <el-icon class="arrow-icon">
@@ -127,14 +127,14 @@
           </div>
 
           <div class="setting-item">
-            <span class="label">全员禁言</span>
+            <span class="label">{{ $t("business.group.management.muteAll") }}</span>
             <div class="content">
               <el-switch v-model="muteAllSwitch" class="custom-switch" @change="onMuteAllSwitchChange" />
             </div>
           </div>
 
           <div v-if="isOwner" class="setting-item clickable" @click="ui.dialogs.transferOwner = true">
-            <span class="label">移交群主</span>
+            <span class="label">{{ $t("business.group.management.transferOwner") }}</span>
             <div class="content">
               <el-icon class="arrow-icon">
                 <ArrowRight />
@@ -179,7 +179,7 @@
             {{ $t("components.dialog.clearChat.title") }}
           </div>
           <div class="danger-item clickable" @click="handleQuitGroup">
-            {{ isOwner ? $t("pages.contacts.actions.delete") : $t("business.group.actions.leave") }}
+            {{ isOwner ? $t("business.group.actions.dissolve") : $t("business.group.actions.leave") }}
           </div>
         </div>
       </el-form>
@@ -203,7 +203,12 @@
       />
 
       <!-- 成员操作弹窗 -->
-      <el-dialog v-model="ui.dialogs.memberAction" title="成员管理" width="320px" class="member-action-dialog">
+      <el-dialog
+        v-model="ui.dialogs.memberAction"
+        :title="$t('business.group.memberAction.dialogTitle')"
+        width="320px"
+        class="member-action-dialog"
+      >
         <div v-if="selectedMember" class="member-action-content">
           <div class="member-info">
             <Avatar :avatar="selectedMember.avatar" :name="selectedMember.name" :width="48" :borderRadius="8" />
@@ -218,7 +223,7 @@
             "
             class="mute-duration"
           >
-            <span class="mute-label">禁言时长</span>
+            <span class="mute-label">{{ $t("business.group.memberAction.muteDurationLabel") }}</span>
             <el-select v-model="ui.muteDurationSec" size="small" class="mute-select">
               <el-option v-for="opt in muteOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
             </el-select>
@@ -229,30 +234,43 @@
               <el-icon>
                 <User />
               </el-icon>
-              <span>{{ selectedMember.role === 1 ? "取消管理员" : "设为管理员" }}</span>
+              <span>{{
+                selectedMember.role === 1
+                  ? $t("business.group.memberAction.cancelAdmin")
+                  : $t("business.group.memberAction.setAdmin")
+              }}</span>
             </div>
             <!-- 禁言（管理员可操作普通成员） -->
             <div v-if="canMuteMember(selectedMember)" class="action-item" @click="handleMuteMember">
               <el-icon>
                 <MuteNotification />
               </el-icon>
-              <span>{{ selectedMember.mute === 0 ? "取消禁言" : "禁言" }}</span>
+              <span>{{
+                selectedMember.mute === 0
+                  ? $t("business.group.memberAction.unmute")
+                  : $t("business.group.memberAction.mute")
+              }}</span>
             </div>
             <!-- 踢出（管理员可操作普通成员，群主可操作所有非群主） -->
             <div v-if="canKickMember(selectedMember)" class="action-item danger" @click="handleKickMember">
               <el-icon>
                 <Delete />
               </el-icon>
-              <span>移出群聊</span>
+              <span>{{ $t("business.group.memberAction.kick") }}</span>
             </div>
           </div>
         </div>
       </el-dialog>
 
       <!-- 移交群主弹窗 -->
-      <el-dialog v-model="ui.dialogs.transferOwner" title="移交群主" width="400px" class="transfer-dialog">
+      <el-dialog
+        v-model="ui.dialogs.transferOwner"
+        :title="$t('business.group.transferOwner.dialogTitle')"
+        width="400px"
+        class="transfer-dialog"
+      >
         <div class="transfer-content">
-          <p class="transfer-tip">选择新群主后，你将成为普通成员</p>
+          <p class="transfer-tip">{{ $t("business.group.transferOwner.tip") }}</p>
           <el-scrollbar max-height="300px">
             <div class="transfer-list">
               <div
@@ -272,15 +290,20 @@
           </el-scrollbar>
         </div>
         <template #footer>
-          <el-button @click="ui.dialogs.transferOwner = false">取消</el-button>
-          <el-button type="primary" :disabled="!ui.selectedTransferMember" @click="confirmTransferOwner"
-            >确认移交
+          <el-button @click="ui.dialogs.transferOwner = false">{{ $t("business.group.buttons.cancel") }}</el-button>
+          <el-button type="primary" :disabled="!ui.selectedTransferMember" @click="confirmTransferOwner">
+            {{ $t("business.group.transferOwner.buttonConfirm") }}
           </el-button>
         </template>
       </el-dialog>
 
       <!-- 设置加入方式弹窗 -->
-      <el-dialog v-model="ui.dialogs.joinMode" title="加入群聊方式" width="340px" class="join-mode-dialog">
+      <el-dialog
+        v-model="ui.dialogs.joinMode"
+        :title="$t('business.group.joinMode.dialogTitle')"
+        width="340px"
+        class="join-mode-dialog"
+      >
         <div class="join-mode-content">
           <div
             v-for="mode in joinModeOptions"
@@ -301,9 +324,19 @@
       </el-dialog>
 
       <!-- 移除成员弹窗 -->
-      <el-dialog v-model="ui.dialogs.removeMember" title="移除成员" width="400px" class="remove-member-dialog">
+      <el-dialog
+        v-model="ui.dialogs.removeMember"
+        :title="$t('business.group.removeMember.dialogTitle')"
+        width="400px"
+        class="remove-member-dialog"
+      >
         <div class="remove-content">
-          <el-input v-model="ui.removeSearch" placeholder="搜索成员" clearable class="remove-search" />
+          <el-input
+            v-model="ui.removeSearch"
+            :placeholder="$t('business.group.removeMember.searchPlaceholder')"
+            clearable
+            class="remove-search"
+          />
           <el-scrollbar max-height="300px">
             <div class="remove-list">
               <div
@@ -321,9 +354,10 @@
           </el-scrollbar>
         </div>
         <template #footer>
-          <el-button @click="ui.dialogs.removeMember = false">取消</el-button>
+          <el-button @click="ui.dialogs.removeMember = false">{{ $t("business.group.buttons.cancel") }}</el-button>
           <el-button type="danger" :disabled="!ui.selectedRemoveMembers.length" @click="confirmRemoveMembers">
-            移除 {{ ui.selectedRemoveMembers.length ? `(${ui.selectedRemoveMembers.length})` : "" }}
+            {{ $t("business.group.removeMember.buttonRemove") }}
+            {{ ui.selectedRemoveMembers.length ? `(${ui.selectedRemoveMembers.length})` : "" }}
           </el-button>
         </template>
       </el-dialog>
@@ -372,15 +406,21 @@
     muteDurationSec: 2592000,
   });
 
-  const muteOptions = [
-    { value: 600, label: "10分钟" },
-    { value: 3600, label: "1小时" },
-    { value: 43200, label: "12小时" },
-    { value: 86400, label: "1天" },
-    { value: 259200, label: "3天" },
-    { value: 604800, label: "7天" },
-    { value: 2592000, label: "30天" },
-  ];
+  const muteDurationKeys: Record<number, string> = {
+    600: "10m",
+    3600: "1h",
+    43200: "12h",
+    86400: "1d",
+    259200: "3d",
+    604800: "7d",
+    2592000: "30d",
+  };
+  const muteOptions = computed(() =>
+    [600, 3600, 43200, 86400, 259200, 604800, 2592000].map(value => ({
+      value,
+      label: $t(`business.group.muteDurations.${muteDurationKeys[value]}`),
+    }))
+  );
 
   const selectedMember = ref<GroupMember | null>(null);
   const chatHeight = computed(() => window.innerHeight - 60);
@@ -442,15 +482,27 @@
   });
 
   // ==================== 群设置相关 ====================
-  const joinModeOptions = [
-    { value: GroupJoinMode.FREE.code, label: "自由加入", desc: "任何人都可以直接加入" },
-    { value: GroupJoinMode.APPROVAL.code, label: "需要验证", desc: "需要群主或管理员同意" },
-    { value: GroupJoinMode.FORBIDDEN.code, label: "禁止加入", desc: "不允许新成员加入" },
-  ];
+  const joinModeOptions = computed(() => [
+    {
+      value: GroupJoinMode.FREE.code,
+      label: $t("business.group.joinMode.options.free.label"),
+      desc: $t("business.group.joinMode.options.free.desc"),
+    },
+    {
+      value: GroupJoinMode.APPROVAL.code,
+      label: $t("business.group.joinMode.options.approval.label"),
+      desc: $t("business.group.joinMode.options.approval.desc"),
+    },
+    {
+      value: GroupJoinMode.FORBIDDEN.code,
+      label: $t("business.group.joinMode.options.forbidden.label"),
+      desc: $t("business.group.joinMode.options.forbidden.desc"),
+    },
+  ]);
 
   const joinModeText = computed(() => {
-    const mode = joinModeOptions.find(m => m.value === groupInfoData.joinMode);
-    return mode?.label || "需要验证";
+    const mode = joinModeOptions.value.find(m => m.value === groupInfoData.joinMode);
+    return mode?.label || $t("business.group.joinMode.defaultLabel");
   });
 
   const muteAllSwitch = computed({
@@ -482,11 +534,11 @@
   const getRoleText = (role?: number) => {
     switch (role) {
       case GroupMemberRole.OWNER.code:
-        return "群主";
+        return $t("business.group.roles.owner");
       case GroupMemberRole.ADMIN.code:
-        return "管理员";
+        return $t("business.group.roles.admin");
       default:
-        return "成员";
+        return $t("business.group.roles.member");
     }
   };
 
@@ -564,7 +616,7 @@
       type: 1,
     });
     ui.dialogs.invite = false;
-    ElMessage.success("邀请已发送");
+    ElMessage.success($t("business.group.messages.inviteSent"));
   };
 
   const handleMemberClick = (member: GroupMember) => {
@@ -597,7 +649,9 @@
     });
 
     if (result) {
-      ElMessage.success(isCurrentAdmin ? "已取消管理员" : "已设为管理员");
+      ElMessage.success(
+        isCurrentAdmin ? $t("business.group.messages.adminCanceled") : $t("business.group.messages.adminSet")
+      );
       ui.dialogs.memberAction = false;
     }
   };
@@ -617,7 +671,9 @@
     });
 
     if (result) {
-      ElMessage.success(isMuted ? "已取消禁言" : "已禁言该成员");
+      ElMessage.success(
+        isMuted ? $t("business.group.messages.unmuteSuccess") : $t("business.group.messages.muteSuccess")
+      );
       ui.dialogs.memberAction = false;
     }
   };
@@ -626,9 +682,15 @@
     if (!selectedMember.value) return;
 
     await ElMessageBox.confirm(
-      `确定将 ${selectedMember.value.alias || selectedMember.value.name} 移出群聊？`,
-      "移出群聊",
-      { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      $t("business.group.confirm.kickMessage", {
+        name: selectedMember.value.alias || selectedMember.value.name,
+      }),
+      $t("business.group.confirm.kickTitle"),
+      {
+        confirmButtonText: $t("business.group.buttons.confirm"),
+        cancelButtonText: $t("business.group.buttons.cancel"),
+        type: "warning",
+      }
     );
 
     const groupId = chatStore.currentChat?.toId;
@@ -640,7 +702,7 @@
     });
 
     if (result) {
-      ElMessage.success("已移出群聊");
+      ElMessage.success($t("business.group.messages.kickSuccess"));
       ui.dialogs.memberAction = false;
     }
   };
@@ -657,11 +719,15 @@
   const confirmRemoveMembers = async () => {
     if (!ui.selectedRemoveMembers.length) return;
 
-    await ElMessageBox.confirm(`确定移除选中的 ${ui.selectedRemoveMembers.length} 名成员？`, "移除成员", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
+    await ElMessageBox.confirm(
+      $t("business.group.confirm.removeMessage", { count: ui.selectedRemoveMembers.length }),
+      $t("business.group.confirm.removeTitle"),
+      {
+        confirmButtonText: $t("business.group.buttons.confirm"),
+        cancelButtonText: $t("business.group.buttons.cancel"),
+        type: "warning",
+      }
+    );
 
     const groupId = chatStore.currentChat?.toId;
     if (!groupId) return;
@@ -676,7 +742,7 @@
     }
 
     if (successCount > 0) {
-      ElMessage.success(`已移除 ${successCount} 名成员`);
+      ElMessage.success($t("business.group.messages.removeSuccess", { count: successCount }));
       ui.selectedRemoveMembers = [];
       ui.dialogs.removeMember = false;
     }
@@ -690,7 +756,7 @@
     const result = await groupStore.setJoinMode(String(groupId), mode);
     if (result) {
       groupInfoData.joinMode = mode;
-      ElMessage.success("加入方式已更新");
+      ElMessage.success($t("business.group.messages.joinModeUpdated"));
       ui.dialogs.joinMode = false;
     }
   };
@@ -706,7 +772,7 @@
     const muteStatus = value ? GroupMuteStatus.MUTED.code : GroupMuteStatus.NORMAL.code;
     const result = await groupStore.setMuteAll(String(groupId), muteStatus as number);
     if (result) {
-      ElMessage.success(value ? "已开启全员禁言" : "已关闭全员禁言");
+      ElMessage.success(value ? $t("business.group.messages.muteAllOn") : $t("business.group.messages.muteAllOff"));
     }
   };
 
@@ -717,9 +783,13 @@
     if (!member) return;
 
     await ElMessageBox.confirm(
-      `确定将群主移交给 ${member.alias || member.name}？移交后你将成为普通成员。`,
-      "移交群主",
-      { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      $t("business.group.confirm.transferMessage", { name: member.alias || member.name }),
+      $t("business.group.confirm.transferTitle"),
+      {
+        confirmButtonText: $t("business.group.buttons.confirm"),
+        cancelButtonText: $t("business.group.buttons.cancel"),
+        type: "warning",
+      }
     );
 
     const groupId = chatStore.currentChat?.toId;
@@ -731,7 +801,7 @@
     });
 
     if (result) {
-      ElMessage.success("群主已移交");
+      ElMessage.success($t("business.group.transferOwner.success"));
       ui.dialogs.transferOwner = false;
       ui.selectedTransferMember = "";
     }
@@ -745,7 +815,7 @@
       ui.edit.name.value = groupInfoData.name;
       nextTick(() => groupNameInputRef.value?.focus());
     } else {
-      ElMessage.warning("只有群主才能修改群名称");
+      ElMessage.warning($t("business.group.messages.onlyOwnerRename"));
     }
   };
 
@@ -781,20 +851,20 @@
       if (result) {
         if (params.groupName) groupInfoData.name = params.groupName;
         if (params.notification !== undefined) groupInfoData.notification = params.notification;
-        ElMessage.success("群信息已更新");
+        ElMessage.success($t("business.group.messages.groupInfoUpdated"));
       }
       ui.edit.name.editing = false;
       ui.edit.notice.editing = false;
     } catch (e) {
-      ElMessage.error("更新失败");
+      ElMessage.error($t("business.group.messages.updateFailed"));
     }
   };
 
   const checkAndCancelEditGroupName = () => {
     if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
-      ElMessageBox.confirm("是否保存群名称更改？", "提示", {
-        confirmButtonText: "保存",
-        cancelButtonText: "取消",
+      ElMessageBox.confirm($t("business.group.confirm.saveName"), $t("business.group.confirm.tip"), {
+        confirmButtonText: $t("business.group.buttons.save"),
+        cancelButtonText: $t("business.group.buttons.cancel"),
         type: "warning",
       })
         .then(() => saveGroupInfo())
@@ -818,9 +888,9 @@
 
   const checkAndCancelEditGroupNotice = () => {
     if (ui.edit.notice.value !== groupInfoData.notification) {
-      ElMessageBox.confirm("是否保存群公告更改？", "提示", {
-        confirmButtonText: "保存",
-        cancelButtonText: "取消",
+      ElMessageBox.confirm($t("business.group.confirm.saveNotice"), $t("business.group.confirm.tip"), {
+        confirmButtonText: $t("business.group.buttons.save"),
+        cancelButtonText: $t("business.group.buttons.cancel"),
         type: "warning",
       })
         .then(() => saveGroupInfo())
@@ -860,9 +930,9 @@
   ui.switches = { top, mute: messageMute };
 
   const handleClearGroupMessage = () => {
-    ElMessageBox.confirm("确定清空该群聊的聊天记录？", "提示", {
-      confirmButtonText: "确认",
-      cancelButtonText: "取消",
+    ElMessageBox.confirm($t("business.group.confirm.clearChat"), $t("business.group.confirm.tip"), {
+      confirmButtonText: $t("business.group.buttons.confirm"),
+      cancelButtonText: $t("business.group.buttons.cancel"),
       type: "warning",
     })
       .then(() => emit("handleClearGroupMessage"))
@@ -870,11 +940,15 @@
   };
 
   const handleQuitGroup = () => {
-    const title = isOwner.value ? "解散群聊" : "退出群聊";
-    const msg = isOwner.value ? "确定解散该群聊？" : "确定退出群聊？";
+    const title = isOwner.value
+      ? $t("business.group.confirm.dissolveTitle")
+      : $t("business.group.confirm.quitTitle");
+    const msg = isOwner.value
+      ? $t("business.group.confirm.dissolveMessage")
+      : $t("business.group.confirm.quitMessage");
     ElMessageBox.confirm(msg, title, {
-      confirmButtonText: "确认",
-      cancelButtonText: "取消",
+      confirmButtonText: $t("business.group.buttons.confirm"),
+      cancelButtonText: $t("business.group.buttons.cancel"),
       type: "warning",
     })
       .then(() => emit("handleQuitGroup"))

@@ -4,6 +4,7 @@
 
 import { computed, ref } from "vue";
 import { Child, Command } from "@tauri-apps/plugin-shell";
+import { logger } from "@/hooks/useLogger";
 import { join, tempDir } from "@tauri-apps/api/path";
 import { BaseDirectory, readFile, remove, writeFile } from "@tauri-apps/plugin-fs";
 import { platform } from "@tauri-apps/plugin-os";
@@ -46,7 +47,7 @@ export function useFFmpeg(options: UseFFmpegOptions = {}) {
   const tempOutName = ref<string | null>(null);
 
   function log(...args: any[]) {
-    if (logEnabled) console.log("[useFFmpeg-sidecar]", ...args);
+    if (logEnabled) logger.debug("[useFFmpeg-sidecar]", ...args);
   }
 
   async function ensureReady() {

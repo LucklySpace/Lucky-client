@@ -23,11 +23,11 @@
 </template>
 
 <script lang="ts" setup>
-import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { reactive, ref, shallowRef, watch } from "vue";
 import HistoryItem from "./item.vue";
 
-const chatStore = useChatStore();
+const messageStore = useMessageStore();
 
 const emit = defineEmits(["handleClose"]);
 
@@ -84,7 +84,7 @@ const getList = async () => {
 
   loading.value = true;
   try {
-    const res = await chatStore.handleHistoryMessage(
+    const res = await messageStore.handleHistoryMessage(
       { page: pageInfo.currentPage, size: pageInfo.pageSize },
       searchStr.value
     );

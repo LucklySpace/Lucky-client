@@ -8,7 +8,7 @@ import { useSettingStore } from "@/store/modules/setting";
 import { appCacheDir, downloadDir, join, resolve } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { ElMessage } from "element-plus";
-import { useLogger } from "./useLogger";
+import { logger, useLogger } from "./useLogger";
 
 /**
  * 文件类型枚举
@@ -188,7 +188,7 @@ export async function openFileDialog(name: string, extensions: FileEnum[]): Prom
     });
     return Array.isArray(file) ? (file[0] ?? null) : file;
   } catch (error) {
-    console.error("打开文件对话框失败:", error);
+    logger.error("打开文件对话框失败:", error);
     return null;
   }
 }
@@ -204,7 +204,7 @@ export async function saveFileDialog(filename: string, name: string, ...extensio
     });
     return path || "";
   } catch (error) {
-    console.error("保存文件对话框失败:", error);
+    logger.error("保存文件对话框失败:", error);
     return "";
   }
 }
@@ -214,7 +214,7 @@ export async function saveFileDialog(filename: string, name: string, ...extensio
  */
 export async function uploadFile(url: string, path: string): Promise<void> {
   const progressHandler: any = (progress: number, total: number) => {
-    console.log(`Uploaded ${progress} of ${total} bytes`);
+    logger.debug(`Uploaded ${progress} of ${total} bytes`);
   };
   const headers: any = { "Content-Type": "multipart/form-data" };
   await tauriUpload(url, path, progressHandler, headers);
@@ -225,7 +225,7 @@ export async function uploadFile(url: string, path: string): Promise<void> {
  */
 export async function downloadToPath(url: string, path: string): Promise<void> {
   const progressHandler: any = (progress: any, total: any) => {
-    console.log(`Downloaded ${progress} of ${total} bytes`);
+    logger.debug(`Downloaded ${progress} of ${total} bytes`);
   };
   const headers: any = { "Content-Type": "multipart/form-data" };
   await tauriDownload(url, path, progressHandler, headers);
@@ -321,7 +321,7 @@ export function useFile() {
 
       // 执行下载，并等待完成
       await tauriDownload(path, localPath, (progress: ProgressPayload) => {
-        console.log(`Downloaded ${progress.progress} of ${progress.total} bytes`);
+        logger.debug(`Downloaded ${progress.progress} of ${progress.total} bytes`);
       });
 
       log.info(`文件 ${path} 已下载到 ${localPath}`);
@@ -405,7 +405,7 @@ export function useFile() {
 
       // 开始下载
       await tauriDownload(path, localPath, (progress: ProgressPayload) => {
-        console.log(`Downloaded ${progress.progress} of ${progress.total} bytes`);
+        logger.debug(`Downloaded ${progress.progress} of ${progress.total} bytes`);
       });
 
       log.info(`自动下载成功: ${localPath}`);

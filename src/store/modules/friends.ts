@@ -4,6 +4,7 @@ import { useMappers } from "@/database";
 import Chats from "@/database/entity/Chats";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { storage } from "@/utils/Storage";
 import { computed, ref } from "vue";
 import { useUserStore } from "./user";
@@ -38,6 +39,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
   // 初始化其他 stores
   const userStore = useUserStore();
   const chatMessageStore = useChatStore();
+  const messageStore = useMessageStore();
   const logger = useLogger();
 
   // 定义响应式状态
@@ -112,7 +114,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         await api.DeleteContact({ fromId: getOwnerId.value, toId: chat.toId });
 
         // 删除聊天记录
-        await chatMessageStore.handleClearMessage(chat);
+        await messageStore.handleClearMessage(chat);
 
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);
@@ -147,7 +149,7 @@ export const useFriendsStore = defineStore(StoresEnum.FRIENDS, () => {
         await api.QuitGroups({ userId: getOwnerId.value, groupId: chat.toId });
 
         // 删除聊天记录
-        await chatMessageStore.handleClearMessage(chat);
+        await messageStore.handleClearMessage(chat);
 
         // 删除会话
         await chatMessageStore.handleDeleteChat(chat);

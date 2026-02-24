@@ -330,6 +330,17 @@ class EditMessageBody extends MessageBody {
   }
 }
 
+/** 合并消息体 */
+class MergeMessageBody extends MessageBody {
+
+  messages: MessageBody[];
+
+  constructor(init: { messages: MessageBody[]; }) {
+    super();
+    this.messages = init.messages ?? [];
+  }
+}
+
 /* -------------------------
    ReplyMessageInfo
    ------------------------- */
@@ -650,6 +661,8 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
       return new RecallMessageBody(parsedRaw);
     case MessageContentType.EDIT_MESSAGE.code:
       return new EditMessageBody(parsedRaw);
+    case MessageContentType.MERGE_MESSAGE.code:
+      return new MergeMessageBody(parsedRaw);
     case MessageType.GROUP_OPERATION.code:
       return new GroupOperationMessageBody(parsedRaw);
     case MessageContentType.INVITE_TO_GROUP.code:
@@ -685,7 +698,7 @@ function createMessageInitFromPlain<T extends MessageBody>(obj: any): IMessageIn
 }
 
 export {
-  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMessageAction, IMGroupMessage, IMSingleMessage, LocationMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
+  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMessageAction, IMGroupMessage, IMSingleMessage, LocationMessageBody, MergeMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
 };
 
 export type { IMessagePart };

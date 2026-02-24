@@ -49,6 +49,8 @@
 import Avatar from "@/components/Avatar/index.vue";
 import { FriendRequestStatus } from "@/constants";
 import { useChatStore } from "@/store/modules/chat";
+import { useGroupStore } from "@/store/modules/group";
+import { useMessageStore } from "@/store/modules/message";
 import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { computed } from "vue";
@@ -82,6 +84,8 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const chatStore = useChatStore();
+const groupStore = useGroupStore();
+const messageStore = useMessageStore();
 const { PENDING, ACCEPTED, REJECTED } = FriendRequestStatus;
 
 // ===================== 计算属性 =====================
@@ -140,7 +144,12 @@ async function handleApprove(accept: boolean) {
     const bodyUpdate = { ...body, approveStatus: status };
 
     // 调用 store 处理
-    await chatStore.handleApproveGroupInvite(bodyUpdate);
+    await groupStore.approveInvite({
+      requestId: (bodyUpdate as any).requestId,
+      groupId: bodyUpdate.groupId,
+      inviterId: bodyUpdate.inviterId,
+      approveStatus: status,
+    });
 
     // 提示语
     const successMsg = accept
@@ -149,7 +158,7 @@ async function handleApprove(accept: boolean) {
     ElMessage.success(successMsg);
 
     // 更新本地消息显示
-    chatStore.handleUpdateMessage(props.message, {
+    messageStore.handleUpdateMessage(props.message, {
       messageBody: JSON.stringify(bodyUpdate)
     });
   } catch (err) {

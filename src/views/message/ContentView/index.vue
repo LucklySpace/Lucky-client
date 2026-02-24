@@ -1,5 +1,5 @@
 <template>
-  <div v-if="chatMessageStore.currentChat" ref="containerRef" class="message-container">
+  <div v-if="chatStore.currentChat" ref="containerRef" class="message-container">
     <!-- 消息转发对话框 -->
     <Teleport to="body">
       <Forward :visible="forwardDialogVisible" />
@@ -10,8 +10,8 @@
       <span class="group-notice">
         <GroupNoticeBanner />
       </span>
-      <MessageView v-show="chatMessageStore.currentChat" :chat="chatMessageStore.currentChat"
-        :count="chatMessageStore.remainingQuantity" :data="chatMessageStore.messageList" :rowHeight="64" />
+      <MessageView v-show="chatStore.currentChat" :chat="chatStore.currentChat" :count="messageStore.remainingQuantity"
+        :data="messageStore.messageList" :rowHeight="64" />
 
       <!-- EffectsManager 填满 .message-content（absolute inset:0） -->
       <EffectsManager ref="effectsRef" :zIndex="999" style="height: 100%; width: 100%" />
@@ -25,7 +25,7 @@
 
     <!-- 下半区：输入框区域 -->
     <div ref="bottomRef" class="message-input">
-      <InputView ref="inputRef" v-show="chatMessageStore.currentChat" @trigger="onTrigger" />
+      <InputView ref="inputRef" v-show="chatStore.currentChat" @trigger="onTrigger" />
     </div>
   </div>
 </template>
@@ -38,12 +38,14 @@ import Forward from '@/components/Forward/index.vue';
 import { Events } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useChatStore } from "@/store/modules/chat";
+import { useMessageStore } from "@/store/modules/message";
 import { onBeforeUnmount, ref } from "vue";
 import InputView from "./InputView/index.vue";
 import MessageView from "./MessageView/index.vue";
 
 // stores
-const chatMessageStore = useChatStore();
+const chatStore = useChatStore();
+const messageStore = useMessageStore();
 
 // DOM refs
 const containerRef = ref<HTMLElement | null>(null);

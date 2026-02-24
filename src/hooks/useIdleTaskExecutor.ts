@@ -1,4 +1,6 @@
 /* =========================== Revised IdleTaskExecutor =========================== */
+import { logger } from "@/hooks/useLogger";
+
 /**
  * 任务回调签名（兼容 requestIdleCallback 的 IdleDeadline）
  */
@@ -113,10 +115,10 @@ class IdleTaskExecutor {
         }
         const elapsed = performance.now() - start;
         if (typeof task.maxExecutionTime === "number" && task.maxExecutionTime > 0 && elapsed > task.maxExecutionTime) {
-          console.warn(`Task ${task.id} exceeded maxExecutionTime (${task.maxExecutionTime}ms)`);
+          logger.warn(`Task ${task.id} exceeded maxExecutionTime (${task.maxExecutionTime}ms)`);
         }
       } catch (err) {
-        console.error(`Task ${task.id} execution failed:`, err);
+        logger.error(`Task ${task.id} execution failed:`, err);
       }
       // 微暂停，给主线程喘息
       await new Promise(resolve => setTimeout(resolve, this.options.minTaskInterval));
@@ -252,8 +254,7 @@ class IdleTaskExecutor {
             await this.runWithTimeout(res, task.maxExecutionTime);
           }
         } catch (err) {
-          // 捕获任务内部错误（包括超时错误），记录但继续循环
-          console.error(`Task ${task.id} execution failed:`, err);
+          logger.error(`Task ${task.id} execution failed:`, err);
         }
 
         const elapsedCycle = performance.now() - cycleStart;
