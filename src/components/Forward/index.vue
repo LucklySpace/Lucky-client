@@ -108,6 +108,7 @@ import { globalEventBus } from '@/hooks/useEventBus';
 import { IMessagePart } from '@/models';
 import { useChatStore } from '@/store/modules/chat';
 import { useFriendsStore } from '@/store/modules/friends';
+import { useMessageStore } from '@/store/modules/message';
 import { useUserStore } from '@/store/modules/user';
 import { Search } from "@element-plus/icons-vue";
 import Fuse from 'fuse.js';
@@ -120,6 +121,7 @@ const { t } = useI18n();
 // Store 初始化
 const userStore = useUserStore()
 const chatStore = useChatStore()
+const messageStore = useMessageStore()
 const friendsStore = useFriendsStore()
 
 // ==================== Props & 模板Ref ====================
@@ -309,11 +311,11 @@ async function sendMessage(): Promise<void> {
   let parts: IMessagePart[] = [forwardMessage.value as IMessagePart, leaveMessage.value]
   let chats: Chats[] = []
   for (const chatId of selectedSet.value) {
-    const chat = chatStore.handleGetChat(chatId)
+    const chat = chatStore.getChatByToId(chatId)
     if (chat) chats.push(chat)
   }
   closeForward();
-  await chatStore.handleSendMessageToSomeone(parts, chats);
+  await messageStore.handleSendMessageToSomeone(parts, chats);
 }
 
 /**
