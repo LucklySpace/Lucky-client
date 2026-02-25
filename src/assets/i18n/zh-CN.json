@@ -22,6 +22,7 @@
         "save": "保存修改",
         "complete": "完成",
         "add": "添加",
+        "forward": "转发",
         "delete": "删除",
         "edit": "编辑",
         "change": "更改",
@@ -368,8 +369,15 @@
 
       "forward": {
         "title": "转发消息",
-        "searchPlaceholder": "搜索联系人...",
-        "confirmSend": "确认发送 ({count})"
+        "searchPlaceholder": "搜索",
+        "latestChats": "最近聊天",
+        "sendTo": "发送给",
+        "leaveMessagePlaceholder": "给好友留言",
+        "sendSeparately": "分别发送（{count}）",
+        "send": "发送",
+        "cancel": "取消",
+        "contactsBar": "联系人",
+        "groupsBar": "群组"
       },
 
       "screen": {

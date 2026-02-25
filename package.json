@@ -58,6 +58,7 @@
     "dompurify": "^3.2.6",
     "element-plus": "^2.11.3",
     "encryptlong": "^3.1.4",
+    "fuse.js": "^7.1.0",
     "google-protobuf": "^4.0.0",
     "highlight.js": "^11.11.1",
     "lodash-es": "^4.17.21",

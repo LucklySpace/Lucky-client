@@ -22,6 +22,7 @@
         "save": "Save Changes",
         "complete": "Done",
         "add": "Add",
+        "forward": "Forward",
         "delete": "Delete",
         "edit": "Edit",
         "change": "Change",
@@ -368,8 +369,15 @@
 
       "forward": {
         "title": "Forward Message",
-        "searchPlaceholder": "Search contacts...",
-        "confirmSend": "Confirm Send ({count})"
+        "searchPlaceholder": "Search",
+        "latestChats": "Latest Chats",
+        "sendTo": "Send To",
+        "leaveMessagePlaceholder": "Leave a message to friends",
+        "sendSeparately": "Send separately({count})",
+        "send": "Send",
+        "cancel": "Cancel",
+        "contactsBar": "Contacts",
+        "groupsBar": "Groups"
       },
 
       "screen": {

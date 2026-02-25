@@ -268,8 +268,11 @@ export const useChatStore = defineStore(StoresEnum.CHAT, () => {
     // 构建预览
     const preview = buildPreview(message);
     const isCurrent = String(chat.toId) === String(state.currentChat?.toId);
+    // 判断是否为自己发送的消息
+    const isSelf = String(message.fromId) === String(ownerId.value);
 
-    if (!isCurrent && !isNew) {
+    // 只有非当前会话、非新建会话、且不是自己发的消息，才增加未读
+    if (!isCurrent && !isNew && !isSelf) {
       chat.unread = (chat.unread || 0) + 1;
       chat.message = preview?.html || "";
     } else {
