@@ -200,7 +200,7 @@ class ErrorHandler {
 
 class ErrorNotification {
   // 防抖 - 避免短时间内弹出大量通知
-  private static notificationDebounce = new Map<string, NodeJS.Timeout>();
+  private static notificationDebounce = new Map<string, number>();
   private static readonly DEBOUNCE_TIME: number = 3000; // 3秒内同一错误仅弹一次
 
   /**
@@ -253,13 +253,14 @@ class ErrorNotification {
       return USER_FRIENDLY_MESSAGES[error.code] || error.message;
     }
 
-    const errorName = error.name.toLowerCase();
-    if (errorName.includes("network")) return USER_FRIENDLY_MESSAGES.NETWORK_ERROR;
-    if (errorName.includes("auth")) return USER_FRIENDLY_MESSAGES.AUTH_ERROR;
-    if (errorName.includes("validation")) return USER_FRIENDLY_MESSAGES.VALIDATION_ERROR;
-    if (errorName.includes("database")) return USER_FRIENDLY_MESSAGES.DATABASE_ERROR;
-
-    return error.message || "操作失败，请稍后重试";
+    const errorName = error?.name;
+    if (typeof errorName === 'string') {
+      if (errorName.includes("network")) return USER_FRIENDLY_MESSAGES.NETWORK_ERROR;
+      if (errorName.includes("auth")) return USER_FRIENDLY_MESSAGES.AUTH_ERROR;
+      if (errorName.includes("validation")) return USER_FRIENDLY_MESSAGES.VALIDATION_ERROR;
+      if (errorName.includes("database")) return USER_FRIENDLY_MESSAGES.DATABASE_ERROR;
+    }
+    return error?.message || "操作失败，请稍后重试";
   }
 
   /**

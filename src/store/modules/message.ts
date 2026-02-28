@@ -5,6 +5,7 @@ import type Chats from "@/database/entity/Chats";
 import { useChatInput } from "@/hooks/useChatInput";
 import useCrypto from "@/hooks/useCrypto";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
+import { useLogger } from "@/hooks/useLogger";
 import { IMessage, IMessageAction, IMessagePart, IMGroupMessage, IMSingleMessage, RecallMessageBody } from "@/models";
 import { safeExecute } from "@/utils/ExceptionHandler";
 import { storage } from "@/utils/Storage";
@@ -168,6 +169,17 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
         { op: "sendFile" }
       );
     }
+  };
+
+  /**
+ * 给任意好友/群组发送消息
+ */
+  const sendMessageToSomeone = async (parts: IMessagePart[], chats: Chats[]) => {
+    if (!parts?.length || !chats?.length) return;
+    const allChatPromises = chats.map(chat =>
+      Promise.all(parts.map(part => sendOnePart(part, chat)))
+    );
+    await Promise.all(allChatPromises);
   };
 
   const sendMessage = async (parts: IMessagePart[]) => {
@@ -386,6 +398,7 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
     // 消息操作
     handleResetMessage: resetMessages,
     handleSendMessage: sendMessage,
+    handleSendMessageToSomeone: sendMessageToSomeone,
     sendSingle: send,
     uploadAndSendFile: uploadAndSend,
     handleMoreMessage: loadMore,

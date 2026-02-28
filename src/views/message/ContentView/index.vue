@@ -1,5 +1,9 @@
 <template>
   <div v-if="chatStore.currentChat" ref="containerRef" class="message-container">
+    <!-- 消息转发对话框 -->
+    <Teleport to="body">
+      <Forward :visible="forwardDialogVisible" />
+    </Teleport>
     <!-- 上半区：消息列表（EffectsManager 填满此区域） -->
     <div ref="topRef" class="message-content">
       <!-- 群公告横幅（限制在消息内容区域内渲染） -->
@@ -30,6 +34,9 @@
 import GroupNoticeBanner from "@/components/ChatDetail/GroupNoticeBanner.vue";
 import EffectsManager from "@/components/EffectsManager/index.vue";
 import FilePreview from "@/components/FilePreview/index.vue";
+import Forward from '@/components/Forward/index.vue';
+import { Events } from "@/constants";
+import { globalEventBus } from "@/hooks/useEventBus";
 import { useChatStore } from "@/store/modules/chat";
 import { useMessageStore } from "@/store/modules/message";
 import { onBeforeUnmount, ref } from "vue";
@@ -61,7 +68,18 @@ function onTrigger() {
   });
 }
 
-/* ---------- 拖拽调整上下区域高度（带 RAF 节流，保持 EffectsManager 同步） ---------- */
+/* ----- 转发逻辑 ----- */
+let forwardDialogVisible = ref(false)
+
+globalEventBus.on(Events.MESSAGE_FORWARD, (msg) => {
+  forwardDialogVisible.value = true
+  globalEventBus.emit(Events.MESSAGE_FORWARD_CONTENT, msg)
+})
+
+globalEventBus.on(Events.MESSAGE_FORWARD_CANCEL, () => {
+  forwardDialogVisible.value = false
+})
+/* ----- 拖拽调整上下区域高度（带 RAF 节流，保持 EffectsManager 同步） ----- */
 let startY = 0;
 let startTopHeight = 0;
 let startBotHeight = 0;
