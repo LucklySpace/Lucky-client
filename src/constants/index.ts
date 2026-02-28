@@ -19,7 +19,17 @@ export const Events = {
   /** 取消转发事件 */
   MESSAGE_FORWARD_CANCEL: "message:forwardCancel",
   /** 转发消息内容 */
-  MESSAGE_FORWARD_CONTENT: "message:forwardContent"
+  MESSAGE_FORWARD_CONTENT: "message:forwardContent",
+  /** 文件打开事件 */
+  MESSAGE_FILE_OPEN: "message:file:open",
+  /** 文件预览事件 */
+  MESSAGE_FILE_PREVIEW: "message:file:preview",
+  /** 文件下载事件 */
+  MESSAGE_FILE_DOWNLOAD: "message:file:download",
+  /** 文件打开路径事件 */
+  MESSAGE_FILE_OPEN_PATH: "message:file:openPath",
+  /** 文件自动下载事件 */
+  MESSAGE_FILE_AUTO_DOWNLOAD: "message:file:autoDownload"
 };
 
 

@@ -1,9 +1,11 @@
 import api from "@/api/index";
-import { isTextType, MessageContentType, MessageType, StoresEnum } from "@/constants";
+import { Events, isTextType, MessageContentType, MessageType, StoresEnum } from "@/constants";
 import { PageResult, useMappers } from "@/database";
 import type Chats from "@/database/entity/Chats";
 import { useChatInput } from "@/hooks/useChatInput";
 import useCrypto from "@/hooks/useCrypto";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { useFile } from "@/hooks/useFile";
 import { useIdleTaskExecutor } from "@/hooks/useIdleTaskExecutor";
 import { useLogger } from "@/hooks/useLogger";
 import { IMessage, IMessageAction, IMessagePart, IMGroupMessage, IMSingleMessage, RecallMessageBody } from "@/models";
@@ -15,6 +17,8 @@ import { useChatStore } from "./chat";
 import { useGroupStore } from "./group";
 import { useSearchStore } from "./search";
 import { useUserStore } from "./user";
+
+let fileEventBound = false;
 
 // ==================== 类型定义 ====================
 
@@ -39,6 +43,7 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
   const { buildMessagePreview } = useChatInput();
   const { addTask } = useIdleTaskExecutor({ maxWorkTimePerIdle: 12 });
   const { md5 } = useCrypto();
+  const { openFile, downloadFile, previewFile, openLocalPath, autoDownloadFile } = useFile();
 
   // ==================== 状态 ====================
   const state = reactive<MessageState>({
@@ -78,6 +83,8 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
     }
     return JSON.stringify(raw);
   };
+
+  type FileActionPayload = { message: any; body?: Record<string, any> };
 
   /**
    * 归一化消息（填充缺失字段）
@@ -354,6 +361,75 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
     const idx = state.messageList.findIndex(m => m.messageId === message.messageId);
     if (idx !== -1) state.messageList[idx] = { ...state.messageList[idx], ...update };
   };
+
+  const resolveFilePayload = (payload?: FileActionPayload) => {
+    const message = payload?.message;
+    const body = payload?.body ?? {};
+    return { message, body: { ...body } };
+  };
+
+  const updateFileMessage = (message: any, body: Record<string, any>) => {
+    if (!message?.messageId) return;
+    updateMessage(message, { messageBody: stringifyBody(body) });
+  };
+
+  const handleFileOpen = async (payload: FileActionPayload) => {
+    const { message, body } = resolveFilePayload(payload);
+    if (!message) return;
+    if (body.local) {
+      const opened = await openFile(body.local);
+      if (!opened && body.local) {
+        updateFileMessage(message, { ...body, local: null });
+      }
+      return;
+    }
+    if (body.name && body.path) {
+      previewFile(body.name, body.path);
+    }
+  };
+
+  const handleFilePreview = (payload: FileActionPayload) => {
+    const { body } = resolveFilePayload(payload);
+    if (body.name && body.path) {
+      previewFile(body.name, body.path);
+    }
+  };
+
+  const handleFileDownload = async (payload: FileActionPayload) => {
+    const { message, body } = resolveFilePayload(payload);
+    if (!message || !body.name || !body.path) return;
+    const localPath = await downloadFile(body.name, body.path);
+    if (localPath) {
+      updateFileMessage(message, { ...body, local: localPath });
+    }
+  };
+
+  const handleFileOpenPath = async (payload: FileActionPayload) => {
+    const { body } = resolveFilePayload(payload);
+    if (body.local) {
+      await openLocalPath(body.local);
+    }
+  };
+
+  const handleFileAutoDownload = async (payload: FileActionPayload) => {
+    const { message, body } = resolveFilePayload(payload);
+    if (!message || body.local || !body.name || !body.path) return;
+    const size = Number(body.size);
+    if (!Number.isFinite(size)) return;
+    const localPath = await autoDownloadFile(body.name, body.path, size);
+    if (localPath) {
+      updateFileMessage(message, { ...body, local: localPath });
+    }
+  };
+
+  if (!fileEventBound) {
+    fileEventBound = true;
+    globalEventBus.on(Events.MESSAGE_FILE_OPEN, handleFileOpen);
+    globalEventBus.on(Events.MESSAGE_FILE_PREVIEW, handleFilePreview);
+    globalEventBus.on(Events.MESSAGE_FILE_DOWNLOAD, handleFileDownload);
+    globalEventBus.on(Events.MESSAGE_FILE_OPEN_PATH, handleFileOpenPath);
+    globalEventBus.on(Events.MESSAGE_FILE_AUTO_DOWNLOAD, handleFileAutoDownload);
+  }
 
   const clearMessages = async (chat: Chats) => {
     if (!isSingle(chat)) {

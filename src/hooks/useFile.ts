@@ -1,12 +1,12 @@
+import { useSettingStore } from "@/store/modules/setting";
+import ObjectUtils from "@/utils/ObjectUtils";
+import { ShowPreviewFileWindow } from "@/windows/preview";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { appCacheDir, downloadDir, join, resolve } from "@tauri-apps/api/path";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { exists } from "@tauri-apps/plugin-fs";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { download as tauriDownload,  upload as tauriUpload } from "@tauri-apps/plugin-upload";
-import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
-import { ShowPreviewFileWindow } from "@/windows/preview";
-import ObjectUtils from "@/utils/ObjectUtils";
-import { useSettingStore } from "@/store/modules/setting";
-import { appCacheDir, downloadDir, join, resolve } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { download as tauriDownload, upload as tauriUpload } from "@tauri-apps/plugin-upload";
 import { ElMessage } from "element-plus";
 import { logger, useLogger } from "./useLogger";
 
@@ -72,10 +72,10 @@ export const DEFAULT_FILE_TYPES: FileEnum[] = [
  * 下载进度回调参数
  */
 interface ProgressPayload {
-    progress: number;
-    progressTotal: number;
-    total: number;
-    transferSpeed: number;
+  progress: number;
+  progressTotal: number;
+  total: number;
+  transferSpeed: number;
 }
 
 /**

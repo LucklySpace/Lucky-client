@@ -22,19 +22,16 @@
 <script lang="ts" setup>
 import { Events, MessageContentType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { fileIcon, formatFileSize, useFile } from "@/hooks/useFile";
+import { fileIcon, formatFileSize } from "@/hooks/useFile";
 import { ReplyMessageInfo } from "@/models";
 import { useChatStore } from "@/store/modules/chat";
-import ObjectUtils from "@/utils/ObjectUtils";
 import { storage } from "@/utils/Storage";
-import { ShowPreviewFileWindow } from "@/windows/preview";
 import { computed, shallowReactive, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import ReplyQuote from "./ReplyQuote.vue";
 
 const { t } = useI18n();
-const messageStore = useChatStore();
-const { openFile, downloadFile, previewFile, openFilePath, autoDownloadFile } = useFile();
+const chatStore = useChatStore();
 
 const props = defineProps<{
   message: {
@@ -63,7 +60,7 @@ const replySenderName = computed(() => {
     return t("components.message.me");
   }
 
-  const membersMap = messageStore.currentChatGroupMemberMap;
+  const membersMap = chatStore.currentChatGroupMemberMap;
   const member = membersMap?.[String(replyFromId)];
   return member?.name || replyFromId;
 });
@@ -85,51 +82,24 @@ watchEffect(() => {
   }
 });
 
-// 打开文件（仅更新 local 字段，避免全 body JSON 化）
-const handleOpenFile = async (message: any) => {
-  // 先检查local字段是否存在
-  if (!!parsedBody.local) {
-    // openFile
-    const open = await openFile(parsedBody.local);
-    if (!open && parsedBody.local) {
-      // 只更新 local 为 null，不动其他字段
-      parsedBody.local = null;
-      const updateData = {
-        messageBody: JSON.stringify({ ...parsedBody }), // 仅 stringify 整个 body 以保持 DB 一致
-      };
-      messageStore.handleUpdateMessage(message, updateData);
-    }
-  } else {
-    // 在线预览
-    ShowPreviewFileWindow(parsedBody.name, parsedBody.path);
+const buildFilePayload = (message: any) => ({
+  message,
+  body: {
+    name: parsedBody?.name,
+    path: parsedBody?.path,
+    size: parsedBody?.size,
+    local: parsedBody?.local,
+    suffix: parsedBody?.suffix
   }
+});
+
+const emitFileEvent = (event: string, message: any) => {
+  globalEventBus.emit(event as any, buildFilePayload(message));
 };
 
-// 下载文件（仅更新 local）
-const handleDownloadFile = async (message: any) => {
-  const localPath = await downloadFile(parsedBody.name, parsedBody.path);
-  if (ObjectUtils.isNotEmpty(localPath)) {
-    parsedBody.local = localPath;
-    const updateData = {
-      messageBody: JSON.stringify({ ...parsedBody })
-    };
-    messageStore.handleUpdateMessage(message, updateData);
-  }
-};
-
-// 自动下载（仅更新 local）
-const handleAutoDownloadFile = async (message: any) => {
-  if (ObjectUtils.isEmpty(parsedBody.local)) {
-    const localPath = await autoDownloadFile(parsedBody.name, parsedBody.path, parsedBody.size);
-    if (ObjectUtils.isNotEmpty(localPath)) {
-      parsedBody.local = localPath;
-      const updateData = {
-        messageBody: JSON.stringify({ ...parsedBody })
-      };
-      messageStore.handleUpdateMessage(message, updateData);
-    }
-  }
-};
+const handleOpenFile = (message: any) => emitFileEvent(Events.MESSAGE_FILE_OPEN, message);
+const handleDownloadFile = (message: any) => emitFileEvent(Events.MESSAGE_FILE_DOWNLOAD, message);
+const handleAutoDownloadFile = (message: any) => emitFileEvent(Events.MESSAGE_FILE_AUTO_DOWNLOAD, message);
 
 /** 处理回复消息 */
 function handleReply(msg: typeof props.message): void {
@@ -193,11 +163,11 @@ const getMenuConfig = (item: any) => {
       }
 
       if (action === "openPath") {
-        openFilePath(parsedBody.local);
+        emitFileEvent(Events.MESSAGE_FILE_OPEN_PATH, item);
       }
 
       if (action === "preview") {
-        previewFile(parsedBody.name, parsedBody.path);
+        emitFileEvent(Events.MESSAGE_FILE_PREVIEW, item);
       }
     } catch {
       /* cancel */
