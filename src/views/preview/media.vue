@@ -2,37 +2,36 @@
   <div style="border: 1px solid #ddd">
     <div class="media-previewer-head" data-tauri-drag-region>
       <el-row style="height: 30px">
-        <el-col :span="20" data-tauri-drag-region>
-          <div v-show="!isVideo" :style="{ opacity: controlPanelOpacity }" class="control-panel" data-tauri-drag-region>
-            <div @click="zoomIn">
-              <i class="iconfont icon-fangda1"></i>
-            </div>
-            <div @click="zoomOut">
-              <i class="iconfont icon-suoxiao"></i>
-            </div>
-            <div @click="centerImage">
-              <i class="iconfont icon-juzhong"></i>
-            </div>
-            <div @click="rotateLeft">
-              <i class="iconfont icon-zuoxuanzhuan"></i>
-            </div>
-            <div @click="rotateRight">
-              <i class="iconfont icon-youxuanzhuan"></i>
-            </div>
-          </div>
-        </el-col>
+        <el-col :span="20" data-tauri-drag-region />
         <el-col :span="4">
           <System about-visible @handleClose="handleClose" />
         </el-col>
       </el-row>
     </div>
-    <div class="media-previewer">
+    <div class="media-previewer" @mousemove="resetControls" @mousedown="resetControls">
       <div ref="mediaContainer" class="media-container" @wheel="handleWheel">
         <video v-if="isVideo" ref="videoRef" :src="mediaUrl" controls />
         <img v-else ref="imageRef" :src="mediaUrl" :style="transformStyle" class="lazy-img"
           style="cursor: move;user-select: none;" @mousedown="startDrag" @mousemove="moveImg" @mouseup="endDrag" />
         <!-- 缩放倍率指示器 -->
         <div v-if="showZoomIndicator" class="zoom-indicator">{{ (scale * 100).toFixed(0) }}%</div>
+      </div>
+      <div v-show="!isVideo && isControlVisible" class="media-controls">
+        <button type="button" class="control-btn" @click="zoomIn">
+          <i class="iconfont icon-fangda1"></i>
+        </button>
+        <button type="button" class="control-btn" @click="zoomOut">
+          <i class="iconfont icon-suoxiao"></i>
+        </button>
+        <button type="button" class="control-btn" @click="centerImage">
+          <i class="iconfont icon-juzhong"></i>
+        </button>
+        <button type="button" class="control-btn" @click="rotateLeft">
+          <i class="iconfont icon-zuoxuanzhuan"></i>
+        </button>
+        <button type="button" class="control-btn" @click="rotateRight">
+          <i class="iconfont icon-youxuanzhuan"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -51,12 +50,13 @@ const { addShortcut } = useGlobalShortcut();
 const isVideo = ref(false);
 const videoRef = ref();
 const imageRef = ref();
-const controlPanelOpacity = ref(0.5);
 const mediaContainer = ref();
 let dragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 const mediaUrl = ref("");
+const isControlVisible = ref(true);
+let hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 缩小
 const zoomInScale = ref<number>(Number(import.meta.env.VITE_APP_PREVIEW_IMAGE_ZOOMIN) || 0.5);
@@ -160,11 +160,21 @@ const centerImage = () => {
 
 // 滚轮缩放
 const handleWheel = (event: WheelEvent) => {
+  resetControls();
   if (event.deltaY < 0) {
     zoomIn();
   } else {
     zoomOut();
   }
+};
+
+const resetControls = () => {
+  isControlVisible.value = true;
+  if (hideControlsTimer) clearTimeout(hideControlsTimer);
+  hideControlsTimer = setTimeout(() => {
+    isControlVisible.value = false;
+    hideControlsTimer = null;
+  }, 3000);
 };
 
 // 更新媒体容器尺寸
@@ -201,6 +211,7 @@ onMounted(() => {
   init();
   updateMediaContainerSize();
   window.addEventListener("resize", updateMediaContainerSize);
+  resetControls();
 
   addShortcut({
     name: "esc",
@@ -216,6 +227,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateMediaContainerSize);
+  if (hideControlsTimer) clearTimeout(hideControlsTimer);
 });
 </script>
 
@@ -252,26 +264,47 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 
-.control-panel {
+.media-controls {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  line-height: 30px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.45);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.control-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-}
-
-.iconfont {
-  color: #000;
-  font-size: 18px;
-  margin: 0 5px;
   cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
+
+.control-btn .iconfont {
+  color: #fff;
+  font-size: 18px;
   font-weight: 500;
-}
-
-.iconfont:hover {
-  color: rgb(14, 115, 204);
-}
-
-.control-panel div:hover {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .el-button {

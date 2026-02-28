@@ -308,11 +308,15 @@ function toggleSelect(id: string) {
  * 发送转发消息
  */
 async function sendMessage(): Promise<void> {
-  let parts: IMessagePart[] = [forwardMessage.value as IMessagePart, leaveMessage.value]
-  let chats: Chats[] = []
+  let parts: IMessagePart[] = [forwardMessage.value as IMessagePart];
+  // 留言判断是否为空
+  if (leaveMessage.value.content.trim() !== '') {
+    parts.push(leaveMessage.value as IMessagePart);
+  }
+  let chats: Chats[] = [];
   for (const chatId of selectedSet.value) {
-    const chat = chatStore.getChatByToId(chatId)
-    if (chat) chats.push(chat)
+    const chat = chatStore.getChatByToId(chatId);
+    if (chat) chats.push(chat);
   }
   closeForward();
   await messageStore.handleSendMessageToSomeone(parts, chats);
