@@ -1,8 +1,9 @@
 import { onBeforeUnmount, ref, shallowReactive } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/window";
 import ClipboardManager from "@/utils/Clipboard"; // 你已有的剪贴板管理器
-import type { ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
+import type { MultiScreenCapture, MultiScreenInfo, ScreenshotAPI, ScreenshotPlugin, ToolType } from "./types";
 import { createUseCanvasTool } from "./useCanvasTool";
 
 /**
@@ -107,13 +108,10 @@ export function useScreenshot() {
   async function initCanvases() {
     if (!imgCanvas.value || !maskCanvas.value || !drawCanvas.value || !magnifierCanvas.value) return;
 
-    // 使用屏幕尺寸 * devicePixelRatio 保证在高 DPI 下清晰
+    // 使用虚拟桌面尺寸（多屏）或屏幕尺寸（单屏）
     const factor = window.devicePixelRatio || 1 || (await getCurrentWebviewWindow().scaleFactor());
-    state.scaleX = factor;
-    state.scaleY = factor;
-
-    const canvasW = Math.round(screen.width * factor);
-    const canvasH = Math.round(screen.height * factor);
+    const canvasW = state.virtualWidth > 0 ? state.virtualWidth : Math.round(screen.width * factor);
+    const canvasH = state.virtualHeight > 0 ? state.virtualHeight : Math.round(screen.height * factor);
 
     // 设置画布 size（像素大小）并使用 css 100% 来适配屏幕显示
     imgCanvas.value.width = canvasW;
@@ -129,13 +127,116 @@ export function useScreenshot() {
     drawCtx.value = drawCanvas.value.getContext("2d", { willReadFrequently: true });
     magnifierCtx.value = magnifierCanvas.value.getContext("2d", { willReadFrequently: true });
 
+    // 通过实际渲染尺寸反推缩放比例，避免任务栏/多屏导致偏移
+    const rect = maskCanvas.value.getBoundingClientRect();
+    state.scaleX = rect.width > 0 ? canvasW / rect.width : factor;
+    state.scaleY = rect.height > 0 ? canvasH / rect.height : factor;
+
     // 初始化放大镜尺寸
     magnifierCanvas.value.width = magnifierConfig.size;
     magnifierCanvas.value.height = magnifierConfig.size;
   }
 
-  // --- 发起本地截屏（依赖 Tauri 的 screenshot 命令） ---
-  async function captureFullScreen() {
+  async function getDisplayInfoSafe(): Promise<MultiScreenInfo | null> {
+    try {
+      const info = await invoke<MultiScreenInfo>("get_display_info");
+      state.virtualX = info.virtual_x;
+      state.virtualY = info.virtual_y;
+      state.virtualWidth = info.virtual_width;
+      state.virtualHeight = info.virtual_height;
+      return info;
+    } catch (e) {
+      console.log("[screenshot] get_display_info failed", e);
+      return null;
+    }
+  }
+
+  async function fitWindowToVirtualDesktop(info: MultiScreenInfo) {
+    try {
+      const win = getCurrentWebviewWindow();
+      await win.setDecorations(false);
+      await win.setPosition(new PhysicalPosition(info.virtual_x, info.virtual_y));
+      await win.setSize(new PhysicalSize(info.virtual_width, info.virtual_height));
+    } catch (e) {
+      console.log("[screenshot] fit window failed", e);
+    }
+  }
+
+  async function drawScreenBytes(data: number[], dx: number, dy: number, w: number, h: number) {
+    if (!imgCtx.value) return;
+    const blob = new Blob([new Uint8Array(data)], { type: "image/png" });
+    try {
+      const bitmap = await createImageBitmap(blob);
+      imgCtx.value.drawImage(bitmap, dx, dy, w, h);
+      if ((bitmap as any).close) (bitmap as any).close();
+    } catch {
+      const url = URL.createObjectURL(blob);
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          imgCtx.value?.drawImage(img, dx, dy, w, h);
+          URL.revokeObjectURL(url);
+          resolve();
+        };
+        img.onerror = e => {
+          URL.revokeObjectURL(url);
+          reject(e);
+        };
+        img.src = url;
+      });
+    }
+  }
+
+  // --- 发起本地截屏（优先多屏拼接，失败则回退旧API） ---
+  async function captureFullScreen(info?: MultiScreenInfo | null) {
+    const displayInfo = info ?? (await getDisplayInfoSafe());
+    if (displayInfo) {
+      try {
+        const capture = await invoke<MultiScreenCapture>("capture_all_screens");
+        // 使用 capture 返回的虚拟桌面信息（以防与 displayInfo 不一致）
+        const virtualX = capture.virtual_x ?? displayInfo.virtual_x;
+        const virtualY = capture.virtual_y ?? displayInfo.virtual_y;
+        const virtualW = capture.virtual_width ?? displayInfo.virtual_width;
+        const virtualH = capture.virtual_height ?? displayInfo.virtual_height;
+
+        state.virtualX = virtualX;
+        state.virtualY = virtualY;
+        state.virtualWidth = virtualW;
+        state.virtualHeight = virtualH;
+
+        const canvasW = imgCanvas.value?.width || virtualW;
+        const canvasH = imgCanvas.value?.height || virtualH;
+
+        imgCtx.value?.clearRect(0, 0, canvasW, canvasH);
+
+        for (const s of capture.screens) {
+          const dx = s.x - virtualX;
+          const dy = s.y - virtualY;
+          await drawScreenBytes(s.data, dx, dy, s.width, s.height);
+        }
+
+        // 默认绘制全屏蒙版
+        drawMask();
+
+        // 绘制全屏绿色边框
+        drawRectangle(0, 0, canvasW, canvasH, 1);
+
+        if (plugins.some(p => p.onCapture)) {
+          const preview = new Image();
+          preview.src = (imgCanvas.value as HTMLCanvasElement).toDataURL("image/png");
+          preview.onload = () => {
+            emitPluginEvent("onCapture", { width: canvasW, height: canvasH, image: preview });
+          };
+        }
+        screenshotImage = null;
+        screenshotBlobBuffer = null;
+        return;
+      } catch (e) {
+        console.log("[screenshot] capture_all_screens failed, fallback to old api", e);
+      }
+    }
+
+    // fallback：旧单屏 API
     let pos: any;
     try {
       pos = await invoke("get_mouse_position"); // 你现有的 native 调用
@@ -737,12 +838,17 @@ export function useScreenshot() {
 
   // 启动截屏（初始化 + 进行截图）
   async function start() {
-    // 截图窗口需要覆盖任务栏，否则画布会按工作区尺寸缩放导致偏移
-    try {
-      await getCurrentWebviewWindow().setFullscreen(true);
-    } catch {}
+    const displayInfo = await getDisplayInfoSafe();
+    if (displayInfo && displayInfo.screens && displayInfo.screens.length > 1) {
+      await fitWindowToVirtualDesktop(displayInfo);
+    } else {
+      // 单屏时保持原策略（覆盖任务栏，避免工作区缩放偏移）
+      try {
+        await getCurrentWebviewWindow().setFullscreen(true);
+      } catch {}
+    }
     await initCanvases();
-    await captureFullScreen();
+    await captureFullScreen(displayInfo);
 
     // 挂载事件监听（mask canvas 上）
     maskCanvas.value?.addEventListener("mousedown", handleMaskMouseDown);
