@@ -39,6 +39,7 @@
 import { Events, MessageContentType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { fetchLinkMeta, isPureUrl, type LinkMeta } from "@/hooks/useLinkPreview";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
 import { useChatStore } from "@/store/modules/chat";
 import ClipboardManager from "@/utils/Clipboard";
 import { storage } from "@/utils/Storage";
@@ -71,11 +72,6 @@ interface Message {
   isOwner?: boolean;
   type?: string;
   name?: string;
-}
-
-interface MenuOption {
-  label: string;
-  value: string;
 }
 
 // ===================== Props =====================
@@ -132,10 +128,62 @@ const canRecall = computed(() => {
   return elapsed >= 0 && elapsed <= RECALL_TIME_LIMIT;
 });
 
-const menuConfig = computed(() => ({
-  options: buildMenuOptions(),
-  callback: handleMenuAction
-}));
+// ===================== 右键菜单 =====================
+const { menuConfig, setTarget } = useMessageContextMenu<Message>({
+  getOptions: () => {
+    const options = [
+      { label: t("components.bubble.reply.action", "Reply"), value: "reply" },
+      { label: t("common.actions.forward", "Forward"), value: "forward" },
+      { label: t("common.actions.copy", "Copy"), value: "copy" },
+      { label: t("common.actions.delete", "Delete"), value: "delete" }
+    ];
+
+    if (linkMeta.value) {
+      options.splice(1, 0, { label: t("common.actions.copyLink"), value: "copyLink" });
+    }
+
+    if (canRecall.value) {
+      options.splice(options.length - 1, 0, { label: t("common.actions.recall"), value: "recall" });
+    }
+
+    return options;
+  },
+  onAction: async (action, target) => {
+    const msg = target ?? props.message;
+    try {
+      if (action === "reply") {
+        handleReply(msg);
+        return;
+      }
+      if (action === "forward") {
+        handleForward(msg);
+        return;
+      }
+      if (action === "copy") {
+        await handleCopy(msg);
+        return;
+      }
+      if (action === "copyLink") {
+        if (linkMeta.value?.url) {
+          await ClipboardManager.writeText(linkMeta.value.url);
+          useLogger().prettySuccess("copy link success", linkMeta.value.url);
+        }
+        return;
+      }
+      if (action === "recall") {
+        globalEventBus.emit(Events.MESSAGE_RECALL, msg);
+        return;
+      }
+      if (action === "delete") {
+        await confirmDelete(msg);
+        globalEventBus.emit(Events.MESSAGE_DELETE, msg);
+      }
+    } catch {
+      // 用户取消或操作失败
+    }
+  },
+  beforeShow: () => setTarget(props.message)
+});
 
 // 从 messageBody 获取引用消息
 const replyInfo = computed(() => props.message.messageBody?.replyMessage);
@@ -204,57 +252,6 @@ const openLink = async () => {
 };
 
 // ===================== 方法 =====================
-
-function buildMenuOptions(): MenuOption[] {
-  const options: MenuOption[] = [
-    { label: t("components.bubble.reply.action", 'Reply'), value: "reply" },
-    { label: t("common.actions.forward", 'Forward'), value: "forward" },
-    { label: t("common.actions.copy", 'Copy'), value: "copy" },
-    { label: t("common.actions.delete", 'Delete'), value: "delete" }
-  ];
-
-  if (linkMeta.value) {
-    options.splice(1, 0, { label: t("common.actions.copyLink"), value: "copyLink" });
-  }
-
-  if (canRecall.value) {
-    options.splice(options.length - 1, 0, { label: t("common.actions.recall"), value: "recall" });
-  }
-
-  return options;
-}
-
-async function handleMenuAction(action: string): Promise<void> {
-  const msg = props.message;
-
-  try {
-    switch (action) {
-      case "reply":
-        handleReply(msg);
-        break;
-      case "forward":
-        handleForward(msg);
-        break;
-      case "copy":
-        await handleCopy(msg);
-        break;
-      case "copyLink":
-        if (linkMeta.value?.url) {
-          await ClipboardManager.writeText(linkMeta.value.url);
-          useLogger().prettySuccess("copy link success", linkMeta.value.url);
-        }
-        break;
-      case "recall":
-        globalEventBus.emit("message:recall", msg);
-        break;
-      case "delete":
-        await confirmDelete(msg);
-        break;
-    }
-  } catch {
-    // 用户取消或操作失败
-  }
-}
 
 /** 处理回复消息 */
 function handleReply(msg: Message): void {

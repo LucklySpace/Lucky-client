@@ -1,5 +1,5 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
     v-memo="[message, message.isOwner, replyInfo?.messageId]"
     :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble file-message-bubble">
     <div :title="parsedBody?.name" class="file-bubble no-select" @click="handleOpenFile(message)">
@@ -23,9 +23,11 @@
 import { Events, MessageContentType } from "@/constants";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { fileIcon, formatFileSize } from "@/hooks/useFile";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
 import { ReplyMessageInfo } from "@/models";
 import { useChatStore } from "@/store/modules/chat";
 import { storage } from "@/utils/Storage";
+import { ElMessageBox } from "element-plus";
 import { computed, shallowReactive, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import ReplyQuote from "./ReplyQuote.vue";
@@ -124,58 +126,54 @@ function handleForward(msg: typeof props.message): void {
   })
 }
 
-/**
- * 右键菜单配置（简化：移除未用复制逻辑）
- */
-const getMenuConfig = (item: any) => {
-  const config = shallowReactive<any>({
-    options: [],
-    callback: async () => { }
-  });
-
-  watchEffect(() => {
-    config.options = [
-      { label: t("components.bubble.reply.action"), value: "reply" },
-      { label: t("common.actions.forward",), value: "forward" },
-      { label: t("common.actions.delete"), value: "delete" },
-      {
-        label: parsedBody.local ? t("common.actions.showInFolder") : t("common.actions.preview"),
-        value: parsedBody.local ? "openPath" : "preview"
-      }
-    ];
-  });
-
-  config.callback = async (action: any) => {
+// ===================== 右键菜单 =====================
+const { menuConfig, setTarget } = useMessageContextMenu<typeof props.message>({
+  getOptions: () => [
+    { label: t("components.bubble.reply.action"), value: "reply" },
+    { label: t("common.actions.forward"), value: "forward" },
+    { label: t("common.actions.delete"), value: "delete" },
+    {
+      label: parsedBody.local ? t("common.actions.showInFolder") : t("common.actions.preview"),
+      value: parsedBody.local ? "openPath" : "preview"
+    }
+  ],
+  onAction: async (action, item) => {
+    const target = item ?? props.message;
     try {
       if (action === "reply") {
-        handleReply(item);
+        handleReply(target);
         return;
       }
-
       if (action === "forward") {
-        handleForward(item);
+        handleForward(target);
         return;
       }
-
       if (action === "delete") {
-        // TODO: 确认删除逻辑
+        await ElMessageBox.confirm(
+          t("components.dialog.deleteMessage.confirm"),
+          t("components.dialog.title.warning"),
+          {
+            distinguishCancelAndClose: true,
+            confirmButtonText: t("components.dialog.buttons.confirm"),
+            cancelButtonText: t("components.dialog.buttons.cancel"),
+            type: "warning"
+          }
+        );
+        globalEventBus.emit(Events.MESSAGE_DELETE, target);
         return;
       }
-
       if (action === "openPath") {
-        emitFileEvent(Events.MESSAGE_FILE_OPEN_PATH, item);
+        emitFileEvent(Events.MESSAGE_FILE_OPEN_PATH, target);
       }
-
       if (action === "preview") {
-        emitFileEvent(Events.MESSAGE_FILE_PREVIEW, item);
+        emitFileEvent(Events.MESSAGE_FILE_PREVIEW, target);
       }
     } catch {
       /* cancel */
     }
-  };
-
-  return config;
-};
+  },
+  beforeShow: () => setTarget(props.message)
+});
 
 onMounted(() => {
   handleAutoDownloadFile(props.message);

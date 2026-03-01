@@ -6,7 +6,7 @@
         <div v-for="(item, index) in displayFiles" :key="item.id" class="file-card">
           <!-- 图片 -->
           <template v-if="item.isImage">
-            <div class="card-image">
+            <div class="card-image" @click="handlePreview(item.preview)">
               <img :src="item.preview" :alt="item.name" />
             </div>
           </template>
@@ -36,6 +36,7 @@
 
 <script lang="ts" setup>
 import { fileIcon, formatFileSize } from "@/hooks/useFile";
+import { ShowPreviewWindow } from "@/windows/preview";
 import { Close } from "@element-plus/icons-vue";
 import { computed, ref } from "vue";
 
@@ -77,6 +78,10 @@ function truncate(name: string, max: number): string {
   const keep = max - ext.length - 1;
   return keep > 0 ? name.slice(0, keep) + "…" + ext : name.slice(0, max - 1) + "…";
 }
+
+const handlePreview = (url: string | undefined) => {
+  if (url && url.trim() != "") ShowPreviewWindow("", url, "image");
+};
 
 function handleRemove(index: number) {
   emit("remove", index);
@@ -138,7 +143,8 @@ function handleRemove(index: number) {
     max-width: 140px;
     transition: none; // 收缩态切换时不使用动画，防止布局抖动
 
-    .card-size, .card-close {
+    .card-size,
+    .card-close {
       display: none;
     }
 
@@ -153,7 +159,8 @@ function handleRemove(index: number) {
       font-weight: normal;
     }
 
-    .card-image, .card-icon {
+    .card-image,
+    .card-icon {
       width: 14px;
       height: 14px;
       border-radius: 2px;
@@ -163,7 +170,11 @@ function handleRemove(index: number) {
   &:hover {
     border-color: var(--el-color-primary, #409eff);
     box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
-    .card-close { opacity: 1; transform: scale(1); }
+
+    .card-close {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 }
 
@@ -174,7 +185,7 @@ function handleRemove(index: number) {
   border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
-  
+
   img {
     width: 100%;
     height: 100%;
@@ -265,6 +276,7 @@ function handleRemove(index: number) {
 .bar-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
 .bar-fade-enter-from,
 .bar-fade-leave-to {
   opacity: 0;
@@ -275,14 +287,17 @@ function handleRemove(index: number) {
 .item-pop-leave-active {
   transition: all 0.3s ease;
 }
+
 .item-pop-enter-from {
   opacity: 0;
   transform: scale(0.9) translateY(5px);
 }
+
 .item-pop-leave-to {
   opacity: 0;
   transform: scale(0.9);
 }
+
 .item-pop-move {
   transition: transform 0.3s ease;
 }

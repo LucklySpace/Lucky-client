@@ -15,11 +15,19 @@ export const Events = {
   /** 取消引用事件 */
   MESSAGE_REPLY_CANCEL: "message:replyCancel",
   /** 消息转发事件 */
-  MESSAGE_FORWARD: 'message:forward',
+  MESSAGE_FORWARD: "message:forward",
   /** 取消转发事件 */
   MESSAGE_FORWARD_CANCEL: "message:forwardCancel",
   /** 转发消息内容 */
   MESSAGE_FORWARD_CONTENT: "message:forwardContent",
+  /** 消息撤回事件 */
+  MESSAGE_RECALL: "message:recall",
+  /** 消息删除事件 */
+  MESSAGE_DELETE: "message:delete",
+  /** 消息更新事件 */
+  MESSAGE_UPDATE: "message:update",
+  /** 群邀请审批事件 */
+  GROUP_INVITE_APPROVE: "group:invite:approve",
   /** 文件打开事件 */
   MESSAGE_FILE_OPEN: "message:file:open",
   /** 文件预览事件 */

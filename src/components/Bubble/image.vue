@@ -16,6 +16,7 @@ import { globalEventBus } from "@/hooks/useEventBus";
 import { useFile } from "@/hooks/useFile";
 import { useImageCache } from "@/hooks/useImageCache";
 import { useLogger } from "@/hooks/useLogger";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
 import { ReplyMessageInfo } from "@/models";
 import { useChatStore } from "@/store/modules/chat";
 import ClipboardManager from "@/utils/Clipboard";
@@ -24,7 +25,7 @@ import { storage } from "@/utils/Storage";
 import { ShowPreviewWindow } from "@/windows/preview";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { ElMessageBox } from "element-plus";
-import { computed, shallowReactive, watchEffect } from "vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import ReplyQuote from "./ReplyQuote.vue";
 
@@ -91,24 +92,41 @@ const canRecall = (item: typeof props.message) => {
   return Date.now() - item.messageTime <= recallTime;
 };
 
-const menuConfig = shallowReactive({
-  options: [] as { label: string; value: string }[],
-  callback: async (action: string) => {
-    const item = props.message;
-    const body = item.messageBody;
-
+const { menuConfig, setTarget } = useMessageContextMenu<typeof props.message>({
+  getOptions: (item) => {
+    const target = item ?? props.message;
+    const opts = [
+      { label: t("components.bubble.reply.action"), value: "reply" },
+      { label: t("common.actions.copy"), value: "copy" },
+      { label: t("common.actions.saveAs"), value: "saveAs" },
+      { label: t("common.actions.delete"), value: "delete" }
+    ];
+    if (isOwner(target) && canRecall(target)) {
+      opts.splice(3, 0, { label: t("common.actions.recall"), value: "recall" });
+    }
+    return opts;
+  },
+  onAction: async (action, item) => {
+    const target = item ?? props.message;
+    const body = target.messageBody;
     try {
       if (action === "reply") {
-        handleReply(item);
-      } else if (action === "copy") {
+        handleReply(target);
+        return;
+      }
+      if (action === "copy") {
         await ClipboardManager.clear();
         const path = await getPath(body?.path || "", CacheEnum.IMAGE_CACHE);
         const imgBuf = await readFile(path);
         await ClipboardManager.writeImage(imgBuf);
         logger.prettySuccess("Image copied", body?.path);
-      } else if (action === "saveAs") {
+        return;
+      }
+      if (action === "saveAs") {
         await downloadFile(body?.name || `image_${Date.now()}.png`, body?.path || "");
-      } else if (action === "delete") {
+        return;
+      }
+      if (action === "delete") {
         await ElMessageBox.confirm(
           t("components.dialog.deleteMessage.confirm"),
           t("components.dialog.title.warning"),
@@ -119,13 +137,17 @@ const menuConfig = shallowReactive({
             type: "warning"
           }
         );
-      } else if (action === "recall") {
-        globalEventBus.emit("message:recall", item);
+        globalEventBus.emit(Events.MESSAGE_DELETE, target);
+        return;
+      }
+      if (action === "recall") {
+        globalEventBus.emit(Events.MESSAGE_RECALL, target);
       }
     } catch {
       // 用户取消
     }
-  }
+  },
+  beforeShow: () => setTarget(props.message)
 });
 
 /** 处理回复消息 */
@@ -139,19 +161,6 @@ function handleReply(msg: typeof props.message): void {
   });
 }
 
-watchEffect(() => {
-  const item = props.message;
-  const opts = [
-    { label: t("components.bubble.reply.action"), value: "reply" },
-    { label: t("common.actions.copy"), value: "copy" },
-    { label: t("common.actions.saveAs"), value: "saveAs" },
-    { label: t("common.actions.delete"), value: "delete" }
-  ];
-  if (isOwner(item) && canRecall(item)) {
-    opts.splice(3, 0, { label: t("common.actions.recall"), value: "recall" });
-  }
-  menuConfig.options = opts;
-});
 </script>
 
 <style lang="scss" scoped>

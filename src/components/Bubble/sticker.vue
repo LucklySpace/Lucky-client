@@ -1,5 +1,5 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)" v-memo="[message, message.isOwner]"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig" v-memo="[message, message.isOwner]"
     :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble image-bubble">
     <div class="image-wrapper">
       <img :data-src="localPath" :src="localPath" alt="Image message" class="img-bubble lazy-img"
@@ -11,14 +11,11 @@
 <script lang="ts" setup>
 import { ShowPreviewWindow } from "@/windows/preview";
 import { useMediaCacheStore } from "@/store/modules/media";
-import { CacheEnum, MessageContentType } from "@/constants";
-import ClipboardManager from "@/utils/Clipboard";
-import { getPath } from "@/utils/Image";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { Events } from "@/constants";
 import { storage } from "@/utils/Storage";
 import { globalEventBus } from "@/hooks/useEventBus";
-import { useFile } from "@/hooks/useFile";
-import { useLogger } from "@/hooks/useLogger";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
+import { ElMessageBox } from "element-plus";
 
 const props = defineProps({
   message: {
@@ -31,9 +28,6 @@ const props = defineProps({
 });
 
 const store = useMediaCacheStore();
-const { downloadFile } = useFile();
-const logger = useLogger();
-
 const cacheMedia = () => {
   const id = store.getId();
   if (id && (id == props.message?.toId || id == props.message?.groupId)) {
@@ -63,62 +57,37 @@ function isWithinTwoMinutes(timestamp: number): boolean {
   return diff <= (import.meta.env.VITE_MESSAGE_RECALL_TIME || 120000);
 }
 
-/**
- * 构造右键菜单配置
- */
-const getMenuConfig = (item: any) => {
-  const config = shallowReactive<any>({
-    options: [],
-    callback: async () => {
+// ===================== 右键菜单 =====================
+const { menuConfig, setTarget } = useMessageContextMenu<any>({
+  getOptions: (item) => {
+    const target = item ?? props.message;
+    const options = [{ label: "删除", value: "delete" }];
+    if (isOwnerOfMessage(target) && isWithinTwoMinutes(target.messageTime)) {
+      options.push({ label: "撤回", value: "recall" });
     }
-  });
-
-  watchEffect(() => {
-    const options = [
-      // { label: "复制", value: "copy" },
-      // { label: "另存为...", value: "saveAs" },
-      { label: "删除", value: "delete" }
-    ];
-
-    if (isOwnerOfMessage(item) && isWithinTwoMinutes(item.messageTime)) {
-      options.splice(2, 0, { label: "撤回", value: "recall" });
-    }
-
-    config.options = options;
-  });
-
-  config.callback = async (action: any) => {
+    return options;
+  },
+  onAction: async (action, item) => {
+    const target = item ?? props.message;
     try {
-      if (action === "copy") {
-        try {
-          await ClipboardManager.clear();
-          const path = await getPath(item.messageBody?.path, CacheEnum.IMAGE_CACHE);
-          const imgBuf = await readFile(path);
-          await ClipboardManager.writeImage(imgBuf);
-          logger.prettySuccess("copy image success", item.messageBody?.path);
-        } catch (err) {
-          console.error("Copy image failed:", err);
-        }
-      } else if (action === "saveAs") {
-        const fileName = item.messageBody?.name || `image_${Date.now()}.png`;
-        await downloadFile(fileName, item.messageBody?.path);
-      } else if (action === "delete") {
+      if (action === "delete") {
         await ElMessageBox.confirm("确定删除这条消息吗?", "提示", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning"
         });
-        // TODO: 调用删除 API
-      } else if (action === "recall") {
-        globalEventBus.emit("message:recall", item);
+        globalEventBus.emit(Events.MESSAGE_DELETE, target);
+        return;
       }
-    } catch (err) {
+      if (action === "recall") {
+        globalEventBus.emit(Events.MESSAGE_RECALL, target);
+      }
+    } catch {
       // User cancelled or error
     }
-  };
-
-  return config;
-};
+  },
+  beforeShow: () => setTarget(props.message)
+});
 </script>
 
 <style lang="scss" scoped>

@@ -1,7 +1,8 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-memo="[message, message.isOwner, parsed.parts?.length]"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
+    v-memo="[message, message.isOwner, parsed.parts?.length]"
     :class="['mixed-bubble', { 'mixed-bubble--owner': message.isOwner }]" class="mixed-bubble" role="group"
-    @contextmenu.prevent.stop="onContextmenu($event, null)">
+    @contextmenu="handleRootContextMenu">
     <div :aria-label="ariaLabel" class="mixed-bubble__inner" tabindex="0">
       <!-- 头像（可选） -->
       <div v-if="showAvatar" aria-hidden="true" class="mixed-bubble__avatar-wrap">
@@ -14,19 +15,19 @@
         <template v-for="(part, idx) in parsed.parts">
           <!-- 文本部分：支持简单 html（已转义）和 @ 提示高亮 -->
           <div v-if="part.type === 'text'" :key="`p-text-${idx}`" class="mixed-bubble__part mixed-bubble__part--text"
-            v-html="renderTextPart(part)"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'text', part, idx })"></div>
+            v-html="renderTextPart(part)" @contextmenu="handlePartContextMenu($event, { type: 'text', part, idx })">
+          </div>
 
           <!-- @ 提示单独渲染（如果你把 at 单独作为 part） -->
           <div v-else-if="part.type === 'at'" :key="`p-at-${idx}`" class="mixed-bubble__part mixed-bubble__part--at"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'at', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'at', part, idx })">
             <span :data-mention-id="part.id" class="mixed-bubble__mention">@{{ part.name || part.id }}</span>
           </div>
 
           <!-- 图片：缩略图 + 点击预览 -->
           <div v-else-if="part.type === 'image'" :key="`p-img-${idx}`"
             class="mixed-bubble__part mixed-bubble__part--media"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'image', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'image', part, idx })">
             <!-- 使用 el-image 可自动支持预览功能 -->
             <!-- <el-image
               :src="part.content?.path || part.content?.url || part.content"
@@ -40,7 +41,7 @@
           <!-- 视频：内联 video 控件 -->
           <div v-else-if="part.type === 'video'" :key="`p-video-${idx}`"
             class="mixed-bubble__part mixed-bubble__part--media"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'video', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'video', part, idx })">
             <video :src="part.content?.path || part.content?.url || part.content" class="mixed-bubble__video" controls
               preload="metadata" @click.stop />
           </div>
@@ -48,7 +49,7 @@
           <!-- 文件：图标 + 文件名 + 下载按钮 -->
           <div v-else-if="part.type === 'file'" :key="`p-file-${idx}`"
             class="mixed-bubble__part mixed-bubble__part--file"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'file', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'file', part, idx })">
             <div class="mixed-bubble__file-left">
               <svg aria-hidden="true" class="mixed-bubble__file-icon" viewBox="0 0 24 24">
                 <path d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
@@ -66,7 +67,7 @@
             <div class="mixed-bubble__file-actions">
               <el-button :aria-label="t('mixed.download')" size="small" @click.stop="downloadFile(part)">{{
                 t("mixed.download")
-              }}
+                }}
               </el-button>
             </div>
           </div>
@@ -75,30 +76,20 @@
           <div v-else-if="part.type === 'location'" :key="`p-loc-${idx}`"
             class="mixed-bubble__part mixed-bubble__part--location" role="button" tabindex="0"
             @click.stop="openLocation(part)"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'location', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'location', part, idx })">
             <div class="mixed-bubble__loc-title">{{ part.content?.title || t("mixed.location") }}</div>
             <div class="mixed-bubble__loc-addr">{{ part.content?.address || "" }}</div>
           </div>
 
           <!-- 回退：未知类型展示占位 -->
           <div v-else :key="`p-unknown-${idx}`" class="mixed-bubble__part mixed-bubble__part--unknown"
-            @contextmenu.prevent.stop="onContextmenu($event, { type: 'unknown', part, idx })">
+            @contextmenu="handlePartContextMenu($event, { type: 'unknown', part, idx })">
             [{{ t("mixed.unknown") }}]
           </div>
         </template>
       </div>
     </div>
 
-    <!-- 自定义右键菜单（最简单实现） -->
-    <div v-if="menu.visible" :style="{ left: `${menu.x}px`, top: `${menu.y}px` }" class="mixed-bubble__context-menu"
-      role="menu" @click.stop>
-      <ul class="mixed-bubble__menu-list" role="list">
-        <li v-for="(opt, i) in menu.options" :key="i" class="mixed-bubble__menu-item" role="menuitem"
-          @click="onMenuClick(opt)">
-          {{ opt.label }}
-        </li>
-      </ul>
-    </div>
   </div>
 </template>
 
@@ -112,10 +103,11 @@
  * 备注：该组件只负责渲染与交互事件（openImage/openLocation/download 等通过 emit 暴露）
  */
 
-import { computed, reactive } from "vue";
 import Avatar from "@/components/Avatar/index.vue";
-import { useI18n } from "vue-i18n";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
 import { ElMessage } from "element-plus";
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 
 // props：message 必须包含 messageBody（string 或 object），并可能包含 isOwner/name/avatar 等
 const props = defineProps<{
@@ -134,7 +126,7 @@ const emits = defineEmits<{
 
 const { t } = useI18n();
 
-// --- 本地状态：解析后的 body / right-click 菜单 ---
+// --- 本地状态：解析后的 body ---
 /** 解析 messageBody（兼容 string 或 object），并保证 parts 数组存在 */
 function parseBody(raw: any) {
   if (!raw) return { parts: [] as any[] };
@@ -181,102 +173,81 @@ const ariaLabel = computed(() => {
 const showAvatar = computed(() => props.showAvatar ?? Boolean(props.avatarUrl ?? props.message?.avatar));
 const avatarUrl = computed(() => props.avatarUrl ?? props.message?.avatar ?? "");
 
-// --- 右键菜单实现（最简单） ---
-const menu = reactive({
-  visible: false,
-  x: 0,
-  y: 0,
-  // current part 被点击（null 表示整体气泡）
-  target: null as any,
-  options: [] as { label: string; action: string }[]
-});
+type MenuTarget = { type: string; part: any; idx: number } | null;
 
-// 生成菜单选项（根据 target.type）
-function buildMenuOptions(target: any) {
+function buildMenuOptions(target: MenuTarget) {
   if (!target) {
-    return [{ label: t("mixed.copyAll"), action: "copyAll" }];
+    return [{ label: t("mixed.copyAll"), value: "copyAll" }];
   }
   const type = target.type;
   switch (type) {
     case "text":
-      return [{ label: t("mixed.copyText"), action: "copyText" }];
+      return [{ label: t("mixed.copyText"), value: "copyText" }];
     case "image":
       return [
-        { label: t("mixed.openImage"), action: "openImage" },
-        { label: t("mixed.download"), action: "download" }
+        { label: t("mixed.openImage"), value: "openImage" },
+        { label: t("mixed.download"), value: "download" }
       ];
     case "video":
       return [
-        { label: t("mixed.openVideo"), action: "openVideo" },
-        { label: t("mixed.download"), action: "download" }
+        { label: t("mixed.openVideo"), value: "openVideo" },
+        { label: t("mixed.download"), value: "download" }
       ];
     case "file":
-      return [{ label: t("mixed.download"), action: "download" }];
+      return [{ label: t("mixed.download"), value: "download" }];
     case "location":
-      return [{ label: t("mixed.openLocation"), action: "openLocation" }];
+      return [{ label: t("mixed.openLocation"), value: "openLocation" }];
     default:
-      return [{ label: t("mixed.copyAll"), action: "copyAll" }];
+      return [{ label: t("mixed.copyAll"), value: "copyAll" }];
   }
 }
 
-/** 在指定位置打开菜单 */
-function openMenuAt(x: number, y: number, target: any) {
-  menu.target = target;
-  menu.options = buildMenuOptions(target);
-  menu.x = x;
-  menu.y = y;
-  menu.visible = true;
-  // 点击其它区域隐藏
-  setTimeout(() => {
-    window.addEventListener("click", onWindowClick);
-  }, 0);
-}
-
-/** 隐藏菜单 */
-function hideMenu() {
-  menu.visible = false;
-  menu.target = null;
-  menu.options = [];
-  window.removeEventListener("click", onWindowClick);
-}
-
-function onWindowClick() {
-  hideMenu();
-}
-
-/** 鼠标右键事件处理器：partInfo 可为 null 或 {type, part, idx} */
-function onContextmenu(ev: MouseEvent, partInfo: any | null) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  const rect = (ev.target as HTMLElement).getBoundingClientRect();
-  // 优先使用鼠标位置
-  openMenuAt(ev.clientX + 4, ev.clientY + 4, partInfo);
-}
-
-// 菜单项点击
-function onMenuClick(opt: { label: string; action: string }) {
-  const t = menu.target;
-  if (opt.action === "copyText") {
-    if (t?.part?.content?.text) {
-      copyToClipboard(String(t.part.content.text));
-      ElMessage.success(t("mixed.copied"));
-      emits("copy-text", { text: String(t.part.content.text) });
+const { menuConfig, setTarget } = useMessageContextMenu<MenuTarget>({
+  getOptions: (target) => buildMenuOptions(target ?? null),
+  onAction: (action, target) => {
+    const activeTarget = target ?? null;
+    if (action === "copyText") {
+      if (activeTarget?.part?.content?.text) {
+        const text = String(activeTarget.part.content.text);
+        copyToClipboard(text);
+        ElMessage.success(t("mixed.copied"));
+        emits("copy-text", { text });
+      }
+      return;
     }
-  } else if (opt.action === "copyAll") {
-    const all = buildPlainTextFromParts(parsed.value.parts);
-    copyToClipboard(all);
-    ElMessage.success(t("mixed.copied"));
-    emits("copy-text", { text: all });
-  } else if (opt.action === "openImage") {
-    if (t?.part) openImage(t.part);
-  } else if (opt.action === "openVideo") {
-    if (t?.part) openVideo(t.part);
-  } else if (opt.action === "download") {
-    if (t?.part) downloadFile(t.part);
-  } else if (opt.action === "openLocation") {
-    if (t?.part) openLocation(t.part);
+    if (action === "copyAll") {
+      const all = buildPlainTextFromParts(parsed.value.parts);
+      copyToClipboard(all);
+      ElMessage.success(t("mixed.copied"));
+      emits("copy-text", { text: all });
+      return;
+    }
+    if (action === "openImage") {
+      if (activeTarget?.part) openImage(activeTarget.part);
+      return;
+    }
+    if (action === "openVideo") {
+      if (activeTarget?.part) openVideo(activeTarget.part);
+      return;
+    }
+    if (action === "download") {
+      if (activeTarget?.part) downloadFile(activeTarget.part);
+      return;
+    }
+    if (action === "openLocation") {
+      if (activeTarget?.part) openLocation(activeTarget.part);
+    }
   }
-  hideMenu();
+});
+
+function handleRootContextMenu(event: MouseEvent) {
+  event.preventDefault();
+  setTarget(null);
+}
+
+function handlePartContextMenu(event: MouseEvent, info: MenuTarget) {
+  event.preventDefault();
+  setTarget(info);
 }
 
 // --- 主要交互：打开/下载/复制/位置 ---

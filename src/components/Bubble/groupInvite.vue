@@ -47,10 +47,9 @@
 
 <script lang="ts" setup>
 import Avatar from "@/components/Avatar/index.vue";
-import { FriendRequestStatus } from "@/constants";
+import { Events, FriendRequestStatus } from "@/constants";
+import { globalEventBus } from "@/hooks/useEventBus";
 import { useChatStore } from "@/store/modules/chat";
-import { useGroupStore } from "@/store/modules/group";
-import { useMessageStore } from "@/store/modules/message";
 import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { computed } from "vue";
@@ -84,8 +83,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const chatStore = useChatStore();
-const groupStore = useGroupStore();
-const messageStore = useMessageStore();
 const { PENDING, ACCEPTED, REJECTED } = FriendRequestStatus;
 
 // ===================== 计算属性 =====================
@@ -144,11 +141,17 @@ async function handleApprove(accept: boolean) {
     const bodyUpdate = { ...body, approveStatus: status };
 
     // 调用 store 处理
-    await groupStore.approveInvite({
-      requestId: (bodyUpdate as any).requestId,
-      groupId: bodyUpdate.groupId,
-      inviterId: bodyUpdate.inviterId,
-      approveStatus: status,
+    await new Promise<void>((resolve, reject) => {
+      globalEventBus.emit(Events.GROUP_INVITE_APPROVE, {
+        params: {
+          requestId: (bodyUpdate as any).requestId,
+          groupId: bodyUpdate.groupId,
+          inviterId: bodyUpdate.inviterId,
+          approveStatus: status,
+        },
+        resolve,
+        reject
+      });
     });
 
     // 提示语
@@ -158,8 +161,9 @@ async function handleApprove(accept: boolean) {
     ElMessage.success(successMsg);
 
     // 更新本地消息显示
-    messageStore.handleUpdateMessage(props.message, {
-      messageBody: JSON.stringify(bodyUpdate)
+    globalEventBus.emit(Events.MESSAGE_UPDATE, {
+      message: props.message,
+      patch: { messageBody: JSON.stringify(bodyUpdate) }
     });
   } catch (err) {
     console.error("Group invite approval failed:", err);

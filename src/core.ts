@@ -1,7 +1,7 @@
 // ==================== 导入 ====================
 
 // 常量和类型
-import { MessageContentType, MessageType } from "@/constants";
+import { Events, MessageContentType, MessageType } from "@/constants";
 import { IMessage, IMessageAction, IMGroupMessage, IMSingleMessage } from "./models";
 
 // 数据库
@@ -312,8 +312,24 @@ class MainManager {
   }
 
   private initEventListeners(): void {
-    globalEventBus.on("message:recall", payload => {
+    globalEventBus.on(Events.MESSAGE_RECALL, payload => {
       this.stores.message.handleSendRecallMessage(payload);
+    });
+    globalEventBus.on(Events.MESSAGE_DELETE, payload => {
+      this.stores.message.handleDeleteMessageFromList(payload);
+    });
+    globalEventBus.on(Events.MESSAGE_UPDATE, payload => {
+      if (!payload?.message || !payload?.patch) return;
+      this.stores.message.handleUpdateMessage(payload.message, payload.patch);
+    });
+    globalEventBus.on(Events.GROUP_INVITE_APPROVE, async payload => {
+      if (!payload?.params) return;
+      try {
+        await this.stores.group.approveInvite(payload.params);
+        payload.resolve?.();
+      } catch (err) {
+        payload.reject?.(err);
+      }
     });
   }
 

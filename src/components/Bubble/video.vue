@@ -1,5 +1,5 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="getMenuConfig(message)" v-memo="[message, message.isOwner, replyInfo?.messageId]"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig" v-memo="[message, message.isOwner, replyInfo?.messageId]"
     :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble video-bubble">
     <div class="video-wrapper" @click="handlePreview(message.messageBody?.path)">
       <video ref="videoRef" :src="localPath" preload="metadata" @loadedmetadata="handleMetadata"></video>
@@ -19,12 +19,12 @@ import { useMediaCacheStore } from "@/store/modules/media";
 import { storage } from "@/utils/Storage";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useFile } from "@/hooks/useFile";
-import { useLogger } from "@/hooks/useLogger";
-import ClipboardManager from "@/utils/Clipboard";
+import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
 import ReplyQuote from "./ReplyQuote.vue";
 import { useChatStore } from "@/store/modules/chat";
 import { useI18n } from "vue-i18n";
 import { Events, MessageContentType } from "@/constants";
+import { ElMessageBox } from "element-plus";
 
 const props = defineProps({
   message: {
@@ -59,8 +59,6 @@ const replySenderName = computed(() => {
 
 const store = useMediaCacheStore();
 const { downloadFile } = useFile();
-const logger = useLogger();
-
 const videoRef = ref<HTMLVideoElement | null>(null);
 const duration = ref<number>(0);
 
@@ -116,41 +114,33 @@ function handleReply(msg: any): void {
   });
 }
 
-/**
- * 构造右键菜单配置
- */
-const getMenuConfig = (item: any) => {
-  const config = shallowReactive<any>({
-    options: [],
-    callback: async () => {
-    }
-  });
-
-  watchEffect(() => {
+// ===================== 右键菜单 =====================
+const { menuConfig, setTarget } = useMessageContextMenu<any>({
+  getOptions: (item) => {
+    const target = item ?? props.message;
     const options = [
       { label: t("components.bubble.reply.action"), value: "reply" },
       { label: t("common.actions.saveAs"), value: "saveAs" },
       { label: t("common.actions.delete"), value: "delete" }
     ];
-
-    if (isOwnerOfMessage(item) && isWithinTwoMinutes(item.messageTime)) {
+    if (isOwnerOfMessage(target) && isWithinTwoMinutes(target.messageTime)) {
       options.splice(2, 0, { label: t("common.actions.recall"), value: "recall" });
     }
-
-    config.options = options;
-  });
-
-  config.callback = async (action: any) => {
+    return options;
+  },
+  onAction: async (action, item) => {
+    const target = item ?? props.message;
     try {
       if (action === "reply") {
-        handleReply(item);
-      } else if (action === "copyLink") {
-        await ClipboardManager.writeText(item.messageBody?.path);
-        logger.prettySuccess("copy link success");
-      } else if (action === "saveAs") {
-        const fileName = item.messageBody?.name || `video_${Date.now()}.mp4`;
-        await downloadFile(fileName, item.messageBody?.path);
-      } else if (action === "delete") {
+        handleReply(target);
+        return;
+      }
+      if (action === "saveAs") {
+        const fileName = target.messageBody?.name || `video_${Date.now()}.mp4`;
+        await downloadFile(fileName, target.messageBody?.path);
+        return;
+      }
+      if (action === "delete") {
         await ElMessageBox.confirm(
           t("components.dialog.deleteMessage.confirm"),
           t("components.dialog.title.warning"),
@@ -161,16 +151,18 @@ const getMenuConfig = (item: any) => {
             type: "warning"
           }
         );
-      } else if (action === "recall") {
-        globalEventBus.emit("message:recall", item);
+        globalEventBus.emit(Events.MESSAGE_DELETE, target);
+        return;
       }
-    } catch (err) {
+      if (action === "recall") {
+        globalEventBus.emit(Events.MESSAGE_RECALL, target);
+      }
+    } catch {
       // User cancelled or error
     }
-  };
-
-  return config;
-};
+  },
+  beforeShow: () => setTarget(props.message)
+});
 </script>
 
 <style lang="scss" scoped>
