@@ -4,12 +4,8 @@
       <el-form :model="groupInfoData" label-position="top" @submit.prevent>
         <!-- 搜索群成员 -->
         <div class="search-section">
-          <el-input
-            v-model="ui.search"
-            class="group-search"
-            clearable
-            :placeholder="$t('business.group.members.search')"
-          >
+          <el-input v-model="ui.search" class="group-search" clearable
+            :placeholder="$t('business.group.members.search')">
           </el-input>
         </div>
 
@@ -19,13 +15,8 @@
             <span>{{ $t("business.group.members.title") }} ({{ filteredMembers.length }})</span>
           </div>
           <div class="members-grid">
-            <div
-              v-for="item in displayedMembers"
-              :key="item.userId"
-              class="member-item"
-              @click="handleMemberClick(item)"
-              @contextmenu.prevent="handleMemberContext($event, item)"
-            >
+            <div v-for="item in displayedMembers" :key="item.userId" class="member-item"
+              @click="handleMemberClick(item)" @contextmenu.prevent="handleMemberContext($event, item)">
               <div class="avatar-wrapper">
                 <Avatar class="member-avatar" :avatar="item.avatar" :name="item.name" :width="42" :borderRadius="6" />
               </div>
@@ -41,11 +32,8 @@
               <div class="member-name">{{ $t("common.actions.add") }}</div>
             </div>
             <!-- 移除成员按钮（仅管理员可见） -->
-            <div
-              v-if="hasAdminPermission && filteredMembers.length > 1"
-              class="member-item clickable"
-              @click="ui.dialogs.removeMember = true"
-            >
+            <div v-if="hasAdminPermission && filteredMembers.length > 1" class="member-item clickable"
+              @click="ui.dialogs.removeMember = true">
               <div class="add-btn remove-btn">
                 <el-icon>
                   <Minus />
@@ -65,47 +53,25 @@
 
         <!-- 基本设置 -->
         <div class="settings-section">
-          <div class="setting-item" :class="{ clickable: isOwner }" @click="startEditGroupName">
+          <div class="setting-item" :class="{ clickable: isOwner }" @click="openGroupNameDialog">
             <span class="label">{{ $t("business.group.details.name") }}</span>
             <div class="content">
-              <template v-if="!ui.edit.name.editing">
-                <span class="value">{{ groupInfoData.name }}</span>
-                <el-icon v-if="isOwner" class="arrow-icon">
-                  <ArrowRight />
-                </el-icon>
-              </template>
-              <el-input
-                v-else
-                ref="groupNameInputRef"
-                v-model="ui.edit.name.value"
-                size="small"
-                @blur="checkAndCancelEditGroupName"
-                @keydown.enter.prevent="saveGroupInfo"
-                @click.stop
-              />
+              <span class="value">{{ groupInfoData.name }}</span>
+              <el-icon v-if="isOwner" class="arrow-icon">
+                <ArrowRight />
+              </el-icon>
             </div>
           </div>
 
-          <div class="setting-item" :class="{ clickable: canEditNotice }" @click="startEditGroupNotice">
+          <div class="setting-item" :class="{ clickable: canEditNotice }" @click="openGroupNoticeDialog">
             <span class="label">{{ $t("business.group.details.notice") }}</span>
             <div class="content notice-content">
-              <template v-if="!ui.edit.notice.editing">
-                <span class="value notice-text">{{
-                  groupInfoData.notification || $t("business.group.notice.empty")
-                }}</span>
-                <el-icon v-if="canEditNotice" class="arrow-icon">
-                  <ArrowRight />
-                </el-icon>
-              </template>
-              <el-input
-                v-else
-                ref="groupNoticeRef"
-                v-model="ui.edit.notice.value"
-                type="textarea"
-                :rows="3"
-                @blur="checkAndCancelEditGroupNotice"
-                @click.stop
-              />
+              <span class="value notice-text">{{
+                groupInfoData.notification || $t("business.group.notice.empty")
+              }}</span>
+              <el-icon v-if="canEditNotice" class="arrow-icon">
+                <ArrowRight />
+              </el-icon>
             </div>
           </div>
         </div>
@@ -185,51 +151,39 @@
       </el-form>
 
       <!-- 邀请成员弹窗 -->
-      <el-dialog
-        v-model="ui.dialogs.invite"
-        :destroy-on-close="true"
-        class="invite-dialog"
-        :title="$t('components.search.inviteMembers')"
-        width="550px"
-      >
+      <el-dialog v-model="ui.dialogs.invite" :destroy-on-close="true" class="invite-dialog"
+        :title="$t('components.search.inviteMembers')" width="550px">
         <SelectContact @handleAddGroupMember="handleAddGroupMember" @handleClose="handleInviteDialog"></SelectContact>
       </el-dialog>
 
       <!-- 历史消息弹窗 -->
-      <HistoryDialog
-        :visible="ui.dialogs.history"
-        :title="$t('pages.chat.toolbar.history')"
-        @handleClose="toggleHistoryDialog"
-      />
+      <HistoryDialog :visible="ui.dialogs.history" :title="$t('pages.chat.toolbar.history')"
+        @handleClose="toggleHistoryDialog" />
 
       <!-- 成员操作弹窗 -->
-      <el-dialog
-        v-model="ui.dialogs.memberAction"
-        :title="$t('business.group.memberAction.dialogTitle')"
-        width="320px"
-        class="member-action-dialog"
-      >
+      <el-dialog v-model="ui.dialogs.memberAction" :title="$t('business.group.memberAction.dialogTitle')" width="320px"
+        class="member-action-dialog">
         <div v-if="selectedMember" class="member-action-content">
-          <div class="member-info">
+          <UserPopover :contact="selectedContact" :isMe="selectedIsMe" :groupRoleText="selectedMemberRoleText" />
+          <!-- <div v-if="canManageMember" class="member-info">
             <Avatar :avatar="selectedMember.avatar" :name="selectedMember.name" :width="48" :borderRadius="8" />
             <div class="member-detail">
               <div class="name">{{ selectedMember.alias || selectedMember.name }}</div>
               <div class="role-text">{{ getRoleText(selectedMember.role) }}</div>
             </div>
-          </div>
-          <div
-            v-if="
-              selectedMember && canMuteMember(selectedMember) && selectedMember.mute === GroupMuteStatus.NORMAL.code
-            "
-            class="mute-duration"
-          >
+          </div> -->
+          <div v-if="
+            canManageMember &&
+            selectedMember &&
+            canMuteMember(selectedMember) &&
+            selectedMember.mute === GroupMuteStatus.NORMAL.code
+          " class="mute-duration">
             <span class="mute-label">{{ $t("business.group.memberAction.muteDurationLabel") }}</span>
             <el-select v-model="ui.muteDurationSec" size="small" class="mute-select">
               <el-option v-for="opt in muteOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
             </el-select>
           </div>
-          <div class="action-list">
-            <!-- 设置管理员（仅群主可操作非群主成员） -->
+          <div v-if="canManageMember" class="action-list">
             <div v-if="isOwner && selectedMember.role !== 0" class="action-item" @click="handleSetAdmin">
               <el-icon>
                 <User />
@@ -240,7 +194,6 @@
                   : $t("business.group.memberAction.setAdmin")
               }}</span>
             </div>
-            <!-- 禁言（管理员可操作普通成员） -->
             <div v-if="canMuteMember(selectedMember)" class="action-item" @click="handleMuteMember">
               <el-icon>
                 <MuteNotification />
@@ -251,7 +204,6 @@
                   : $t("business.group.memberAction.mute")
               }}</span>
             </div>
-            <!-- 踢出（管理员可操作普通成员，群主可操作所有非群主） -->
             <div v-if="canKickMember(selectedMember)" class="action-item danger" @click="handleKickMember">
               <el-icon>
                 <Delete />
@@ -262,24 +214,34 @@
         </div>
       </el-dialog>
 
+      <el-dialog v-model="ui.dialogs.groupName" :title="$t('business.group.details.name')" width="360px"
+        class="group-name-dialog">
+        <el-input v-model="ui.edit.name.value" maxlength="30" show-word-limit />
+        <template #footer>
+          <el-button @click="ui.dialogs.groupName = false">{{ $t("business.group.buttons.cancel") }}</el-button>
+          <el-button type="primary" @click="saveGroupName">{{ $t("business.group.buttons.confirm") }}</el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="ui.dialogs.groupNotice" :title="$t('business.group.details.notice')" width="420px"
+        class="group-notice-dialog">
+        <el-input v-model="ui.edit.notice.value" type="textarea" :rows="4" maxlength="200" show-word-limit />
+        <template #footer>
+          <el-button @click="ui.dialogs.groupNotice = false">{{ $t("business.group.buttons.cancel") }}</el-button>
+          <el-button type="primary" @click="saveGroupNotice">{{ $t("business.group.buttons.confirm") }}</el-button>
+        </template>
+      </el-dialog>
+
       <!-- 移交群主弹窗 -->
-      <el-dialog
-        v-model="ui.dialogs.transferOwner"
-        :title="$t('business.group.transferOwner.dialogTitle')"
-        width="400px"
-        class="transfer-dialog"
-      >
+      <el-dialog v-model="ui.dialogs.transferOwner" :title="$t('business.group.transferOwner.dialogTitle')"
+        width="400px" class="transfer-dialog">
         <div class="transfer-content">
           <p class="transfer-tip">{{ $t("business.group.transferOwner.tip") }}</p>
           <el-scrollbar max-height="300px">
             <div class="transfer-list">
-              <div
-                v-for="member in transferableMembers"
-                :key="member.userId"
-                class="transfer-item"
+              <div v-for="member in transferableMembers" :key="member.userId" class="transfer-item"
                 :class="{ selected: ui.selectedTransferMember === member.userId }"
-                @click="ui.selectedTransferMember = member.userId"
-              >
+                @click="ui.selectedTransferMember = member.userId">
                 <Avatar :avatar="member.avatar" :name="member.name" :width="36" :borderRadius="6" />
                 <span class="name">{{ member.alias || member.name }}</span>
                 <el-icon v-if="ui.selectedTransferMember === member.userId" class="check-icon">
@@ -298,20 +260,11 @@
       </el-dialog>
 
       <!-- 设置加入方式弹窗 -->
-      <el-dialog
-        v-model="ui.dialogs.joinMode"
-        :title="$t('business.group.joinMode.dialogTitle')"
-        width="340px"
-        class="join-mode-dialog"
-      >
+      <el-dialog v-model="ui.dialogs.joinMode" :title="$t('business.group.joinMode.dialogTitle')" width="340px"
+        class="join-mode-dialog">
         <div class="join-mode-content">
-          <div
-            v-for="mode in joinModeOptions"
-            :key="mode.value"
-            class="mode-item"
-            :class="{ selected: groupInfoData.joinMode === mode.value }"
-            @click="handleJoinModeChange(mode.value)"
-          >
+          <div v-for="mode in joinModeOptions" :key="mode.value" class="mode-item"
+            :class="{ selected: groupInfoData.joinMode === mode.value }" @click="handleJoinModeChange(mode.value)">
             <div class="mode-info">
               <div class="mode-label">{{ mode.label }}</div>
               <div class="mode-desc">{{ mode.desc }}</div>
@@ -324,28 +277,16 @@
       </el-dialog>
 
       <!-- 移除成员弹窗 -->
-      <el-dialog
-        v-model="ui.dialogs.removeMember"
-        :title="$t('business.group.removeMember.dialogTitle')"
-        width="400px"
-        class="remove-member-dialog"
-      >
+      <el-dialog v-model="ui.dialogs.removeMember" :title="$t('business.group.removeMember.dialogTitle')" width="400px"
+        class="remove-member-dialog">
         <div class="remove-content">
-          <el-input
-            v-model="ui.removeSearch"
-            :placeholder="$t('business.group.removeMember.searchPlaceholder')"
-            clearable
-            class="remove-search"
-          />
+          <el-input v-model="ui.removeSearch" :placeholder="$t('business.group.removeMember.searchPlaceholder')"
+            clearable class="remove-search" />
           <el-scrollbar max-height="300px">
             <div class="remove-list">
-              <div
-                v-for="member in removableMembers"
-                :key="member.userId"
-                class="remove-item"
+              <div v-for="member in removableMembers" :key="member.userId" class="remove-item"
                 :class="{ selected: ui.selectedRemoveMembers.includes(member.userId) }"
-                @click="toggleRemoveMember(member.userId)"
-              >
+                @click="toggleRemoveMember(member.userId)">
                 <el-checkbox :model-value="ui.selectedRemoveMembers.includes(member.userId)" @click.stop />
                 <Avatar :avatar="member.avatar" :name="member.name" :width="36" :borderRadius="6" />
                 <span class="name">{{ member.alias || member.name }}</span>
@@ -366,929 +307,878 @@
 </template>
 
 <script lang="ts" setup>
-  import Avatar from "@/components/Avatar/index.vue";
-  import HistoryDialog from "@/components/History/index.vue";
-  import SelectContact from "@/components/SelectContact/index.vue";
-  import { Events, GroupJoinMode, GroupMemberRole, GroupMuteStatus, MessageType } from "@/constants";
-  import Chats from "@/database/entity/Chats";
-  import { globalEventBus } from "@/hooks/useEventBus";
-  import { useChatStore } from "@/store/modules/chat";
-  import { useGroupStore, type GroupMember } from "@/store/modules/group";
-  import { ElMessage, ElMessageBox } from "element-plus";
-  import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue";
-  import { useI18n } from "vue-i18n";
+import Avatar from "@/components/Avatar/index.vue";
+import HistoryDialog from "@/components/History/index.vue";
+import SelectContact from "@/components/SelectContact/index.vue";
+import UserPopover from "@/components/UserPopover/index.vue";
+import { Events, GroupJoinMode, GroupMemberRole, GroupMuteStatus, MessageContentType, MessageType } from "@/constants";
+import Chats from "@/database/entity/Chats";
+import { globalEventBus } from "@/hooks/useEventBus";
+import { useChatStore } from "@/store/modules/chat";
+import { useFriendsStore } from "@/store/modules/friends";
+import { useGroupStore, type GroupMember } from "@/store/modules/group";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue";
+import { useI18n } from "vue-i18n";
 
-  const { t: $t } = useI18n();
-  const chatStore = useChatStore();
-  const groupStore = useGroupStore();
-  const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
+const { t: $t } = useI18n();
+const chatStore = useChatStore();
+const friendStore = useFriendsStore();
+const groupStore = useGroupStore();
+const emit = defineEmits(["handleQuitGroup", "handleClearGroupMessage"]);
 
-  // ==================== 状态管理 ====================
-  const ui = reactive({
-    search: "",
-    removeSearch: "",
-    members: { expanded: false },
-    dialogs: {
-      invite: false,
-      history: false,
-      memberAction: false,
-      transferOwner: false,
-      joinMode: false,
-      removeMember: false,
-    },
-    edit: {
-      name: { editing: false, value: "" },
-      notice: { editing: false, value: "" },
-    },
-    switches: {} as any,
-    selectedTransferMember: "",
-    selectedRemoveMembers: [] as string[],
-    muteDurationSec: 2592000,
-  });
+// ==================== 状态管理 ====================
+const ui = reactive({
+  search: "",
+  removeSearch: "",
+  members: { expanded: false },
+  dialogs: {
+    invite: false,
+    history: false,
+    memberAction: false,
+    transferOwner: false,
+    joinMode: false,
+    removeMember: false,
+    groupName: false,
+    groupNotice: false,
+  },
+  edit: {
+    name: { editing: false, value: "" },
+    notice: { editing: false, value: "" },
+  },
+  switches: {} as any,
+  selectedTransferMember: "",
+  selectedRemoveMembers: [] as string[],
+  muteDurationSec: 2592000,
+});
 
-  const muteDurationKeys: Record<number, string> = {
-    600: "10m",
-    3600: "1h",
-    43200: "12h",
-    86400: "1d",
-    259200: "3d",
-    604800: "7d",
-    2592000: "30d",
-  };
-  const muteOptions = computed(() =>
-    [600, 3600, 43200, 86400, 259200, 604800, 2592000].map(value => ({
-      value,
-      label: $t(`business.group.muteDurations.${muteDurationKeys[value]}`),
-    }))
+const muteDurationKeys: Record<number, string> = {
+  600: "10m",
+  3600: "1h",
+  43200: "12h",
+  86400: "1d",
+  259200: "3d",
+  604800: "7d",
+  2592000: "30d",
+};
+const muteOptions = computed(() =>
+  [600, 3600, 43200, 86400, 259200, 604800, 2592000].map(value => ({
+    value,
+    label: $t(`business.group.muteDurations.${muteDurationKeys[value]}`),
+  }))
+);
+
+const selectedMember = ref<GroupMember | null>(null);
+const selectedContact = ref<any>(null);
+const selectedMemberRoleText = computed(() =>
+  selectedMember.value ? getRoleText(selectedMember.value.role) : ""
+);
+const selectedIsMe = computed(() =>
+  selectedMember.value ? String(selectedMember.value.userId) === String(groupStore.getOwnerId) : false
+);
+const canManageMember = computed(() => hasAdminPermission.value && !selectedIsMe.value);
+const chatHeight = computed(() => window.innerHeight - 60);
+
+const groupInfoData = reactive<{
+  name: string;
+  notification: string;
+  joinMode: number;
+}>({
+  name: "",
+  notification: "",
+  joinMode: GroupJoinMode.APPROVAL.code as number,
+});
+
+// ==================== 权限计算 ====================
+const isOwner = computed(() => groupStore.getIsOwner);
+const hasAdminPermission = computed(() => groupStore.getHasAdminPermission);
+const canEditNotice = computed(() => groupStore.getHasAdminPermission);
+// 所有成员都可邀请
+const canInvite = computed(() => true);
+
+// ==================== 成员列表 ====================
+const filteredMembers = computed(() => {
+  const members = groupStore.getMemberList;
+  const q = ui.search.trim().toLowerCase();
+  if (!q) return members;
+  return members.filter(
+    (m: any) => (m?.name || "").toLowerCase().includes(q) || (m?.alias || "").toLowerCase().includes(q)
   );
+});
 
-  const selectedMember = ref<GroupMember | null>(null);
-  const chatHeight = computed(() => window.innerHeight - 60);
+const displayedMembers = computed(() =>
+  ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 14)
+);
 
-  const groupInfoData = reactive<{
-    name: string;
-    notification: string;
-    joinMode: number;
-  }>({
-    name: "",
-    notification: "",
-    joinMode: GroupJoinMode.APPROVAL.code as number,
-  });
+// 可移交群主的成员列表（排除自己）
+const transferableMembers = computed(() => {
+  const ownerId = groupStore.getOwnerId;
+  return groupStore.getMemberList.filter(m => m.userId !== ownerId);
+});
 
-  // ==================== 权限计算 ====================
-  const isOwner = computed(() => groupStore.getIsOwner);
-  const hasAdminPermission = computed(() => groupStore.getHasAdminPermission);
-  const canEditNotice = computed(() => groupStore.getHasAdminPermission);
-  const canInvite = computed(() => true); // 所有成员都可以邀请
+// 可移除的成员列表
+const removableMembers = computed(() => {
+  const ownerId = groupStore.getOwnerId;
+  const currentRole = groupStore.getCurrentRole;
+  const q = ui.removeSearch.trim().toLowerCase();
 
-  // ==================== 成员列表 ====================
-  const filteredMembers = computed(() => {
-    const members = groupStore.getMemberList;
-    const q = ui.search.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter(
-      (m: any) => (m?.name || "").toLowerCase().includes(q) || (m?.alias || "").toLowerCase().includes(q)
-    );
-  });
-
-  const displayedMembers = computed(() =>
-    ui.members.expanded ? filteredMembers.value : filteredMembers.value.slice(0, 14)
-  );
-
-  // 可移交群主的成员列表（排除自己）
-  const transferableMembers = computed(() => {
-    const ownerId = groupStore.getOwnerId;
-    return groupStore.getMemberList.filter(m => m.userId !== ownerId);
-  });
-
-  // 可移除的成员列表
-  const removableMembers = computed(() => {
-    const ownerId = groupStore.getOwnerId;
-    const currentRole = groupStore.getCurrentRole;
-    const q = ui.removeSearch.trim().toLowerCase();
-
-    return groupStore.getMemberList.filter(m => {
-      // 不能移除自己
-      if (m.userId === ownerId) return false;
-      // 群主可以移除所有人，管理员只能移除普通成员
-      if (currentRole === GroupMemberRole.OWNER.code) {
-        return !q || (m.name || "").toLowerCase().includes(q);
-      }
-      if (currentRole === GroupMemberRole.ADMIN.code) {
-        return m.role === GroupMemberRole.MEMBER.code && (!q || (m.name || "").toLowerCase().includes(q));
-      }
-      return false;
-    });
-  });
-
-  // ==================== 群设置相关 ====================
-  const joinModeOptions = computed(() => [
-    {
-      value: GroupJoinMode.FREE.code,
-      label: $t("business.group.joinMode.options.free.label"),
-      desc: $t("business.group.joinMode.options.free.desc"),
-    },
-    {
-      value: GroupJoinMode.APPROVAL.code,
-      label: $t("business.group.joinMode.options.approval.label"),
-      desc: $t("business.group.joinMode.options.approval.desc"),
-    },
-    {
-      value: GroupJoinMode.FORBIDDEN.code,
-      label: $t("business.group.joinMode.options.forbidden.label"),
-      desc: $t("business.group.joinMode.options.forbidden.desc"),
-    },
-  ]);
-
-  const joinModeText = computed(() => {
-    const mode = joinModeOptions.value.find(m => m.value === groupInfoData.joinMode);
-    return mode?.label || $t("business.group.joinMode.defaultLabel");
-  });
-
-  const muteAllSwitch = computed({
-    get: () => groupStore.getIsMuteAll,
-    set: () => {},
-  });
-
-  // ==================== 成员操作权限判断 ====================
-  const canKickMember = (member: GroupMember) => {
-    if (!member || member.userId === groupStore.getOwnerId) return false;
-    const currentRole = groupStore.getCurrentRole;
-    // 群主可以踢除任何非群主成员
-    if (currentRole === GroupMemberRole.OWNER.code) return member.role !== GroupMemberRole.OWNER.code;
-    // 管理员只能踢除普通成员
-    if (currentRole === GroupMemberRole.ADMIN.code) return member.role === GroupMemberRole.MEMBER.code;
+  return groupStore.getMemberList.filter(m => {
+    // 不能移除自己
+    if (m.userId === ownerId) return false;
+    // 群主可以移除所有人，管理员只能移除普通成员
+    if (currentRole === GroupMemberRole.OWNER.code) {
+      return !q || (m.name || "").toLowerCase().includes(q);
+    }
+    if (currentRole === GroupMemberRole.ADMIN.code) {
+      return m.role === GroupMemberRole.MEMBER.code && (!q || (m.name || "").toLowerCase().includes(q));
+    }
     return false;
-  };
+  });
+});
 
-  const canMuteMember = (member: GroupMember) => {
-    if (!member || member.userId === groupStore.getOwnerId) return false;
-    const currentRole = groupStore.getCurrentRole;
-    // 群主可以禁言任何非群主成员
-    if (currentRole === GroupMemberRole.OWNER.code) return member.role !== GroupMemberRole.OWNER.code;
-    // 管理员只能禁言普通成员
-    if (currentRole === GroupMemberRole.ADMIN.code) return member.role === GroupMemberRole.MEMBER.code;
-    return false;
-  };
+// ==================== 群设置相关 ====================
+const joinModeOptions = computed(() => [
+  {
+    value: GroupJoinMode.FREE.code,
+    label: $t("business.group.joinMode.options.free.label"),
+    desc: $t("business.group.joinMode.options.free.desc"),
+  },
+  {
+    value: GroupJoinMode.APPROVAL.code,
+    label: $t("business.group.joinMode.options.approval.label"),
+    desc: $t("business.group.joinMode.options.approval.desc"),
+  },
+  {
+    value: GroupJoinMode.FORBIDDEN.code,
+    label: $t("business.group.joinMode.options.forbidden.label"),
+    desc: $t("business.group.joinMode.options.forbidden.desc"),
+  },
+]);
 
-  const getRoleText = (role?: number) => {
-    switch (role) {
-      case GroupMemberRole.OWNER.code:
-        return $t("business.group.roles.owner");
-      case GroupMemberRole.ADMIN.code:
-        return $t("business.group.roles.admin");
-      default:
-        return $t("business.group.roles.member");
-    }
-  };
+const joinModeText = computed(() => {
+  const mode = joinModeOptions.value.find(m => m.value === groupInfoData.joinMode);
+  return mode?.label || $t("business.group.joinMode.defaultLabel");
+});
 
-  // ==================== 事件处理 ====================
-  const onNoPermission = () => {
-    ElMessage.warning($t("business.group.empty.noSelection"));
-  };
+const muteAllSwitch = computed({
+  get: () => groupStore.getIsMuteAll,
+  set: () => { },
+});
 
-  const onBusGroupRenamed = (payload: any) => {
-    if (payload && chatStore.currentChat && String(payload.groupId) === String(chatStore.currentChat.chatId)) {
-      nextTick(() => {
-        groupInfoData.name = payload.groupName ?? groupInfoData.name;
-      });
-    }
-  };
+// ==================== 成员操作权限判断 ====================
+// 群主可操作非群主，管理员仅可操作普通成员
+const canOperateMember = (member: GroupMember) => {
+  if (!member || member.userId === groupStore.getOwnerId) return false;
+  const currentRole = groupStore.getCurrentRole;
+  if (currentRole === GroupMemberRole.OWNER.code) return member.role !== GroupMemberRole.OWNER.code;
+  if (currentRole === GroupMemberRole.ADMIN.code) return member.role === GroupMemberRole.MEMBER.code;
+  return false;
+};
+const canKickMember = (member: GroupMember) => canOperateMember(member);
+const canMuteMember = (member: GroupMember) => canOperateMember(member);
 
-  const onBusChatChanged = (payload: any) => {
-    if (payload && chatStore.currentChat && String(payload.chatId) === String(chatStore.currentChat.chatId)) {
-      nextTick(() => {
-        if (payload.name !== undefined) groupInfoData.name = payload.name;
-        if (payload.notification !== undefined) groupInfoData.notification = payload.notification || "";
-      });
-    }
-  };
+const getRoleText = (role?: number) => {
+  switch (role) {
+    case GroupMemberRole.OWNER.code:
+      return $t("business.group.roles.owner");
+    case GroupMemberRole.ADMIN.code:
+      return $t("business.group.roles.admin");
+    default:
+      return $t("business.group.roles.member");
+  }
+};
 
-  const onBusGroupNoticeChanged = (payload: any) => {
-    if (!payload) return;
-    const cid = chatStore.currentChat?.chatId;
-    const target = payload.chatId ?? payload.groupId;
-    if (!cid || (target && String(target) !== String(cid))) return;
+// ==================== 事件处理 ====================
+const onNoPermission = () => {
+  ElMessage.warning($t("business.group.empty.noSelection"));
+};
+
+const onBusGroupRenamed = (payload: any) => {
+  if (payload && chatStore.currentChat && String(payload.groupId) === String(chatStore.currentChat.chatId)) {
     nextTick(() => {
-      if (payload.content !== undefined) groupInfoData.notification = payload.content || "";
+      groupInfoData.name = payload.groupName ?? groupInfoData.name;
     });
-  };
+  }
+};
 
-  function updateGroupInfoData() {
-    const currentChat = chatStore.currentChat;
-    if (currentChat && currentChat.chatType == MessageType.GROUP_MESSAGE.code) {
-      groupInfoData.name = currentChat.name ?? "";
-      groupInfoData.notification = (currentChat as any).notification || "";
-      groupInfoData.joinMode = groupStore.info?.applyJoinType ?? GroupJoinMode.APPROVAL.code;
+const onBusChatChanged = (payload: any) => {
+  if (payload && chatStore.currentChat && String(payload.chatId) === String(chatStore.currentChat.chatId)) {
+    nextTick(() => {
+      if (payload.name !== undefined) groupInfoData.name = payload.name;
+      if (payload.notification !== undefined) groupInfoData.notification = payload.notification || "";
+    });
+  }
+};
+
+const onBusGroupNoticeChanged = (payload: any) => {
+  if (!payload) return;
+  const cid = chatStore.currentChat?.chatId;
+  const target = payload.chatId ?? payload.groupId;
+  if (!cid || (target && String(target) !== String(cid))) return;
+  nextTick(() => {
+    if (payload.content !== undefined) groupInfoData.notification = payload.content || "";
+  });
+};
+
+function updateGroupInfoData() {
+  const currentChat = chatStore.currentChat;
+  if (currentChat && currentChat.chatType == MessageType.GROUP_MESSAGE.code) {
+    groupInfoData.name = currentChat.name ?? "";
+    groupInfoData.notification = (currentChat as any).notification || "";
+    groupInfoData.joinMode = groupStore.info?.applyJoinType ?? GroupJoinMode.APPROVAL.code;
+  }
+}
+
+onMounted(() => {
+  updateGroupInfoData();
+  globalEventBus.on(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.on(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.on(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+});
+
+onUnmounted(() => {
+  globalEventBus.off(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
+  globalEventBus.off(Events.CHAT_CHANGED as any, onBusChatChanged as any);
+  globalEventBus.off(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
+});
+
+// ==================== 成员操作 ====================
+const toggleExpand = () => {
+  ui.members.expanded = !ui.members.expanded;
+};
+
+const handleInviteDialog = () => {
+  ui.dialogs.invite = !ui.dialogs.invite;
+};
+
+// 当前群 ID 统一读取
+const getCurrentGroupId = () => {
+  const id = chatStore.currentChat?.toId;
+  return id ? String(id) : "";
+};
+
+const handleAddGroupMember = async (arr: any) => {
+  if (!arr?.length) return;
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  await groupStore.inviteMembers({
+    groupId,
+    memberIds: arr.map((m: any) => m.friendId || m.userId || m),
+    type: MessageContentType.INVITE_TO_GROUP.code,
+  });
+  ui.dialogs.invite = false;
+  ElMessage.success($t("business.group.messages.inviteSent"));
+};
+
+const buildMemberContact = (member: GroupMember) => ({
+  userId: member.userId,
+  friendId: member.userId,
+  name: member.alias || member.name,
+  avatar: member.avatar,
+  remark: member.alias,
+  flag: 0
+});
+
+// 群成员基础信息 + 好友详情合并
+const loadMemberContact = async (member: GroupMember) => {
+  selectedContact.value = buildMemberContact(member);
+  try {
+    const detail = await friendStore.handleGetContactInfo(member.userId);
+    if (detail) selectedContact.value = { ...selectedContact.value, ...detail };
+  } catch {
+    selectedContact.value = buildMemberContact(member);
+  }
+};
+
+const handleMemberClick = async (member: GroupMember) => {
+  selectedMember.value = member;
+  await loadMemberContact(member);
+  ui.dialogs.memberAction = true;
+};
+
+const handleMemberContext = (event: MouseEvent, member: GroupMember) => {
+  event.preventDefault();
+  handleMemberClick(member);
+};
+
+const handleSetAdmin = async () => {
+  if (!selectedMember.value) return;
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  const isCurrentAdmin = selectedMember.value.role === GroupMemberRole.ADMIN.code;
+  const newRole = isCurrentAdmin ? GroupMemberRole.MEMBER.code : GroupMemberRole.ADMIN.code;
+
+  const result = await groupStore.setAdmin({
+    groupId,
+    targetUserId: selectedMember.value.userId,
+    role: newRole as number,
+  });
+
+  if (result) {
+    ElMessage.success(
+      isCurrentAdmin ? $t("business.group.messages.adminCanceled") : $t("business.group.messages.adminSet")
+    );
+    ui.dialogs.memberAction = false;
+  }
+};
+
+const handleMuteMember = async () => {
+  if (!selectedMember.value) return;
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  const isMuted = selectedMember.value.mute === GroupMuteStatus.MUTED.code;
+
+  const result = await groupStore.muteMember({
+    groupId,
+    targetUserId: selectedMember.value.userId,
+    mute: (isMuted ? GroupMuteStatus.NORMAL.code : GroupMuteStatus.MUTED.code) as number,
+    muteDuration: isMuted ? 0 : ui.muteDurationSec,
+  });
+
+  if (result) {
+    ElMessage.success(
+      isMuted ? $t("business.group.messages.unmuteSuccess") : $t("business.group.messages.muteSuccess")
+    );
+    ui.dialogs.memberAction = false;
+  }
+};
+
+const handleKickMember = async () => {
+  if (!selectedMember.value) return;
+
+  await ElMessageBox.confirm(
+    $t("business.group.confirm.kickMessage", {
+      name: selectedMember.value.alias || selectedMember.value.name,
+    }),
+    $t("business.group.confirm.kickTitle"),
+    {
+      confirmButtonText: $t("business.group.buttons.confirm"),
+      cancelButtonText: $t("business.group.buttons.cancel"),
+      type: "warning",
     }
+  );
+
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  const result = await groupStore.kickMember({
+    groupId,
+    targetUserId: selectedMember.value.userId,
+  });
+
+  if (result) {
+    ElMessage.success($t("business.group.messages.kickSuccess"));
+    ui.dialogs.memberAction = false;
+  }
+};
+
+const toggleRemoveMember = (userId: string) => {
+  const idx = ui.selectedRemoveMembers.indexOf(userId);
+  if (idx === -1) {
+    ui.selectedRemoveMembers.push(userId);
+  } else {
+    ui.selectedRemoveMembers.splice(idx, 1);
+  }
+};
+
+const confirmRemoveMembers = async () => {
+  if (!ui.selectedRemoveMembers.length) return;
+
+  await ElMessageBox.confirm(
+    $t("business.group.confirm.removeMessage", { count: ui.selectedRemoveMembers.length }),
+    $t("business.group.confirm.removeTitle"),
+    {
+      confirmButtonText: $t("business.group.buttons.confirm"),
+      cancelButtonText: $t("business.group.buttons.cancel"),
+      type: "warning",
+    }
+  );
+
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  let successCount = 0;
+  for (const userId of ui.selectedRemoveMembers) {
+    const result = await groupStore.kickMember({
+      groupId,
+      targetUserId: userId,
+    });
+    if (result) successCount++;
   }
 
-  onMounted(() => {
-    updateGroupInfoData();
-    globalEventBus.on(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
-    globalEventBus.on(Events.CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.on(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
-  });
+  if (successCount > 0) {
+    ElMessage.success($t("business.group.messages.removeSuccess", { count: successCount }));
+    ui.selectedRemoveMembers = [];
+    ui.dialogs.removeMember = false;
+  }
+};
 
-  onUnmounted(() => {
-    globalEventBus.off(Events.GROUP_RENAMED as any, onBusGroupRenamed as any);
-    globalEventBus.off(Events.CHAT_CHANGED as any, onBusChatChanged as any);
-    globalEventBus.off(Events.GROUP_NOTICE_CHANGED as any, onBusGroupNoticeChanged as any);
-  });
+// ==================== 群设置操作 ====================
+const handleJoinModeChange = async (mode: number) => {
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
 
-  // ==================== 成员操作 ====================
-  const toggleExpand = () => {
-    ui.members.expanded = !ui.members.expanded;
-  };
+  const result = await groupStore.setJoinMode(groupId, mode);
+  if (result) {
+    groupInfoData.joinMode = mode;
+    ElMessage.success($t("business.group.messages.joinModeUpdated"));
+    ui.dialogs.joinMode = false;
+  }
+};
 
-  const handleInviteDialog = () => {
-    ui.dialogs.invite = !ui.dialogs.invite;
-  };
+const onMuteAllSwitchChange = (val: string | number | boolean) => {
+  handleMuteAllChange(Boolean(val));
+};
 
-  const handleAddGroupMember = async (arr: any) => {
-    if (!arr?.length) return;
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
+const handleMuteAllChange = async (value: boolean) => {
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
 
-    await groupStore.inviteMembers({
-      groupId: String(groupId),
-      memberIds: arr.map((m: any) => m.friendId || m.userId || m),
-      type: 1,
-    });
-    ui.dialogs.invite = false;
-    ElMessage.success($t("business.group.messages.inviteSent"));
-  };
+  const muteStatus = value ? GroupMuteStatus.MUTED.code : GroupMuteStatus.NORMAL.code;
+  const result = await groupStore.setMuteAll(groupId, muteStatus as number);
+  if (result) {
+    ElMessage.success(value ? $t("business.group.messages.muteAllOn") : $t("business.group.messages.muteAllOff"));
+  }
+};
 
-  const handleMemberClick = (member: GroupMember) => {
-    // 点击自己不弹窗
-    if (member.userId === groupStore.getOwnerId) return;
-    // 非管理员不显示管理弹窗
-    if (!hasAdminPermission.value) return;
+const confirmTransferOwner = async () => {
+  if (!ui.selectedTransferMember) return;
 
-    selectedMember.value = member;
-    ui.dialogs.memberAction = true;
-  };
+  const member = transferableMembers.value.find(m => m.userId === ui.selectedTransferMember);
+  if (!member) return;
 
-  const handleMemberContext = (event: MouseEvent, member: GroupMember) => {
-    event.preventDefault();
-    handleMemberClick(member);
-  };
-
-  const handleSetAdmin = async () => {
-    if (!selectedMember.value) return;
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const isCurrentAdmin = selectedMember.value.role === GroupMemberRole.ADMIN.code;
-    const newRole = isCurrentAdmin ? GroupMemberRole.MEMBER.code : GroupMemberRole.ADMIN.code;
-
-    const result = await groupStore.setAdmin({
-      groupId: String(groupId),
-      targetUserId: selectedMember.value.userId,
-      role: newRole as number,
-    });
-
-    if (result) {
-      ElMessage.success(
-        isCurrentAdmin ? $t("business.group.messages.adminCanceled") : $t("business.group.messages.adminSet")
-      );
-      ui.dialogs.memberAction = false;
-    }
-  };
-
-  const handleMuteMember = async () => {
-    if (!selectedMember.value) return;
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const isMuted = selectedMember.value.mute === GroupMuteStatus.MUTED.code;
-
-    const result = await groupStore.muteMember({
-      groupId: String(groupId),
-      targetUserId: selectedMember.value.userId,
-      mute: (isMuted ? GroupMuteStatus.NORMAL.code : GroupMuteStatus.MUTED.code) as number,
-      muteDuration: isMuted ? 0 : ui.muteDurationSec,
-    });
-
-    if (result) {
-      ElMessage.success(
-        isMuted ? $t("business.group.messages.unmuteSuccess") : $t("business.group.messages.muteSuccess")
-      );
-      ui.dialogs.memberAction = false;
-    }
-  };
-
-  const handleKickMember = async () => {
-    if (!selectedMember.value) return;
-
-    await ElMessageBox.confirm(
-      $t("business.group.confirm.kickMessage", {
-        name: selectedMember.value.alias || selectedMember.value.name,
-      }),
-      $t("business.group.confirm.kickTitle"),
-      {
-        confirmButtonText: $t("business.group.buttons.confirm"),
-        cancelButtonText: $t("business.group.buttons.cancel"),
-        type: "warning",
-      }
-    );
-
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const result = await groupStore.kickMember({
-      groupId: String(groupId),
-      targetUserId: selectedMember.value.userId,
-    });
-
-    if (result) {
-      ElMessage.success($t("business.group.messages.kickSuccess"));
-      ui.dialogs.memberAction = false;
-    }
-  };
-
-  const toggleRemoveMember = (userId: string) => {
-    const idx = ui.selectedRemoveMembers.indexOf(userId);
-    if (idx === -1) {
-      ui.selectedRemoveMembers.push(userId);
-    } else {
-      ui.selectedRemoveMembers.splice(idx, 1);
-    }
-  };
-
-  const confirmRemoveMembers = async () => {
-    if (!ui.selectedRemoveMembers.length) return;
-
-    await ElMessageBox.confirm(
-      $t("business.group.confirm.removeMessage", { count: ui.selectedRemoveMembers.length }),
-      $t("business.group.confirm.removeTitle"),
-      {
-        confirmButtonText: $t("business.group.buttons.confirm"),
-        cancelButtonText: $t("business.group.buttons.cancel"),
-        type: "warning",
-      }
-    );
-
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    let successCount = 0;
-    for (const userId of ui.selectedRemoveMembers) {
-      const result = await groupStore.kickMember({
-        groupId: String(groupId),
-        targetUserId: userId,
-      });
-      if (result) successCount++;
-    }
-
-    if (successCount > 0) {
-      ElMessage.success($t("business.group.messages.removeSuccess", { count: successCount }));
-      ui.selectedRemoveMembers = [];
-      ui.dialogs.removeMember = false;
-    }
-  };
-
-  // ==================== 群设置操作 ====================
-  const handleJoinModeChange = async (mode: number) => {
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const result = await groupStore.setJoinMode(String(groupId), mode);
-    if (result) {
-      groupInfoData.joinMode = mode;
-      ElMessage.success($t("business.group.messages.joinModeUpdated"));
-      ui.dialogs.joinMode = false;
-    }
-  };
-
-  const onMuteAllSwitchChange = (val: string | number | boolean) => {
-    handleMuteAllChange(Boolean(val));
-  };
-
-  const handleMuteAllChange = async (value: boolean) => {
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const muteStatus = value ? GroupMuteStatus.MUTED.code : GroupMuteStatus.NORMAL.code;
-    const result = await groupStore.setMuteAll(String(groupId), muteStatus as number);
-    if (result) {
-      ElMessage.success(value ? $t("business.group.messages.muteAllOn") : $t("business.group.messages.muteAllOff"));
-    }
-  };
-
-  const confirmTransferOwner = async () => {
-    if (!ui.selectedTransferMember) return;
-
-    const member = transferableMembers.value.find(m => m.userId === ui.selectedTransferMember);
-    if (!member) return;
-
-    await ElMessageBox.confirm(
-      $t("business.group.confirm.transferMessage", { name: member.alias || member.name }),
-      $t("business.group.confirm.transferTitle"),
-      {
-        confirmButtonText: $t("business.group.buttons.confirm"),
-        cancelButtonText: $t("business.group.buttons.cancel"),
-        type: "warning",
-      }
-    );
-
-    const groupId = chatStore.currentChat?.toId;
-    if (!groupId) return;
-
-    const result = await groupStore.transferOwner({
-      groupId: String(groupId),
-      targetUserId: ui.selectedTransferMember,
-    });
-
-    if (result) {
-      ElMessage.success($t("business.group.transferOwner.success"));
-      ui.dialogs.transferOwner = false;
-      ui.selectedTransferMember = "";
-    }
-  };
-
-  // ==================== 群名称和公告编辑 ====================
-  const groupNameInputRef = ref();
-  const startEditGroupName = () => {
-    if (isOwner.value) {
-      ui.edit.name.editing = true;
-      ui.edit.name.value = groupInfoData.name;
-      nextTick(() => groupNameInputRef.value?.focus());
-    } else {
-      ElMessage.warning($t("business.group.messages.onlyOwnerRename"));
-    }
-  };
-
-  const saveGroupInfo = async () => {
-    const chatId = chatStore.currentChat?.chatId;
-    const groupId = chatStore.currentChat?.toId;
-    if (!chatId || !groupId) return;
-
-    let hasChange = false;
-    const params: any = { groupId: String(groupId) };
-
-    if (ui.edit.name.editing && ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
-      params.groupName = ui.edit.name.value;
-      hasChange = true;
-    }
-    if (ui.edit.notice.editing && ui.edit.notice.value.trim() !== groupInfoData.notification) {
-      if (!canEditNotice.value) {
-        onNoPermission();
-      } else {
-        params.notification = ui.edit.notice.value;
-        hasChange = true;
-      }
-    }
-
-    if (!hasChange) {
-      ui.edit.name.editing = false;
-      ui.edit.notice.editing = false;
-      return;
-    }
-
-    try {
-      const result = await groupStore.updateGroupInfo(params, chatId);
-      if (result) {
-        if (params.groupName) groupInfoData.name = params.groupName;
-        if (params.notification !== undefined) groupInfoData.notification = params.notification;
-        ElMessage.success($t("business.group.messages.groupInfoUpdated"));
-      }
-      ui.edit.name.editing = false;
-      ui.edit.notice.editing = false;
-    } catch (e) {
-      ElMessage.error($t("business.group.messages.updateFailed"));
-    }
-  };
-
-  const checkAndCancelEditGroupName = () => {
-    if (ui.edit.name.value.trim() && ui.edit.name.value !== groupInfoData.name) {
-      ElMessageBox.confirm($t("business.group.confirm.saveName"), $t("business.group.confirm.tip"), {
-        confirmButtonText: $t("business.group.buttons.save"),
-        cancelButtonText: $t("business.group.buttons.cancel"),
-        type: "warning",
-      })
-        .then(() => saveGroupInfo())
-        .catch(() => {
-          ui.edit.name.editing = false;
-          ui.edit.name.value = groupInfoData.name;
-        });
-    } else {
-      ui.edit.name.editing = false;
-    }
-  };
-
-  const startEditGroupNotice = () => {
-    if (!canEditNotice.value) {
-      onNoPermission();
-      return;
-    }
-    ui.edit.notice.editing = true;
-    ui.edit.notice.value = groupInfoData.notification;
-  };
-
-  const checkAndCancelEditGroupNotice = () => {
-    if (ui.edit.notice.value !== groupInfoData.notification) {
-      ElMessageBox.confirm($t("business.group.confirm.saveNotice"), $t("business.group.confirm.tip"), {
-        confirmButtonText: $t("business.group.buttons.save"),
-        cancelButtonText: $t("business.group.buttons.cancel"),
-        type: "warning",
-      })
-        .then(() => saveGroupInfo())
-        .catch(() => {
-          ui.edit.notice.editing = false;
-          ui.edit.notice.value = groupInfoData.notification;
-        });
-    } else {
-      ui.edit.notice.editing = false;
-    }
-  };
-
-  // ==================== 其他操作 ====================
-  const switchHistoryMessage = () => (ui.dialogs.history = true);
-  const toggleHistoryDialog = () => (ui.dialogs.history = !ui.dialogs.history);
-
-  const currentItem = computed(() => {
-    const { currentChat } = chatStore;
-    const chatId = currentChat?.chatId;
-    return chatId ? chatStore.getChatById(chatId) : null;
-  });
-
-  const top = computed({
-    get: () => currentItem.value?.isTop === 1,
-    set: () => {
-      if (currentItem.value) chatStore.handlePinChat(currentItem.value as Chats);
-    },
-  });
-
-  const messageMute = computed({
-    get: () => currentItem.value?.isMute === 1,
-    set: () => {
-      if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats);
-    },
-  });
-
-  ui.switches = { top, mute: messageMute };
-
-  const handleClearGroupMessage = () => {
-    ElMessageBox.confirm($t("business.group.confirm.clearChat"), $t("business.group.confirm.tip"), {
+  await ElMessageBox.confirm(
+    $t("business.group.confirm.transferMessage", { name: member.alias || member.name }),
+    $t("business.group.confirm.transferTitle"),
+    {
       confirmButtonText: $t("business.group.buttons.confirm"),
       cancelButtonText: $t("business.group.buttons.cancel"),
       type: "warning",
-    })
-      .then(() => emit("handleClearGroupMessage"))
-      .catch(() => {});
-  };
+    }
+  );
 
-  const handleQuitGroup = () => {
-    const title = isOwner.value
-      ? $t("business.group.confirm.dissolveTitle")
-      : $t("business.group.confirm.quitTitle");
-    const msg = isOwner.value
-      ? $t("business.group.confirm.dissolveMessage")
-      : $t("business.group.confirm.quitMessage");
-    ElMessageBox.confirm(msg, title, {
-      confirmButtonText: $t("business.group.buttons.confirm"),
-      cancelButtonText: $t("business.group.buttons.cancel"),
-      type: "warning",
-    })
-      .then(() => emit("handleQuitGroup"))
-      .catch(() => {});
-  };
+  const groupId = getCurrentGroupId();
+  if (!groupId) return;
+
+  const result = await groupStore.transferOwner({
+    groupId,
+    targetUserId: ui.selectedTransferMember,
+  });
+
+  if (result) {
+    ElMessage.success($t("business.group.transferOwner.success"));
+    ui.dialogs.transferOwner = false;
+    ui.selectedTransferMember = "";
+  }
+};
+
+const updateGroupInfo = async (payload: { groupName?: string; notification?: string }) => {
+  const chatId = chatStore.currentChat?.chatId;
+  const groupId = chatStore.currentChat?.toId;
+  if (!chatId || !groupId) return;
+  try {
+    const result = await groupStore.updateGroupInfo({ groupId: String(groupId), ...payload }, chatId);
+    if (result) {
+      if (payload.groupName !== undefined) groupInfoData.name = payload.groupName;
+      if (payload.notification !== undefined) groupInfoData.notification = payload.notification;
+      ElMessage.success($t("business.group.messages.groupInfoUpdated"));
+    }
+  } catch (e) {
+    ElMessage.error($t("business.group.messages.updateFailed"));
+  }
+};
+
+const openGroupNameDialog = () => {
+  if (!isOwner.value) {
+    ElMessage.warning($t("business.group.messages.onlyOwnerRename"));
+    return;
+  }
+  ui.edit.name.value = groupInfoData.name;
+  ui.dialogs.groupName = true;
+};
+
+const saveGroupName = async () => {
+  const nextName = ui.edit.name.value.trim();
+  if (!nextName || nextName === groupInfoData.name) {
+    ui.dialogs.groupName = false;
+    return;
+  }
+  await updateGroupInfo({ groupName: nextName });
+  ui.dialogs.groupName = false;
+};
+
+const openGroupNoticeDialog = () => {
+  if (!canEditNotice.value) {
+    onNoPermission();
+    return;
+  }
+  ui.edit.notice.value = groupInfoData.notification;
+  ui.dialogs.groupNotice = true;
+};
+
+const saveGroupNotice = async () => {
+  if (ui.edit.notice.value === groupInfoData.notification) {
+    ui.dialogs.groupNotice = false;
+    return;
+  }
+  await updateGroupInfo({ notification: ui.edit.notice.value });
+  ui.dialogs.groupNotice = false;
+};
+
+// ==================== 其他操作 ====================
+const switchHistoryMessage = () => (ui.dialogs.history = true);
+const toggleHistoryDialog = () => (ui.dialogs.history = !ui.dialogs.history);
+
+const currentItem = computed(() => {
+  const { currentChat } = chatStore;
+  const chatId = currentChat?.chatId;
+  return chatId ? chatStore.getChatById(chatId) : null;
+});
+
+const top = computed({
+  get: () => currentItem.value?.isTop === 1,
+  set: () => {
+    if (currentItem.value) chatStore.handlePinChat(currentItem.value as Chats);
+  },
+});
+
+const messageMute = computed({
+  get: () => currentItem.value?.isMute === 1,
+  set: () => {
+    if (currentItem.value) chatStore.handleMuteChat(currentItem.value as Chats);
+  },
+});
+
+ui.switches = { top, mute: messageMute };
+
+const handleClearGroupMessage = () => {
+  ElMessageBox.confirm($t("business.group.confirm.clearChat"), $t("business.group.confirm.tip"), {
+    confirmButtonText: $t("business.group.buttons.confirm"),
+    cancelButtonText: $t("business.group.buttons.cancel"),
+    type: "warning",
+  })
+    .then(() => emit("handleClearGroupMessage"))
+    .catch(() => { });
+};
+
+const handleQuitGroup = () => {
+  const title = isOwner.value
+    ? $t("business.group.confirm.dissolveTitle")
+    : $t("business.group.confirm.quitTitle");
+  const msg = isOwner.value
+    ? $t("business.group.confirm.dissolveMessage")
+    : $t("business.group.confirm.quitMessage");
+  ElMessageBox.confirm(msg, title, {
+    confirmButtonText: $t("business.group.buttons.confirm"),
+    cancelButtonText: $t("business.group.buttons.cancel"),
+    type: "warning",
+  })
+    .then(() => emit("handleQuitGroup"))
+    .catch(() => { });
+};
 </script>
 
 <style lang="scss" scoped>
-  .group-container {
-    height: 100%;
-    background-color: #f8f9fa;
-  }
+.group-container {
+  height: 100%;
+  background-color: #f8f9fa;
+}
 
-  .search-section {
-    padding: 15px 20px;
-    background-color: #fff;
+.search-section {
+  padding: 15px 20px;
+  background-color: #fff;
 
-    .group-search {
-      :deep(.el-input__wrapper) {
-        background-color: #f0f2f5;
-        box-shadow: none;
-        border-radius: 8px;
+  .group-search {
+    :deep(.el-input__wrapper) {
+      background-color: #f0f2f5;
+      box-shadow: none;
+      border-radius: 8px;
 
-        &.is-focus {
-          background-color: #fff;
-          box-shadow: 0 0 0 1px #409eff inset;
-        }
+      &.is-focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 1px #409eff inset;
       }
     }
   }
+}
 
-  .members-section {
-    padding: 10px;
-    background-color: #fff;
+.members-section {
+  padding: 10px;
+  background-color: #fff;
 
-    .section-header {
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 15px;
-      padding-left: 5px;
-    }
-
-    .members-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 15px 10px;
-
-      .member-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-
-        .avatar-wrapper {
-          position: relative;
-        }
-
-        .member-name {
-          font-size: 12px;
-          color: #666;
-          width: 100%;
-          text-align: center;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .add-btn {
-          width: 42px;
-          height: 42px;
-          border: 1px dashed #ccc;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #999;
-          font-size: 20px;
-          transition: all 0.2s;
-
-          &:hover {
-            border-color: #409eff;
-            color: #409eff;
-          }
-
-          &.remove-btn:hover {
-            border-color: #f56c6c;
-            color: #f56c6c;
-          }
-        }
-      }
-    }
-
-    .expand-btn-wrapper {
-      text-align: center;
-      margin-top: 15px;
-    }
+  .section-header {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 15px;
+    padding-left: 5px;
   }
 
-  .section-divider {
-    height: 12px;
-    background-color: #f0f2f5;
-  }
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px 10px;
 
-  .settings-section {
-    background-color: #fff;
-
-    .section-title {
-      padding: 12px 16px 8px;
-      font-size: 13px;
-      color: #999;
-    }
-
-    .setting-item {
+    .member-item {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid #f0f2f5;
-      min-height: 30px;
+      gap: 6px;
+      cursor: pointer;
 
-      &:last-child {
-        border-bottom: none;
+      .avatar-wrapper {
+        position: relative;
       }
 
-      &.clickable {
-        cursor: pointer;
-
-        &:active {
-          background-color: #f5f5f5;
-        }
-      }
-
-      .label {
-        font-size: 14px;
-        color: #333;
+      .member-name {
+        font-size: 12px;
+        color: #666;
+        width: 100%;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .content {
+      .add-btn {
+        width: 42px;
+        height: 42px;
+        border: 1px dashed #ccc;
+        border-radius: 6px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        color: #888;
-        font-size: 14px;
-        max-width: 60%;
-        text-align: right;
+        justify-content: center;
+        color: #999;
+        font-size: 20px;
+        transition: all 0.2s;
 
-        &.notice-content {
-          flex-direction: column;
-          align-items: flex-end;
-          width: 100%;
+        &:hover {
+          border-color: #409eff;
+          color: #409eff;
         }
 
-        .value {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          line-clamp: 1;
-          -webkit-box-orient: vertical;
-
-          &.notice-text {
-            -webkit-line-clamp: 3;
-            line-clamp: 3;
-            text-align: right;
-            line-height: 1.4;
-          }
-        }
-
-        .arrow-icon {
-          font-size: 14px;
-          color: #ccc;
-          flex-shrink: 0;
+        &.remove-btn:hover {
+          border-color: #f56c6c;
+          color: #f56c6c;
         }
       }
     }
   }
 
-  .danger-section {
-    background-color: #fff;
+  .expand-btn-wrapper {
+    text-align: center;
+    margin-top: 15px;
+  }
+}
 
-    .danger-item {
-      padding: 14px 20px;
-      text-align: center;
-      font-size: 15px;
-      color: #ff4d4f;
-      border-bottom: 1px solid #f0f2f5;
+.section-divider {
+  height: 12px;
+  background-color: #f0f2f5;
+}
+
+.settings-section {
+  background-color: #fff;
+
+  .section-title {
+    padding: 12px 16px 8px;
+    font-size: 13px;
+    color: #999;
+  }
+
+  .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    min-height: 30px;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.clickable {
       cursor: pointer;
 
-      &:last-child {
-        border-bottom: none;
-      }
-
       &:active {
-        background-color: #fff1f0;
+        background-color: #f5f5f5;
+      }
+    }
+
+    .label {
+      font-size: 14px;
+      color: #333;
+      white-space: nowrap;
+    }
+
+    .content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #888;
+      font-size: 14px;
+      max-width: 60%;
+      text-align: right;
+
+      &.notice-content {
+        flex-direction: column;
+        align-items: flex-end;
+        width: 100%;
+      }
+
+      .value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        -webkit-box-orient: vertical;
+
+        &.notice-text {
+          -webkit-line-clamp: 3;
+          line-clamp: 3;
+          text-align: right;
+          line-height: 1.4;
+        }
+      }
+
+      .arrow-icon {
+        font-size: 14px;
+        color: #ccc;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+.danger-section {
+  background-color: #fff;
+
+  .danger-item {
+    padding: 14px 20px;
+    text-align: center;
+    font-size: 15px;
+    color: #ff4d4f;
+    border-bottom: 1px solid #f0f2f5;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background-color: #fff1f0;
+    }
+  }
+}
+
+.custom-switch {
+  --el-switch-on-color: #409eff;
+}
+
+// 弹窗样式
+:deep(.invite-dialog),
+:deep(.member-action-dialog),
+:deep(.transfer-dialog),
+:deep(.join-mode-dialog),
+:deep(.remove-member-dialog) {
+  .el-dialog__header {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  .el-dialog__body {
+    padding: 16px 20px;
+  }
+}
+
+// 成员操作弹窗
+.member-action-content {
+  .member-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f2f5;
+
+    .member-detail {
+      .name {
+        font-size: 16px;
+        font-weight: 500;
+        color: #333;
+      }
+
+      .role-text {
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
       }
     }
   }
 
-  .custom-switch {
-    --el-switch-on-color: #409eff;
-  }
+  .mute-duration {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 8px 0;
 
-  // 弹窗样式
-  :deep(.invite-dialog),
-  :deep(.member-action-dialog),
-  :deep(.transfer-dialog),
-  :deep(.join-mode-dialog),
-  :deep(.remove-member-dialog) {
-    .el-dialog__header {
-      padding-bottom: 10px;
-      border-bottom: 1px solid #f0f2f5;
+    .mute-label {
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;
     }
 
-    .el-dialog__body {
-      padding: 16px 20px;
+    .mute-select {
+      width: 160px;
     }
   }
 
-  // 成员操作弹窗
-  .member-action-content {
-    .member-info {
+  .action-list {
+    padding-top: 8px;
+
+    .action-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #f0f2f5;
-
-      .member-detail {
-        .name {
-          font-size: 16px;
-          font-weight: 500;
-          color: #333;
-        }
-
-        .role-text {
-          font-size: 12px;
-          color: #999;
-          margin-top: 4px;
-        }
-      }
-    }
-
-    .mute-duration {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 8px 0;
-      .mute-label {
-        font-size: 13px;
-        color: #666;
-        white-space: nowrap;
-      }
-      .mute-select {
-        width: 160px;
-      }
-    }
-    .action-list {
-      padding-top: 8px;
-
-      .action-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-
-        &.danger {
-          color: #f56c6c;
-        }
-
-        .el-icon {
-          font-size: 18px;
-        }
-      }
-    }
-  }
-
-  // 移交群主弹窗
-  .transfer-content {
-    .transfer-tip {
-      color: #999;
-      font-size: 13px;
-      margin-bottom: 16px;
-    }
-
-    .transfer-list {
-      .transfer-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 12px;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-
-        &.selected {
-          background-color: #ecf5ff;
-        }
-
-        .name {
-          flex: 1;
-          font-size: 14px;
-          color: #333;
-        }
-
-        .check-icon {
-          color: #409eff;
-          font-size: 18px;
-        }
-      }
-    }
-  }
-
-  // 加入方式弹窗
-  .join-mode-content {
-    .mode-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 12px;
+      padding: 12px 8px;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 6px;
       transition: background-color 0.2s;
-      margin-bottom: 8px;
 
-      &:last-child {
-        margin-bottom: 0;
+      &:hover {
+        background-color: #f5f5f5;
       }
+
+      &.danger {
+        color: #f56c6c;
+      }
+
+      .el-icon {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+// 移交群主弹窗
+.transfer-content {
+  .transfer-tip {
+    color: #999;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .transfer-list {
+    .transfer-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background-color 0.2s;
 
       &:hover {
         background-color: #f5f5f5;
@@ -1298,18 +1188,10 @@
         background-color: #ecf5ff;
       }
 
-      .mode-info {
-        .mode-label {
-          font-size: 14px;
-          color: #333;
-          font-weight: 500;
-        }
-
-        .mode-desc {
-          font-size: 12px;
-          color: #999;
-          margin-top: 4px;
-        }
+      .name {
+        flex: 1;
+        font-size: 14px;
+        color: #333;
       }
 
       .check-icon {
@@ -1318,37 +1200,83 @@
       }
     }
   }
+}
 
-  // 移除成员弹窗
-  .remove-content {
-    .remove-search {
-      margin-bottom: 12px;
+// 加入方式弹窗
+.join-mode-content {
+  .mode-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 12px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
     }
 
-    .remove-list {
-      .remove-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 8px;
-        cursor: pointer;
-        border-radius: 6px;
-        transition: background-color 0.2s;
+    &:hover {
+      background-color: #f5f5f5;
+    }
 
-        &:hover {
-          background-color: #f5f5f5;
-        }
+    &.selected {
+      background-color: #ecf5ff;
+    }
 
-        &.selected {
-          background-color: #fef0f0;
-        }
+    .mode-info {
+      .mode-label {
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+      }
 
-        .name {
-          flex: 1;
-          font-size: 14px;
-          color: #333;
-        }
+      .mode-desc {
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
+      }
+    }
+
+    .check-icon {
+      color: #409eff;
+      font-size: 18px;
+    }
+  }
+}
+
+// 移除成员弹窗
+.remove-content {
+  .remove-search {
+    margin-bottom: 12px;
+  }
+
+  .remove-list {
+    .remove-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #f5f5f5;
+      }
+
+      &.selected {
+        background-color: #fef0f0;
+      }
+
+      .name {
+        flex: 1;
+        font-size: 14px;
+        color: #333;
       }
     }
   }
+}
 </style>

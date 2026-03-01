@@ -642,6 +642,8 @@
         },
         "status": {
           "pending": "Pending",
+          "accept": "Accept",
+          "denied": "Denied",
           "accepted": "Accepted",
           "declined": "Declined",
           "unknown": "Unknown"

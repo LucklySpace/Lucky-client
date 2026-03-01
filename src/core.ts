@@ -396,10 +396,11 @@ class MainManager {
     const insertConfig = { ownerId, messageType: 0 };
 
     // 处理私聊消息
-    singleMessageMapper.findLastMessage().then(res => {
+    singleMessageMapper.findLastMessage().then(lastRes => {
 
-      const sequence = res?.sequence;
-      sequence && api.GetSingleMessageList({ fromId: ownerId, sequence }).then(async res => {
+      const sequence = lastRes?.sequence ?? 0;
+
+      api.GetSingleMessageList({ fromId: ownerId, sequence }).then(async res => {
 
         if (!res || !Array.isArray(res) || res.length === 0) {
           this.log.prettyDebug("message", "无新私聊离线消息");
@@ -416,11 +417,11 @@ class MainManager {
     });
 
     // 处理群聊消息
-    groupMessageMapper.findLastMessage().then(res => {
+    groupMessageMapper.findLastMessage().then(lastRes => {
 
-      const sequence = res?.sequence;
+      const sequence = lastRes?.sequence ?? 0;
 
-      sequence && api.GetGroupMessageList({ fromId: ownerId, sequence }).then(async res => {
+      api.GetGroupMessageList({ fromId: ownerId, sequence }).then(async res => {
 
         if (!res || !Array.isArray(res) || res.length === 0) {
           this.log.prettyDebug("message", "无新群聊离线消息");

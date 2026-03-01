@@ -642,6 +642,8 @@
         },
         "status": {
           "pending": "待处理",
+          "accept": "同意",
+          "denied": "拒绝",
           "accepted": "已同意",
           "declined": "已拒绝",
           "unknown": "未知状态"

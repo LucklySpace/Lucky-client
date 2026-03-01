@@ -21,14 +21,10 @@
         <div class="setting-item clickable" @click="startEditRemark">
           <span class="label">{{ $t('business.profile.fields.remark') }}</span>
           <div class="content">
-            <template v-if="!isEditingRemark">
-              <span class="value">{{ form.remark || singleInfo.name || $t('common.status.noData') }}</span>
-              <el-icon class="arrow-icon">
-                <ArrowRight />
-              </el-icon>
-            </template>
-            <el-input v-else ref="remarkInputRef" v-model="form.remark" size="small" class="remark-input"
-              @blur="cancelEdit" @keyup.enter="saveRemark" @click.stop />
+            <span class="value">{{ form.remark || singleInfo.name || $t('common.status.noData') }}</span>
+            <el-icon class="arrow-icon">
+              <ArrowRight />
+            </el-icon>
           </div>
         </div>
 
@@ -78,6 +74,14 @@
   <HistoryDialog :visible="historyDialogParam.showDialog" :title="$t('pages.chat.toolbar.history')"
     @handleClose="toggleHistoryDialog" />
 
+  <el-dialog v-model="remarkDialogVisible" :title="$t('business.profile.fields.remark')" width="360px">
+    <el-input v-model="remarkDraft" maxlength="30" show-word-limit />
+    <template #footer>
+      <el-button @click="remarkDialogVisible = false">{{ $t('components.dialog.buttons.cancel') }}</el-button>
+      <el-button type="primary" @click="saveRemark">{{ $t('components.dialog.buttons.confirm') }}</el-button>
+    </template>
+  </el-dialog>
+
   <el-popover ref="InfoRef" :virtual-ref="popRef" placement="right-end" trigger="click" virtual-triggering width="240">
     <UserPopover :contact="userInfo" />
   </el-popover>
@@ -100,7 +104,6 @@ const chatStore = useChatStore();
 const friendStore = useFriendsStore();
 
 const formRef = ref<FormInstance>();
-const remarkInputRef = ref<HTMLInputElement>();
 
 const form = ref({
   remark: ''
@@ -132,21 +135,19 @@ const toggleAvatarPopover = () => {
   else pop?.show?.();
 };
 
-const isEditingRemark = ref(false);
+const remarkDialogVisible = ref(false);
+const remarkDraft = ref('');
 
 const startEditRemark = () => {
-  isEditingRemark.value = true;
-  form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
-  nextTick(() => {
-    remarkInputRef.value?.focus();
-  });
+  remarkDraft.value = singleInfo.value.remark ?? singleInfo.value.name ?? '';
+  remarkDialogVisible.value = true;
 };
 
 const saveRemark = async () => {
-  const next = (form.value.remark || '').trim();
+  const next = (remarkDraft.value || '').trim();
   if (!next) {
     ElMessage.warning($t('common.errors.remark.empty'));
-    return cancelEdit();
+    return;
   }
   if (next.length > MAX_REMARK_LEN) {
     ElMessage.error($t('common.errors.remark.tooLong', { max: MAX_REMARK_LEN }));
@@ -154,17 +155,13 @@ const saveRemark = async () => {
   }
   try {
     await friendStore.updateFriendRemark(fromId.value, next);
-    isEditingRemark.value = false;
+    form.value.remark = next;
+    remarkDialogVisible.value = false;
     ElMessage.success('备注保存成功');
   } catch (error) {
     console.error('保存备注失败:', error);
     ElMessage.error('保存备注失败');
   }
-};
-
-const cancelEdit = () => {
-  isEditingRemark.value = false;
-  form.value.remark = singleInfo.value.remark ?? singleInfo.value.name ?? '';
 };
 
 const historyDialogParam = ref({ showDialog: false });

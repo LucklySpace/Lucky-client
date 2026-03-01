@@ -12,7 +12,8 @@
             <component :is="genderIcon" />
           </el-icon>
         </div>
-        <div class="account-id">ID: {{ contact?.friendId || contact?.userId || '---' }}</div>
+        <div v-if="props.groupRoleText" class="role-text">{{ props.groupRoleText }}</div>
+        <div v-else class="account-id">ID: {{ contact?.friendId || contact?.userId || '---' }}</div>
       </div>
     </div>
 
@@ -26,12 +27,11 @@
 
       <!-- 详细资料列表 -->
       <div class="profile-details">
-        <!-- 备注：仅好友显示且可编辑，自己不可编辑 -->
-        <div v-if="!isMe && contact?.flag === 1" class="detail-item clickable" @click="handleStartEdit">
+        <div v-if="canEditRemark" class="detail-item clickable" @click="handleStartEdit">
           <span class="label">{{ $t("business.profile.fields.remark") }}</span>
           <div class="value">
-            <template v-if="!isEditingRemark">
-              <span class="text-ellipsis">{{ remark || safeName }}</span>
+            <template v-if="!editingRemark">
+              <span class="text-ellipsis">{{ displayRemark }}</span>
               <el-icon class="edit-icon">
                 <Edit />
               </el-icon>
@@ -62,13 +62,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch, nextTick } from "vue";
-import { ElMessage } from "element-plus";
-import { Male, Female, Edit } from "@element-plus/icons-vue";
-import { useFriendsStore } from "@/store/modules/friends";
-import { MAX_REMARK_LEN } from "@/constants";
-import Avatar from "@/components/Avatar/index.vue";
 import defaultImg from "@/assets/avatar/default.jpg";
+import Avatar from "@/components/Avatar/index.vue";
+import { MAX_REMARK_LEN } from "@/constants";
+import { useFriendsStore } from "@/store/modules/friends";
+import { Edit, Female, Male } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -91,9 +91,11 @@ const props = withDefaults(
   defineProps<{
     contact?: Contact | null;
     isMe?: boolean;
+    groupRoleText?: string | null;
   }>(),
   {
-    isMe: false
+    isMe: false,
+    groupRoleText: null
   }
 );
 
@@ -105,9 +107,11 @@ const emit = defineEmits<{
 const hasContact = computed(() => !!props.contact && (!!props.contact.name || !!props.contact.userId));
 const avatarSrc = computed(() => props.contact?.avatar || defaultImg);
 const safeName = computed(() => props.contact?.name || "未知用户");
+const canEditRemark = computed(() => !props.isMe && props.contact?.flag === 1);
+const displayRemark = computed(() => remark.value || safeName.value);
 
 const remark = ref("");
-const isEditingRemark = ref(false);
+const editingRemark = ref(false);
 const remarkInputRef = ref();
 
 watch(() => props.contact, (val) => {
@@ -136,18 +140,18 @@ const displayInfo = computed(() => {
 });
 
 const handleStartEdit = () => {
-  if (props.isMe) return;
-  isEditingRemark.value = true;
+  if (!canEditRemark.value) return;
+  editingRemark.value = true;
   nextTick(() => remarkInputRef.value?.focus());
 };
 
 const saveRemark = async () => {
-  if (!isEditingRemark.value) return;
+  if (!editingRemark.value) return;
   const next = remark.value.trim();
   if (!next) {
     ElMessage.warning(t("errors.remark.empty"));
     remark.value = props.contact?.remark ?? props.contact?.name ?? "";
-    isEditingRemark.value = false;
+    editingRemark.value = false;
     return;
   }
   if (next.length > MAX_REMARK_LEN) {
@@ -160,9 +164,9 @@ const saveRemark = async () => {
       await friendStore.updateFriendRemark(props.contact.friendId, next);
       ElMessage.success("备注已更新");
     }
-    isEditingRemark.value = false;
+    editingRemark.value = false;
   } catch (e) {
-    isEditingRemark.value = false;
+    editingRemark.value = false;
   }
 };
 
@@ -225,6 +229,11 @@ const handleCall = () => emit("call", props.contact!);
     }
 
     .account-id {
+      font-size: 12px;
+      color: #86909c;
+    }
+
+    .role-text {
       font-size: 12px;
       color: #86909c;
     }

@@ -19,10 +19,10 @@
           <div v-if="isInvitee" class="invite-bubble__actions">
             <el-button class="invite-bubble__btn invite-bubble__btn--primary" size="small" type="primary"
               @click.stop="handleApprove(true)">
-              {{ $t("business.invite.status.accepted") }}
+              {{ $t("business.invite.status.accept") }}
             </el-button>
             <el-button class="invite-bubble__btn" size="small" @click.stop="handleApprove(false)">
-              {{ $t("business.invite.status.declined") }}
+              {{ $t("business.invite.status.denied") }}
             </el-button>
           </div>
           <span v-else class="invite-bubble__status invite-bubble__status--pending">
