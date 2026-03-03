@@ -125,12 +125,14 @@ export function useChatInput() {
 
   const placeholderMap: Readonly<Record<string, string>> = {
     image: t("pages.chat.preview.image"),
+    sticker: t("pages.chat.preview.sticker"),
     video: t("pages.chat.preview.video"),
     audio: t("pages.chat.preview.audio")
   } as const;
 
   const codePlaceholderMap: Readonly<Record<number, string>> = {
     [MessageContentType.IMAGE.code]: t("pages.chat.preview.image"),
+    [MessageContentType.STICKER.code]: t("pages.chat.preview.sticker"),
     [MessageContentType.VIDEO.code]: t("pages.chat.preview.video"),
     [MessageContentType.AUDIO.code]: t("pages.chat.preview.audio"),
     [MessageContentType.FILE.code]: t("pages.chat.preview.file"),

@@ -163,6 +163,7 @@
         "draft": "[Draft]",
         "preview": {
           "image": "[Image]",
+          "sticker": "[Sticker]",
           "video": "[Video]",
           "audio": "[Audio]",
           "file": "[File]",

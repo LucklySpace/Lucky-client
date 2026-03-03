@@ -163,6 +163,7 @@
         "draft": "[草稿]",
         "preview": {
           "image": "[图片]",
+          "sticker": "[动画表情]",
           "video": "[视频]",
           "audio": "[语音]",
           "file": "[文件]",

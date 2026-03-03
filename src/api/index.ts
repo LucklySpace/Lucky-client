@@ -342,6 +342,9 @@ export default {
   /** 获取表情包详情 */
   GetEmojiPackInfo: (id: string) => Http.get(`/chat/api/v1/sticker/pack/${id}`),
 
+  /** 获取表情详情 */
+  GetEmojiInfo: (id: string) => Http.get(`/chat/api/v1/sticker/${id}`),
+
 
   /** ================================================== 平台模块 =============================================================== */
 

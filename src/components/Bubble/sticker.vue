@@ -1,46 +1,77 @@
 <template>
-  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig" v-memo="[message, message.isOwner]"
+  <div :id="`message-${message.messageId}`" v-context-menu="menuConfig"
+    v-memo="[message.messageId, message.isOwner, stickerUrl]"
     :class="['bubble', message.type, { owner: message.isOwner }]" class="message-bubble image-bubble">
     <div class="image-wrapper">
-      <img :data-src="localPath" :src="localPath" alt="Image message" class="img-bubble lazy-img"
-        @click="handlePreview(message.messageBody?.path)" @load="cacheMedia" />
+      <img v-if="stickerUrl" :src="stickerUrl" alt="Sticker" class="img-bubble lazy-img" loading="lazy" />
+      <div v-else class="loading-placeholder">
+        <div class="dot-flashing"></div>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ShowPreviewWindow } from "@/windows/preview";
-import { useMediaCacheStore } from "@/store/modules/media";
+import API from "@/api";
 import { Events } from "@/constants";
-import { storage } from "@/utils/Storage";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useMessageContextMenu } from "@/hooks/useMessageContextMenu";
+import { storage } from "@/utils/Storage";
 import { ElMessageBox } from "element-plus";
+import { ref, watch } from "vue";
 
 const props = defineProps({
   message: {
     type: Object,
     required: true,
-    default: function () {
-      return {};
-    }
+    default: () => ({})
   }
 });
 
-const store = useMediaCacheStore();
-const cacheMedia = () => {
-  const id = store.getId();
-  if (id && (id == props.message?.toId || id == props.message?.groupId)) {
-    store.loadMedia(props.message?.messageId, props.message.messageBody?.path);
+const stickerUrl = ref("");
+const loading = ref(false);
+
+// 获取表情包信息
+const fetchStickerInfo = async () => {
+  const body = props.message.messageBody;
+  // 优先使用 content 作为 id，其次尝试 id 字段
+  const stickerId = body?.content || body?.id;
+  
+  if (!stickerId) {
+    // 如果没有 ID，尝试使用 path 作为降级方案
+    if (body?.path) {
+      stickerUrl.value = body.path;
+    }
+    return;
+  }
+
+  try {
+    loading.value = true;
+    const res: any = await API.GetEmojiInfo(stickerId);
+    if (res && res.url) {
+      stickerUrl.value = res.url;
+    } else if (body?.path) {
+      stickerUrl.value = body.path;
+    }
+  } catch (error) {
+    console.error("Failed to fetch sticker info:", error);
+    // 出错时尝试使用 path
+    if (body?.path) {
+      stickerUrl.value = body.path;
+    }
+  } finally {
+    loading.value = false;
   }
 };
 
-const localPath = computed(() => store.getMedia(props.message.messageId) || props.message.messageBody?.path);
-
-// 处理预览
-const handlePreview = (path: string) => {
-  ShowPreviewWindow("", path, "image");
-};
+// 监听消息变化重新获取
+watch(
+  () => props.message.messageId,
+  () => {
+    fetchStickerInfo();
+  },
+  { immediate: true }
+);
 
 // 判断当前用户是否为消息所有者
 function isOwnerOfMessage(item: any) {
@@ -54,7 +85,7 @@ function isOwnerOfMessage(item: any) {
 function isWithinTwoMinutes(timestamp: number): boolean {
   const now = Date.now();
   const diff = Math.abs(now - timestamp);
-  return diff <= (import.meta.env.VITE_MESSAGE_RECALL_TIME || 120000);
+  return diff <= (Number(import.meta.env.VITE_MESSAGE_RECALL_TIME) || 120000);
 }
 
 // ===================== 右键菜单 =====================
@@ -103,6 +134,10 @@ const { menuConfig, setTarget } = useMessageContextMenu<any>({
     border-radius: 5px;
     overflow: hidden;
     transition: transform 0.2s ease;
+    min-height: 50px;
+    min-width: 50px;
+    justify-content: center;
+    align-items: center;
 
     img {
       display: block;
@@ -111,7 +146,15 @@ const { menuConfig, setTarget } = useMessageContextMenu<any>({
       object-fit: cover;
       cursor: pointer;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
+    }
+
+    .loading-placeholder {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 50px;
+      height: 50px;
     }
   }
 
@@ -119,6 +162,57 @@ const { menuConfig, setTarget } = useMessageContextMenu<any>({
     .image-wrapper {
       justify-content: flex-end;
     }
+  }
+}
+
+// 简单的加载动画
+.dot-flashing {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color: #9880ff;
+  color: #9880ff;
+  animation: dot-flashing 1s infinite linear alternate;
+  animation-delay: 0.5s;
+}
+
+.dot-flashing::before,
+.dot-flashing::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 0;
+}
+
+.dot-flashing::before {
+  left: -10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color: #9880ff;
+  color: #9880ff;
+  animation: dot-flashing 1s infinite alternate;
+  animation-delay: 0s;
+}
+
+.dot-flashing::after {
+  left: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color: #9880ff;
+  color: #9880ff;
+  animation: dot-flashing 1s infinite alternate;
+  animation-delay: 1s;
+}
+
+@keyframes dot-flashing {
+  0% {
+    background-color: #9880ff;
+  }
+  50%, 100% {
+    background-color: rgba(152, 128, 255, 0.2);
   }
 }
 </style>

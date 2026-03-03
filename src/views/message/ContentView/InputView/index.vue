@@ -131,7 +131,7 @@ import { globalEventBus } from "@/hooks/useEventBus";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { useInputEditor } from "@/hooks/useInputEditor";
 import { useLogger } from "@/hooks/useLogger";
-import { ReplyMessageInfo, Sticker as StickerModel } from "@/models";
+import { IMessagePart, ReplyMessageInfo, Sticker as StickerModel } from "@/models";
 import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
 import { useGroupStore } from "@/store/modules/group";
@@ -209,15 +209,28 @@ const toggleSticker = () => {
   /* popover 自动处理 */
 };
 
-const handleChooseSticker = (emojiChar: string | StickerModel) => {
+const handleChooseSticker = async (obj: string | StickerModel) => {
 
-  if (typeof emojiChar === "string") {
-    const char = String(emojiChar);
+  if (typeof obj === "string") {
+    const char = String(obj);
     editor.insertText(char);
     editor.moveCursorToEnd();
     pushEmojiHistory(char);
   }
 
+  // 发送图片表情
+  if (obj instanceof Object) {
+
+    if (obj.stickerId) {
+
+      const part: IMessagePart = {
+        type: "sticker",
+        content: obj.stickerId,
+      };
+
+      await messageStore.handleSendMessage([part]);
+    }
+  }
 };
 
 const pushEmojiHistory = (ch: string) => {

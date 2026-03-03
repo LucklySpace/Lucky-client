@@ -14,7 +14,7 @@ export class Sticker {
   tags?: string;
 
   /** 表情ID */
-  emojiId?: string;
+  stickerId?: string;
 
   /** 封面图 下载URL（预签名） */
   url?: string;
@@ -25,7 +25,7 @@ export class Sticker {
 }
 
 /** 表情包请求/响应对象 */
-export class EmojiPack {
+export class StickerPack {
   /** 包编码（唯一） */
   code?: string;
 
@@ -44,7 +44,7 @@ export class EmojiPack {
   /** 是否启用 */
   enabled?: boolean;
 
-  constructor(data?: Partial<EmojiPack>) {
+  constructor(data?: Partial<StickerPack>) {
     Object.assign(this, data);
   }
 }
@@ -90,6 +90,20 @@ class ImageMessageBody extends MessageBody {
     this.replyMessage = init.replyMessage;
   }
 }
+
+
+/** 贴图 */
+class StickerMessageBody extends MessageBody {
+  id: string;
+  replyMessage?: ReplyMessageInfo;
+
+  constructor(init: { id: string; replyMessage?: ReplyMessageInfo; }) {
+    super();
+    this.id = init.id;
+    this.replyMessage = init.replyMessage;
+  }
+}
+
 
 /** 视频 */
 class VideoMessageBody extends MessageBody {
@@ -608,7 +622,7 @@ class IMGroupAction<T extends MessageBody = MessageBody> extends IMessage<T> {
  */
 type IMessagePart = {
   /** 部分类型 */
-  type: "text" | "at" | "image" | "file" | "video";
+  type: "text" | "at" | "image" | "file" | "video" | "sticker";
   /** 内容（文本内容或资源路径） */
   content: string;
   /** 用户/资源 ID */
@@ -657,6 +671,8 @@ function createMessageBody(raw: any, messageContentType: number): MessageBody {
       return new FileMessageBody(parsedRaw);
     case MessageContentType.TIP.code:
       return new SystemMessageBody(parsedRaw);
+    case MessageContentType.STICKER.code:
+      return new StickerMessageBody(parsedRaw)
     case MessageContentType.RECALL_MESSAGE.code:
       return new RecallMessageBody(parsedRaw);
     case MessageContentType.EDIT_MESSAGE.code:
@@ -698,7 +714,7 @@ function createMessageInitFromPlain<T extends MessageBody>(obj: any): IMessageIn
 }
 
 export {
-  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMessageAction, IMGroupMessage, IMSingleMessage, LocationMessageBody, MergeMessageBody, MessageBody, RecallMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
+  AudioMessageBody, ComplexMessageBody, createMessageBody, EditMessageBody, FileMessageBody, GroupInviteMessageBody, GroupOperationMessageBody, ImageMessageBody, IMessage, IMessageAction, IMGroupMessage, IMSingleMessage, LocationMessageBody, MergeMessageBody, MessageBody, RecallMessageBody, StickerMessageBody, SystemMessageBody, TextMessageBody, VideoMessageBody
 };
 
 export type { IMessagePart };

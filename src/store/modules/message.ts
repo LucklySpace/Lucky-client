@@ -170,6 +170,19 @@ export const useMessageStore = defineStore(StoresEnum.MESSAGE, () => {
       await exec(() => send(payload, chat), { op: "sendText" });
       return;
     }
+
+    if (part.type === "sticker") {
+      const payload = buildPayload(
+        { id: part.content },
+        chat,
+        MessageContentType.STICKER.code,
+        {}
+      );
+      await exec(() => send(payload, chat), { op: "sendText" });
+      return;
+    }
+
+
     if (part.file && FILE_CONTENT_TYPE[part.type] != null) {
       await exec(
         () => uploadAndSend(part.file!, chat, FILE_CONTENT_TYPE[part.type], part.replyMessage),

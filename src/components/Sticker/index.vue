@@ -45,7 +45,7 @@
         </div>
 
         <div class="sticker-grid">
-          <div v-for="item in currentPackEmojis" :key="item.emojiId" class="sticker-cell" :title="item.name"
+          <div v-for="item in currentPackEmojis" :key="item.stickerId" class="sticker-cell" :title="item.name"
             @click="onSelectSticker(item)">
             <el-image :src="item.url" fit="contain" lazy class="sticker-img">
               <template #placeholder>
