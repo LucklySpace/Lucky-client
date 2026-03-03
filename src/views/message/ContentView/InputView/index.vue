@@ -35,12 +35,12 @@
     <!-- 工具栏 -->
     <div class="chat-container-tool">
       <!-- 表情 -->
-      <div ref="emojiBtnRef" :title="$t('pages.chat.toolbar.emoji')"
-        :class="['icon-box', { disabled: isInputDisabled }]" @click="toggleEmoji">
+      <div ref="stickerBtnRef" :title="$t('pages.chat.toolbar.sticker')"
+        :class="['icon-box', { disabled: isInputDisabled }]" @click="toggleSticker">
         <i class="iconfont icon-biaoqing-xue"></i>
-        <el-popover v-if="!isInputDisabled" ref="emojiPopoverRef" v-model:visible="emojiVisible"
-          :virtual-ref="emojiBtnRef" placement="top" trigger="click" virtual-triggering width="390">
-          <emoji :historyEmojiList="historyEmojiList" @handleChooseEmoji="handleChooseEmoji" />
+        <el-popover v-if="!isInputDisabled" ref="stickerPopoverRef" v-model:visible="stickerVisible"
+          :virtual-ref="stickerBtnRef" placement="top" trigger="click" virtual-triggering width="390">
+          <Sticker :historyStickerList="historyStickerList" @handleChooseSticker="handleChooseSticker" />
         </el-popover>
       </div>
 
@@ -52,12 +52,12 @@
           <el-row :gutter="5" align="middle" justify="center" style="margin-bottom: 8px" type="flex">
             <el-button link size="default" @click="handleScreenshot">{{
               $t("pages.chat.toolbar.screenshot")
-              }}</el-button>
+            }}</el-button>
           </el-row>
           <el-row :gutter="5" align="middle" justify="center" type="flex">
             <el-button link size="default" @click="handleRecord">{{
               $t("pages.chat.toolbar.recorder.label")
-              }}</el-button>
+            }}</el-button>
           </el-row>
           <template #reference>
             <el-icon :size="15" style="margin-left: 2px">
@@ -123,15 +123,15 @@
  */
 
 import AtDialog from "@/components/Atdialog/index.vue";
-import emoji from "@/components/Emoji/index.vue";
 import HistoryDialog from "@/components/History/index.vue";
+import Sticker from "@/components/Sticker/index.vue";
 import { Events, MessageType } from "@/constants";
 import { useAtMention } from "@/hooks/useAtMention";
 import { globalEventBus } from "@/hooks/useEventBus";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { useInputEditor } from "@/hooks/useInputEditor";
 import { useLogger } from "@/hooks/useLogger";
-import { ReplyMessageInfo } from "@/models";
+import { ReplyMessageInfo, Sticker as StickerModel } from "@/models";
 import { useCallStore } from "@/store/modules/call";
 import { useChatStore } from "@/store/modules/chat";
 import { useGroupStore } from "@/store/modules/group";
@@ -158,12 +158,12 @@ const isInputDisabled = computed(() => {
 
 // ==================== Refs ====================
 
-const emojiBtnRef = ref<HTMLElement | null>(null);
-const emojiVisible = ref(false);
+const stickerBtnRef = ref<HTMLElement | null>(null);
+const stickerVisible = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const editorRef = ref<HTMLElement | null>(null);
 const historyDialogVisible = ref(false);
-const historyEmojiList = ref<string[]>([]);
+const historyStickerList = ref<string[]>([]);
 const isDragging = ref(false);
 let dragCounter = 0; // 用于处理嵌套拖拽
 
@@ -204,20 +204,24 @@ const atMention = useAtMention({
 
 // ==================== 表情处理 ====================
 
-const toggleEmoji = () => {
+const toggleSticker = () => {
   if (isInputDisabled.value) return;
   /* popover 自动处理 */
 };
 
-const handleChooseEmoji = (emojiChar: string | any) => {
-  const char = typeof emojiChar === "string" ? emojiChar : emojiChar?.native || String(emojiChar);
-  editor.insertText(char);
-  editor.moveCursorToEnd();
-  pushEmojiHistory(char);
+const handleChooseSticker = (emojiChar: string | StickerModel) => {
+
+  if (typeof emojiChar === "string") {
+    const char = String(emojiChar);
+    editor.insertText(char);
+    editor.moveCursorToEnd();
+    pushEmojiHistory(char);
+  }
+
 };
 
 const pushEmojiHistory = (ch: string) => {
-  const list = historyEmojiList.value;
+  const list = historyStickerList.value;
   const idx = list.indexOf(ch);
   if (idx >= 0) list.splice(idx, 1);
   list.unshift(ch);
@@ -407,7 +411,7 @@ const handleSend = async () => {
 
   // 清理编辑器和文件队列
   editor.clearContent();
-  emojiVisible.value = false;
+  stickerVisible.value = false;
   atMention.hideDialog();
   cancelReply(); // 清除引用消息
 
@@ -466,11 +470,11 @@ watch(
 );
 
 onMounted(() => {
-  // 恢复 emoji 历史
+  // 恢复 sticker 历史
   try {
-    historyEmojiList.value = JSON.parse(storage.get("emojiHistory")) || [];
+    historyStickerList.value = JSON.parse(storage.get("emojiHistory")) || [];
   } catch {
-    historyEmojiList.value = [];
+    historyStickerList.value = [];
   }
 
   // 注册全局快捷键

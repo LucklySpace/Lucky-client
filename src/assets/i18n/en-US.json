@@ -120,7 +120,7 @@
           "mentionHint": "Type a message, use {at} to mention someone"
         },
         "toolbar": {
-          "emoji": "Emoji",
+          "sticker": "Sticker",
           "file": "File",
           "screenshot": "Screenshot",
           "history": "History",

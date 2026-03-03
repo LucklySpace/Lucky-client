@@ -198,17 +198,20 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
     }
   };
 
+  /** 获取用户表情包 */
   const fetchUserEmojis = async () => {
     const res: any = await api.GetUserEmojis({ userId: userId.value });
 
     if (res) emojiPackIds.value = res;
   };
 
+  /** 更新用户信息 */
   const updateUserInfo = async (profile: Partial<UserInfo>) => {
     const res = await safeExecute(() => api.UpdateUserInfo(profile));
     if (res) await handleGetUserInfo(true);
   };
 
+  /** 更新用户头像 */
   const uploadAvatar = async (file: File) => {
     const md5Str = await md5(file);
     const formData = new FormData();
@@ -273,7 +276,7 @@ export const useUserStore = defineStore(StoresEnum.USER, () => {
   persist: [
     {
       key: `${StoresEnum.USER}_ui`,
-      paths: ["userInfo"],
+      paths: ["userInfo", "emojiPackIds"],
       storage: localStorage,
     }
   ]

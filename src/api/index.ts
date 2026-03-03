@@ -337,15 +337,13 @@ export default {
   DeleteContact: (data: any) => Http.post("/chat/api/v1/relationship/deleteFriendById", data),
 
   /** 获取用户表情包 */
-  GetUserEmojis: (params: any) => Http.get("/chat/api/v1/emoji/list", { params }),
+  GetUserEmojis: (params: any) => Http.get("/chat/api/v1/sticker/list", { params }),
 
+  /** 获取表情包详情 */
+  GetEmojiPackInfo: (id: string) => Http.get(`/chat/api/v1/sticker/pack/${id}`),
 
 
   /** ================================================== 平台模块 =============================================================== */
-
-  /** 获取表情包详情 */
-  GetEmojiPackInfo: (id: string) => Http.get(`/plat/api/v1/emoji/pack/${id}`),
-
 
 
   /** ================================================== 文件管理模块 =============================================================== */

@@ -3,7 +3,7 @@ import { MessageContentType, MessageType } from "@/constants";
 
 
 /** 表情条目请求/响应对象  */
-export class Emoji {
+export class Sticker {
   /** 所属表情包ID（不能为空，最长 64） */
   packId!: string;
 
@@ -19,7 +19,7 @@ export class Emoji {
   /** 封面图 下载URL（预签名） */
   url?: string;
 
-  constructor(data?: Partial<Emoji>) {
+  constructor(data?: Partial<Sticker>) {
     Object.assign(this, data);
   }
 }

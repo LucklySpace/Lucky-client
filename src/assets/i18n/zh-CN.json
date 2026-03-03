@@ -120,7 +120,7 @@
           "mentionHint": "输入消息，使用 {at} 开始提及某人"
         },
         "toolbar": {
-          "emoji": "表情",
+          "sticker": "表情",
           "file": "文件",
           "screenshot": "屏幕截图",
           "history": "历史消息",
